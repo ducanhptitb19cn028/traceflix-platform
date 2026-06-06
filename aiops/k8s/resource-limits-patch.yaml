@@ -1,0 +1,15 @@
+# Patch the three microservices with a memory limit low enough that the
+# memory-leak StressChaos (300MB) drives a real OOMKilled event -- required for
+# the oom_killed / events ("E") signal in configuration C4.
+#
+# Apply:  kubectl patch deployment movie-service -n on-demand-observability \
+#           --patch-file k8s/resource-limits-patch.yaml
+# (repeat for actor-service, review-service)
+spec:
+  template:
+    spec:
+      containers:
+        - name: movie-service          # change name per service when patching
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits:   { cpu: "500m", memory: "384Mi" }

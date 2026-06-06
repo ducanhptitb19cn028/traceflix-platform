@@ -1,0 +1,14 @@
+# Partition movie-service from actor-service: the actor fan-out fails while
+# review still succeeds -> partial-failure trace signature.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata: { name: tf-network-partition, namespace: on-demand-observability }
+spec:
+  action: partition
+  mode: all
+  selector: { namespaces: [on-demand-observability], labelSelectors: { app: movie-service } }
+  direction: to
+  target:
+    mode: all
+    selector: { namespaces: [on-demand-observability], labelSelectors: { app: actor-service } }
+  duration: "2m"

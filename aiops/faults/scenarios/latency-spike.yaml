@@ -1,0 +1,12 @@
+# Network delay injected on review-service responses. movie-service calls review
+# synchronously, so this propagates latency upstream -> secondary symptom on
+# movie-service, which is exactly the case traces must disambiguate (RQ3).
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata: { name: tf-latency-spike, namespace: on-demand-observability }
+spec:
+  action: delay
+  mode: all
+  selector: { namespaces: [on-demand-observability], labelSelectors: { app: review-service } }
+  delay: { latency: "350ms", jitter: "100ms", correlation: "50" }
+  duration: "3m"

@@ -1,0 +1,9 @@
+# CPU saturation on actor-service (a leaf -> isolates root cause cleanly).
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata: { name: tf-cpu-saturation, namespace: on-demand-observability }
+spec:
+  mode: all
+  selector: { namespaces: [on-demand-observability], labelSelectors: { app: actor-service } }
+  stressors: { cpu: { workers: 2, load: 90 } }
+  duration: "3m"

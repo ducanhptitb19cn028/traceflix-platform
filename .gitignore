@@ -1,0 +1,119 @@
+# ===========================================================================
+# Traceflix Platform — root .gitignore
+# Polyglot repo: Java/Maven services + Python aiops + Kubernetes/observability
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# OS / Editor / IDE
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*~
+
+# JetBrains (IntelliJ, PyCharm)
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Eclipse / NetBeans
+.classpath
+.project
+.settings/
+.factorypath
+nbproject/
+
+# ---------------------------------------------------------------------------
+# Java / Maven (services/*)
+# ---------------------------------------------------------------------------
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+replay_pid*
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+dependency-reduced-pom.xml
+
+# ---------------------------------------------------------------------------
+# Python (aiops/*)
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Test / coverage / type-check caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ---------------------------------------------------------------------------
+# AIOps data & model artifacts
+# ---------------------------------------------------------------------------
+aiops/data/labels.csv
+aiops/data/results/*
+!aiops/data/results/.gitkeep
+*.joblib
+*.pkl
+*.h5
+*.onnx
+*.model
+
+# ---------------------------------------------------------------------------
+# Secrets & local config
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.keystore
+kubeconfig
+*.kubeconfig
+
+# ---------------------------------------------------------------------------
+# Kubernetes / Helm / Terraform (if any)
+# ---------------------------------------------------------------------------
+*.tfstate
+*.tfstate.*
+.terraform/
+charts/*.tgz
+
+# ---------------------------------------------------------------------------
+# Logs & temp
+# ---------------------------------------------------------------------------
+logs/
+*.log.*
+tmp/
+temp/
+.claude/

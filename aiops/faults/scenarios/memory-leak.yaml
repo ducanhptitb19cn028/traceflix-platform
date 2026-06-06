@@ -1,0 +1,10 @@
+# Memory pressure on movie-service. Pair with a low pod memory limit (see
+# k8s/resource-limits-patch.yaml) so it can escalate to OOMKilled.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata: { name: tf-memory-leak, namespace: on-demand-observability }
+spec:
+  mode: all
+  selector: { namespaces: [on-demand-observability], labelSelectors: { app: movie-service } }
+  stressors: { memory: { workers: 1, size: "300MB" } }
+  duration: "4m"

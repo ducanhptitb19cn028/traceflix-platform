@@ -1,0 +1,49 @@
+# VictoriaMetrics for the C4 long-range / historical-context path.
+# Prometheus in on-demand-observability.yaml remote_writes to:
+#   http://victoriametrics.devops-agent.svc.cluster.local:8428/api/v1/write
+# so VM must live in the `devops-agent` namespace with service name
+# `victoriametrics`. This manifest creates exactly that.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: devops-agent
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: victoriametrics
+  namespace: devops-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: victoriametrics }
+  template:
+    metadata:
+      labels: { app: victoriametrics }
+    spec:
+      containers:
+        - name: victoriametrics
+          image: victoriametrics/victoria-metrics:v1.103.0
+          args:
+            - "-retentionPeriod=12"          # 12 months historical context
+            - "-storageDataPath=/vmdata"
+            - "-selfScrapeInterval=10s"
+          ports: [{ containerPort: 8428, name: http }]
+          volumeMounts:
+            - { name: vmdata, mountPath: /vmdata }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits:   { cpu: "1",  memory: 1Gi }
+      volumes:
+        - name: vmdata
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: victoriametrics
+  namespace: devops-agent
+spec:
+  selector: { app: victoriametrics }
+  ports:
+    - { name: http, port: 8428, targetPort: 8428 }

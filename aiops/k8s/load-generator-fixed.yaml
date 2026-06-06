@@ -1,0 +1,45 @@
+# Drop-in replacement for the load-generator in on-demand-observability.yaml.
+# Fix: review-service is GET /api/reviews?movieId={id} (query param), not
+# /api/reviews/{id}. The original path-param calls 404 and never exercise the
+# real review query path, biasing the telemetry the ML pipeline trains on.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-generator
+  namespace: on-demand-observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: load-generator }
+  template:
+    metadata:
+      labels: { app: load-generator }
+    spec:
+      containers:
+        - name: load-generator
+          image: curlimages/curl:8.7.1
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "Load generator starting (fixed review path)..."
+              MOVIES="1 2 3 4 5 6 7 8 9 10"
+              ACTORS="1 2 3 4 5 6 7 8 9 10 11 12"
+              while true; do
+                for id in $MOVIES; do
+                  curl -sf "http://movie-service:8080/api/movies/$id" >/dev/null 2>&1 || true
+                  sleep 1
+                done
+                for id in $ACTORS; do
+                  curl -sf "http://actor-service:8080/api/actors/$id" >/dev/null 2>&1 || true
+                  sleep 1
+                done
+                for id in $MOVIES; do
+                  # correct query-param contract for review-service
+                  curl -sf "http://review-service:8080/api/reviews?movieId=$id" >/dev/null 2>&1 || true
+                  sleep 1
+                done
+                sleep 5
+              done
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits:   { cpu: 50m, memory: 32Mi }

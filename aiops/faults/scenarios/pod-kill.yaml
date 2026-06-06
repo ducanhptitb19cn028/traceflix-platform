@@ -1,0 +1,9 @@
+# Repeated pod kills on actor-service -> CrashLoopBackOff / restart events.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata: { name: tf-pod-kill, namespace: on-demand-observability }
+spec:
+  action: pod-kill
+  mode: one
+  selector: { namespaces: [on-demand-observability], labelSelectors: { app: actor-service } }
+  duration: "3m"
