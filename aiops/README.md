@@ -42,7 +42,7 @@ reproduce without Kubernetes:
 
 ```bash
 pip install -r requirements.txt
-./scripts/run_offline.sh 200      # data/results/*.csv + figures
+bash ./scripts/run_offline.sh 200      # data/results/*.csv + figures
 pytest tests/ -q
 ```
 
@@ -59,6 +59,10 @@ RQ3  Top-1 RCA: metrics+logs 0.91  ->  +traces 1.00
 > what the figures emphasise.
 
 ## RQ4 — why traditional (offline) anomaly detection is not enough
+
+> **Deep dive:** [`docs/ONLINE_PIPELINE.md`](docs/ONLINE_PIPELINE.md) walks through
+> the online pipeline end-to-end — the drift generator, the `OnlineModel` and its
+> four adaptation mechanisms, the experiment harness, and the cost comparison.
 
 RQ1–RQ3 hold on a **stationary** stream, where a model trained once stays
 calibrated and the batch detectors look excellent (F1 ≈ 0.99). Production
@@ -119,8 +123,53 @@ Read-out for the dissertation:
   to prove the static model's decay is caused by **non-stationarity**, not by
   model capacity.
 
+### Cost: online vs periodic retraining
+
+A reviewer's fair objection: periodic retraining could close the F1 gap by
+refitting *more often*. `ml/experiments/cost_compare.py` measures the price of
+that. It replays the post-R0 stream and records, per paradigm, the **per-window
+processing latency** (inference + any training that fires on that window), the
+number of train events, model size, and the labelled buffer each must retain:
+
+```
+C4, 8640 future windows           offline_periodic     online_adaptive
+F1                                      0.890               0.983
+train events                            17 full refits      8640 updates
+worst-case latency / window          ~450 ms (refit stall)  ~12 ms
+p99 latency / window                    0.34 ms             6.6 ms
+model size                              3.3 MB              16 KB
+labelled windows retained to train      2880                0
+total CPU over the stream               1.0x (baseline)     ~4.5x
+```
+
+The honest trade-off:
+
+- Online is **not cheaper in total CPU** — it does a little work *every* window
+  (a pool of linear `partial_fit` updates), ~4.5x the aggregate compute of 17
+  RandomForest refits. That cost is real and worth stating.
+- But online wins on every dimension that matters operationally: **~38x lower
+  worst-case latency** (a full refit blocks the detector for ~450 ms; the online
+  update never exceeds ~12 ms, so detection stays real-time), a **~214x smaller
+  model**, **zero retained training data** (periodic must keep a 2880-window
+  labelled buffer to refit — memory and data-governance cost), *and* higher F1.
+- Periodic's mean latency is lower because its work is bursty and rare — but
+  bursty is exactly the problem: the stalls land precisely when a regime shifts
+  and detection matters most. Buying down the F1 gap with a faster cadence only
+  multiplies those stalls and the compute.
+
+So the cost comparison reframes the result: it is not "online is free", it is
+**online converts a bursty, stateful, blocking retrain pipeline into a smooth,
+bounded-latency, stateless stream — at higher steady CPU but lower operational
+risk, smaller footprint, and better accuracy.**
+
 This is the evidence that *operations matter*: in a modern distributed system
 the detector must learn continuously, because the ground truth of "normal" moves.
+
+Reproduce everything (RQ4 detection + cost + figures) with one command:
+
+```bash
+./scripts/run_online_offline.sh 320            # -> rq4_*.csv, rq4_cost.csv, figures
+```
 
 ## Quick start — live (against your cluster)
 
@@ -157,4 +206,5 @@ done
    the exact service name the manifest expects.
 
 See `docs/INTEGRATION.md` for the full data flow, metric-name mapping, and the
-fault-to-service injection plan.
+fault-to-service injection plan, and
+[`docs/ONLINE_PIPELINE.md`](docs/ONLINE_PIPELINE.md) for the RQ4 online pipeline.

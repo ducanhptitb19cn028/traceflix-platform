@@ -1,0 +1,5 @@
+fault,root_cause,start_ts,end_ts
+cpu_saturation,actor-service,1781082149.388,1781082174.388
+memory_leak,movie-service,1781082189.776,1781082214.776
+normal,,1781082229.972,1781082244.972
+network_partition,movie-service,1781082245.141,1781082270.141
