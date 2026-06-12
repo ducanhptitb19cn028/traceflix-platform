@@ -236,8 +236,8 @@ TF_LIVE=1 PROM_URL=http://localhost:9090 LOKI_URL=http://localhost:3100 \
 
 ```bash
 cd aiops && pip install -r requirements.txt
-./scripts/run_offline.sh 200            # RQ1–RQ3
-./scripts/run_online_offline.sh 320     # RQ4 detection + cost + figures
+bash ./scripts/run_offline.sh 200            # RQ1–RQ3
+bash ./scripts/run_online_offline.sh 320     # RQ4 detection + cost + figures
 pytest tests/ -q                        # 7 passed
 ```
 
@@ -245,4 +245,5 @@ pytest tests/ -q                        # 7 passed
 
 ```bash
 kubectl delete namespace on-demand-observability
+kubectl delete namespace devops-agent
 ```

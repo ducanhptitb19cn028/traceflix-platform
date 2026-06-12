@@ -1,0 +1,12 @@
+# Force LF line endings on shell scripts. With core.autocrlf=true, git would
+# otherwise check these out as CRLF on Windows, and bash fails on the trailing
+# carriage return (e.g. `set -o pipefail\r` -> "set: pipefail: invalid option name").
+*.sh text eol=lf
+
+# Other Unix-executed / line-ending-sensitive files
+Dockerfile  text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+
+# Let git auto-detect text vs binary for everything else
+* text=auto
