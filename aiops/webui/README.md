@@ -63,8 +63,11 @@ Open **http://localhost:5173**.
 Build the SPA once; the backend then serves it at `/` (same origin, no proxy):
 
 ```bash
-cd aiops/webui/frontend && npm install && npm run build
-cd ../.. && python -m uvicorn webui.backend.app:app --port 8000
+cd aiops/webui/frontend 
+npm install 
+npm run build
+cd ../.. 
+python -m uvicorn webui.backend.app:app --port 8000
 ```
 
 Open **http://localhost:8000**.

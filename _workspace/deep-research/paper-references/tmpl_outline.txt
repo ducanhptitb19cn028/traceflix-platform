@@ -1,0 +1,63 @@
+=== HEADINGS (outline) ===
+p2: 1 INTRODUCTION
+p3: 1.1 TheProblemandSignificance
+p4: 1.2 ResearchQuestions
+p5: 1.3 Contributions
+p6: 2 THEORY
+p6: 2.1 FormalDefinition
+p9: 2.2 MotivatingScenario
+p10: 3 HOWREQUIREMENTSAREHANDLED
+p10: 3.1 Real-worldRequirementswithAspirations
+p11: 3.2 LiteratureSearchofPatterns
+p12: 3.3 ResultsAnalysis
+p14: 3.4 RespectingRequirementsandAspirationinSoftwareConfigurationTuning
+p15: 4 EMPIRICALSTUDYDESIGN
+p17: 4.1 SubjectSoftwareSystems
+p18: 4.2 AspirationSpace
+p19: 4.3 TuningSettings
+p20: 4.4 AnalysisandComparison
+p22: 5 RESULTSANDFINDINGS
+p22: 5.1 RQ1:WhichisBetterunderRequirementswithRealisticAspirations?
+p25: 5.2 RQ2:HowdoDifferentAspirationsInfluencetheComparisons?
+p26: 5.3 RQ3:WhatiftheAspirationsareUnrealistic?
+p28: 5.4 RQ4:DoestheGivenTuningResourceImportant?
+p30: 6 LESSONSLEARNED
+p32: 7 THREATSTOVALIDITY
+p34: 8 RELATEDWORK
+p34: 8.1 PS-w/oforSoftwareConfigurationTuning
+p34: 8.2 PS-wforSoftwareConfigurationTuning
+p35: 8.3 TuningwithorwithoutSurrogate
+p35: 8.4 GeneralMulti-objectiveOptimization
+p36: 9 CONCLUSION
+
+=== RQ / research-question lines ===
+p4: figurationofthesoftwaresystem),thefirstresearchquestion(RQ)wewishtoansweris:
+p4: RQ1 seeks to provide a global picture of the comparison between the two optimization mod-
+p4: RQ1andRQ2investigateunderthenormalcontextwherethegivenaspirationsarereasonable
+p5: objective.ThisbringsournextRQ,inwhichweask:
+p5: ToaddresstheseRQs,weconductedanextensiveempiricalstudyon15combinationsofpatterns
+p5: OursecondcontributionisthepragmaticfindingsthatanswertheaforementionedRQsoverthe
+p5: —ToRQ1:PS-wperformsconsiderablybetterorsimilartoPS-w/oon84%ofthecases,outof
+p5: —ToRQ2:Theimprovementof PS-woverPS-w/oisoftenlargelybiasedtoacertainposition
+p5: —ToRQ3:PS-w/oisnoworsethanPS-wfor70%ofcases,whereinthedifferenceisconsider-
+p5: —ToRQ4:Underrealisticaspirations,PS-wobtainsconsistentlybetteroutcomesthanPS-w/o
+p15: consider different aspiration spaces for our RQs; this will be further elaborated in
+p22: 5.1 RQ1:WhichisBetterunderRequirementswithRealisticAspirations?
+p22: 5.1.1 Method. ToanswerRQ1,wecomparePS-wandPS-w/oacross15combinationsofpat-
+p25: 5.2 RQ2:HowdoDifferentAspirationsInfluencetheComparisons?
+p25: 5.2.1 Method. TounderstandRQ2,wefollowtheprocedureusedforRQ1,butwithaparticular
+p25: theoverallconclusionisconsistentwiththatforRQ1overdifferentpatternsandsystems,wesee
+p26: 5.2.3 Discussion. As discussed for RQ1, the main reason that PS-w can perform better than
+p26: 5.3 RQ3:WhatiftheAspirationsareUnrealistic?
+p26: 5.3.1 Method. To investigate RQ3, we omit the scenarios with p as they cannot create an
+p26: areidenticaltothoseforRQ1.
+p28: 5.4 RQ4:DoestheGivenTuningResourceImportant?
+p28: 5.4.1 Method. TounderstandtheresourceefficiencyofbothoptimizationmodelsinRQ4,for
+p29: further strengthens our findings for RQ1. The improvement in resource efficiency has been re-
+p29: to 10×. This again complies with the findings for RQ3. However, under unrealistic aspirations,
+p30: discussedforRQ1,theguidanceprovidedbytherequirementsandaspirationsareoftenhelpful
+p30: duetothehighincomparabilityinPS-wasmentionedforRQ3—manyoftheconfigurationsare
+p30: hasbeenoverwhelminglyassumedinexistingwork.Instead,fromRQ1,RQ3,andRQ4,wedis-
+p30: Although from RQ1, we noticed that the benefits of PS-w are blurred when the given combi-
+p30: An unexpected discovery from RQ2 is that, when given realistic aspirations, the position of
+p31: AccordingtoRQ4,wehavealsorevealedthat,givenrealisticaspirations,thechoicebetween
