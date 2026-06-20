@@ -1,0 +1,50 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Class diagram (RQ-D/A/O)" id="cls">
+    <mxGraphModel dx="1000" dy="800" grid="0" pageWidth="980" pageHeight="720" math="0">
+      <root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+
+        <mxCell id="win" value="Window" style="swimlane;fontStyle=1;html=1;startSize=24;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="220" height="150" as="geometry"/></mxCell>
+        <mxCell id="win_a" value="+ ts : datetime&#10;+ service : str&#10;+ fault : str&#10;+ metrics[] / logs[] / traces[] / events[]" style="text;html=1;align=left;verticalAlign=top;spacingLeft=4;" vertex="1" parent="win"><mxGeometry y="24" width="220" height="84" as="geometry"/></mxCell>
+        <mxCell id="win_m" value="+ to_features()" style="text;html=1;align=left;verticalAlign=top;spacingLeft=4;" vertex="1" parent="win"><mxGeometry y="108" width="220" height="42" as="geometry"/></mxCell>
+
+        <mxCell id="cfg" value="ObsConfig" style="swimlane;fontStyle=1;html=1;startSize=24;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="40" y="230" width="220" height="120" as="geometry"/></mxCell>
+        <mxCell id="cfg_a" value="+ key : str  (C1..C4)&#10;+ name : str&#10;+ signals : set" style="text;html=1;align=left;verticalAlign=top;spacingLeft=4;" vertex="1" parent="cfg"><mxGeometry y="24" width="220" height="62" as="geometry"/></mxCell>
+        <mxCell id="cfg_m" value="+ select(features)" style="text;html=1;align=left;verticalAlign=top;spacingLeft=4;" vertex="1" parent="cfg"><mxGeometry y="86" width="220" height="34" as="geometry"/></mxCell>
+
+        <mxCell id="mdl" value="BaselineModel" style="swimlane;fontStyle=1;html=1;startSize=24;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="40" y="400" width="220" height="130" as="geometry"/></mxCell>
+        <mxCell id="mdl_a" value="+ kind : str  (rf | gb | logreg)" style="text;html=1;align=left;verticalAlign=top;spacingLeft=4;" vertex="1" parent="mdl"><mxGeometry y="24" width="220" height="34" as="geometry"/></mxCell>
+        <mxCell id="mdl_m" value="+ fit(X, y)&#10;+ predict(X)&#10;+ predict_proba(X)" style="text;html=1;align=left;verticalAlign=top;spacingLeft=4;" vertex="1" parent="mdl"><mxGeometry y="58" width="220" height="72" as="geometry"/></mxCell>
+
+        <mxCell id="met" value="Metrics" style="swimlane;fontStyle=1;html=1;startSize=24;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="40" y="580" width="220" height="96" as="geometry"/></mxCell>
+        <mxCell id="met_a" value="+ precision / recall / f1 / auc&#10;+ lead_time" style="text;html=1;align=left;verticalAlign=top;spacingLeft=4;" vertex="1" parent="met"><mxGeometry y="24" width="220" height="44" as="geometry"/></mxCell>
+        <mxCell id="met_m" value="+ compute(y, yhat)" style="text;html=1;align=left;verticalAlign=top;spacingLeft=4;" vertex="1" parent="met"><mxGeometry y="68" width="220" height="28" as="geometry"/></mxCell>
+
+        <mxCell id="exp" value="«abstract» Experiment" style="swimlane;fontStyle=3;html=1;startSize=24;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1"><mxGeometry x="420" y="40" width="240" height="110" as="geometry"/></mxCell>
+        <mxCell id="exp_a" value="+ config : ObsConfig&#10;+ model : BaselineModel" style="text;html=1;align=left;verticalAlign=top;spacingLeft=4;" vertex="1" parent="exp"><mxGeometry y="24" width="240" height="44" as="geometry"/></mxCell>
+        <mxCell id="exp_m" value="+ run() : DataFrame&#10;# _metrics()" style="text;html=1;align=left;verticalAlign=top;spacingLeft=4;" vertex="1" parent="exp"><mxGeometry y="68" width="240" height="42" as="geometry"/></mxCell>
+
+        <mxCell id="eD" value="EarlyDetectionExperiment  (RQ-D)" style="swimlane;fontStyle=1;html=1;startSize=24;fillColor=#e8f0fe;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="380" y="220" width="270" height="116" as="geometry"/></mxCell>
+        <mxCell id="eD_m" value="+ _synth_ramp(alpha)&#10;+ _expected_p99()&#10;+ _forecast_breach()&#10;+ run()" style="text;html=1;align=left;verticalAlign=top;spacingLeft=4;" vertex="1" parent="eD"><mxGeometry y="24" width="270" height="92" as="geometry"/></mxCell>
+
+        <mxCell id="eA" value="RobustnessExperiment  (RQ-A)" style="swimlane;fontStyle=1;html=1;startSize=24;fillColor=#fff4e6;strokeColor=#d79b00;" vertex="1" parent="1"><mxGeometry x="380" y="380" width="270" height="104" as="geometry"/></mxCell>
+        <mxCell id="eA_m" value="+ _degrade(kind, level)&#10;+ run()  →  fragility ΔF1" style="text;html=1;align=left;verticalAlign=top;spacingLeft=4;" vertex="1" parent="eA"><mxGeometry y="24" width="270" height="80" as="geometry"/></mxCell>
+
+        <mxCell id="eO" value="OptimiseExperiment  (RQ-O)" style="swimlane;fontStyle=1;html=1;startSize=24;fillColor=#e6f6ec;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="380" y="530" width="270" height="116" as="geometry"/></mxCell>
+        <mxCell id="eO_m" value="+ _cost(config, sampling)&#10;+ _pareto(points)&#10;+ run()  →  F1-vs-cost front" style="text;html=1;align=left;verticalAlign=top;spacingLeft=4;" vertex="1" parent="eO"><mxGeometry y="24" width="270" height="92" as="geometry"/></mxCell>
+
+        <mxCell id="gen" value="TelemetryGenerator&#10;+ generate_run()&#10;+ apply_regime() / _FAULT_SHIFT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;spacingLeft=6;spacingTop=4;" vertex="1" parent="1"><mxGeometry x="740" y="240" width="210" height="90" as="geometry"/></mxCell>
+
+        <mxCell style="endArrow=block;endFill=0;html=1;" edge="1" parent="1" source="eD" target="exp"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell style="endArrow=block;endFill=0;html=1;" edge="1" parent="1" source="eA" target="exp"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell style="endArrow=block;endFill=0;html=1;" edge="1" parent="1" source="eO" target="exp"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell value="config" style="endArrow=diamondThin;endFill=1;html=1;startArrow=none;" edge="1" parent="1" source="exp" target="cfg"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell value="model" style="endArrow=diamondThin;endFill=1;html=1;" edge="1" parent="1" source="exp" target="mdl"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell value="scores" style="endArrow=open;html=1;dashed=1;" edge="1" parent="1" source="exp" target="met"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell value="produces" style="endArrow=open;html=1;dashed=1;" edge="1" parent="1" source="gen" target="win"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell value="uses" style="endArrow=open;html=1;dashed=1;" edge="1" parent="1" source="eD" target="gen"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell style="endArrow=open;html=1;endSize=8;" edge="1" parent="1" source="cfg" target="win"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

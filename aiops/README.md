@@ -85,7 +85,7 @@ that **adapts from the incoming data pattern** — no offline re-fit:
    re-centring after an abrupt shift.
 
 ```bash
-./scripts/run_online_offline.sh 320            # -> rq4_*.csv + rq4 figures
+./scripts/run_online_offline.sh 320            # -> rq3_*.csv + rq3 figures
 ```
 
 Representative output (synthetic drift, seed 42) — F1 on the *operational
@@ -110,7 +110,7 @@ Read-out for the dissertation:
   lot of the loss (0.49 → 0.76, 0.51 → 0.89) but still trails online by 6–9 F1
   points and never reaches the oracle, because every regime shift opens a
   **drift-response gap** until the next refresh — visible as the sawtooth in
-  `rq4_timeline.png` — and each refresh is a full batch re-fit. Faster cadence
+  `rq3_timeline.png` — and each refresh is a full batch re-fit. Faster cadence
   shrinks the gap only by paying more compute; the online model removes it
   structurally.
 - The **online adaptive model recovers to oracle level** (0.82 → 0.98) updating
@@ -168,7 +168,7 @@ the detector must learn continuously, because the ground truth of "normal" moves
 Reproduce everything (RQ4 detection + cost + figures) with one command:
 
 ```bash
-./scripts/run_online_offline.sh 320            # -> rq4_*.csv, rq4_cost.csv, figures
+./scripts/run_online_offline.sh 320            # -> rq3_*.csv, rq3_cost.csv, figures
 ```
 
 ## Quick start — live (against your cluster)

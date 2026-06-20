@@ -1,12 +1,29 @@
 #!/usr/bin/env python3
 """
-C1-C4 experiment harness for the real TraceFlix stack (RQ1, RQ2, RQ3).
+C1-C4 detection harness for the real TraceFlix stack.
 
-  RQ1: hold the model fixed, vary observability completeness C1..C4, compare
-       detection precision/recall/F1/AUC.
-  RQ2: under the richest configuration (C4), compare RF / GB / XGBoost / LSTM /
-       multimodal late-fusion (HolisticRCA building blocks).
-  RQ3: Top-k root-cause localisation with traces excluded (C2) vs included (C3).
+This script produces the *held-out reference* results for the paper, aligned to
+its (reordered) research questions:
+
+  * completeness()  -> paper RQ1 (completeness). Hold the model fixed, vary
+      observability completeness C1..C4, and report detection precision / recall
+      / F1 / AUC on a controlled, single-distribution HELD-OUT slice.
+      NB: the paper poses RQ1 *under non-stationarity*. This function supplies
+      only the stationary HELD-OUT REFERENCE column; the operative drifted-stream
+      column of RQ1 (and the whole paradigm comparison, paper RQ3) is produced by
+      ``online_vs_offline.py`` on the drifted future stream. The two are reported
+      side by side in the manuscript's RQ1 table.
+  * localisation()  -> paper RQ2 (localisation). Top-k root-cause accuracy with
+      traces excluded (C2) vs included (C3).
+  * model_family()  -> paper RQ4 (model family, answered last). Under the richest
+      configuration (C4), compare RF / GB / XGBoost / LSTM / multimodal
+      late-fusion (HolisticRCA building blocks).
+
+  (Paper RQ3 -- static vs periodic vs online learning under drift -- is *not*
+   computed here; see ``online_vs_offline.py``.)
+
+Outputs (one CSV per question, named by the paper's RQ number):
+  rq1_completeness.csv, rq2_localisation.csv, rq4_model_family.csv
 
 Data source is automatic:
   * default      -> synthetic generator (no cluster needed)
@@ -48,7 +65,13 @@ def _metrics(y_true, y_pred, y_proba=None) -> dict:
     return m
 
 
-def rq1(windows, model_kind="rf") -> pd.DataFrame:
+def completeness(windows, model_kind="rf") -> pd.DataFrame:
+    """Paper RQ1 (held-out reference column): detection vs completeness C1..C4.
+
+    The model is held fixed; only the signal set varies. Evaluated on a
+    single-distribution held-out split -- the stationary reference against which
+    the drifted-stream RQ1 result (from online_vs_offline.py) is compared.
+    """
     rows = []
     for key, cfg in CONFIGS.items():
         X, yb, _, feats = split_xy(build_features(windows, cfg))
@@ -64,7 +87,8 @@ def rq1(windows, model_kind="rf") -> pd.DataFrame:
         ["config", "name", "n_features", "precision", "recall", "f1", "auc_roc"]]
 
 
-def rq2(windows) -> pd.DataFrame:
+def model_family(windows) -> pd.DataFrame:
+    """Paper RQ4 (answered last): model-family comparison on full MELT (C4)."""
     X, yb, _, feats = split_xy(build_features(windows, CONFIGS["C4"]))
     Xtr, Xte, ytr, yte = train_test_split(
         X, yb, test_size=0.3, random_state=0, stratify=yb)
@@ -96,7 +120,8 @@ def rq2(windows) -> pd.DataFrame:
     return pd.DataFrame(rows)[["model", "precision", "recall", "f1", "auc_roc"]]
 
 
-def rq3(rca_episodes) -> pd.DataFrame:
+def localisation(rca_episodes) -> pd.DataFrame:
+    """Paper RQ2: top-k root-cause localisation, traces excluded (C2) vs (C3)."""
     rows = []
     for label, cfg_key, use_traces in [
         ("metrics+logs (C2)", "C2", False),
@@ -131,27 +156,33 @@ def main():
     windows, rca_episodes = generate_run(n_episodes=args.episodes, seed=args.seed)
     print(f"    {len(windows)} windows, {len(rca_episodes)} fault episodes")
 
-    print("[*] RQ1: completeness vs detection")
-    r1 = rq1(windows); r1.to_csv(out / "rq1_completeness.csv", index=False)
+    print("[*] RQ1: completeness vs detection (held-out reference)")
+    r1 = completeness(windows)
+    r1.to_csv(out / "rq1_completeness.csv", index=False)
     print(r1.to_string(index=False))
 
-    print("\n[*] RQ2: algorithm comparison (C4)")
-    r2 = rq2(windows); r2.to_csv(out / "rq2_algorithms.csv", index=False)
+    print("\n[*] RQ2: trace contribution to root-cause localisation")
+    r2 = localisation(rca_episodes)
+    r2.to_csv(out / "rq2_localisation.csv", index=False)
     print(r2.to_string(index=False))
 
-    print("\n[*] RQ3: trace contribution to RCA")
-    r3 = rq3(rca_episodes); r3.to_csv(out / "rq3_rca.csv", index=False)
-    print(r3.to_string(index=False))
+    print("\n[*] RQ4: model-family comparison (C4)")
+    r4 = model_family(windows)
+    r4.to_csv(out / "rq4_model_family.csv", index=False)
+    print(r4.to_string(index=False))
+
+    print("\n[i] RQ3 (static vs periodic vs online under drift) is produced by "
+          "online_vs_offline.py, not this script.")
 
     summary = {
         "mode": "live" if live else "synthetic",
         "episodes": args.episodes,
         "n_windows": len(windows),
         "services": ["movie-service", "actor-service", "review-service"],
-        "rq1_best_config": r1.sort_values("f1").iloc[-1]["config"],
-        "rq1_f1_by_config": dict(zip(r1["config"], r1["f1"].round(4))),
-        "rq2_best_model": r2.sort_values("f1").iloc[-1]["model"],
-        "rq3": r3.to_dict(orient="records"),
+        "note": "RQ numbers follow the paper; RQ3 (drift) is in online_vs_offline.py.",
+        "rq1_completeness_reference_f1": dict(zip(r1["config"], r1["f1"].round(4))),
+        "rq2_localisation": r2.to_dict(orient="records"),
+        "rq4_best_model": r4.sort_values("f1").iloc[-1]["model"],
     }
     (out / "summary.json").write_text(json.dumps(summary, indent=2))
     print(f"\n[*] Results -> {out}/")

@@ -1,0 +1,37 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Sequence (RQ-D run)" id="seq">
+    <mxGraphModel dx="1100" dy="800" grid="0" pageWidth="1040" pageHeight="600" math="0">
+      <root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+
+        <mxCell id="aR"  value="Researcher" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="40" height="80" as="geometry"/></mxCell>
+        <mxCell id="lE"  value=":EarlyDetectionExperiment" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e8f0fe;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="150" y="40" width="170" height="34" as="geometry"/></mxCell>
+        <mxCell id="lG"  value=":TelemetryGenerator" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="370" y="40" width="150" height="34" as="geometry"/></mxCell>
+        <mxCell id="lF"  value=":FeatureBuilder" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="560" y="40" width="130" height="34" as="geometry"/></mxCell>
+        <mxCell id="lD"  value=":Detector (config C)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="720" y="40" width="140" height="34" as="geometry"/></mxCell>
+        <mxCell id="lM"  value=":Metrics" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="900" y="40" width="90" height="34" as="geometry"/></mxCell>
+
+        <mxCell id="xR"  style="endArrow=none;html=1;dashed=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="60" y="120" as="sourcePoint"/><mxPoint x="60" y="560" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell id="xE"  style="endArrow=none;html=1;dashed=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="235" y="74" as="sourcePoint"/><mxPoint x="235" y="560" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell id="xG"  style="endArrow=none;html=1;dashed=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="445" y="74" as="sourcePoint"/><mxPoint x="445" y="560" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell id="xF"  style="endArrow=none;html=1;dashed=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="625" y="74" as="sourcePoint"/><mxPoint x="625" y="560" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell id="xD"  style="endArrow=none;html=1;dashed=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="790" y="74" as="sourcePoint"/><mxPoint x="790" y="560" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell id="xM"  style="endArrow=none;html=1;dashed=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="945" y="74" as="sourcePoint"/><mxPoint x="945" y="560" as="targetPoint"/></mxGeometry></mxCell>
+
+        <mxCell value="1: run()" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="60" y="105" as="sourcePoint"/><mxPoint x="235" y="105" as="targetPoint"/></mxGeometry></mxCell>
+
+        <mxCell id="loop" value="loop  [for each config C in C1, C2, C3, C4]" style="shape=umlFrame;whiteSpace=wrap;html=1;width=80;fillColor=none;strokeColor=#6c8ebf;verticalAlign=top;fontSize=10;" vertex="1" parent="1"><mxGeometry x="195" y="130" width="770" height="300" as="geometry"/></mxCell>
+
+        <mxCell value="2: generate ramp episode (alpha 0&#8594;1)" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="235" y="170" as="sourcePoint"/><mxPoint x="445" y="170" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell value="3: windows (MELT) + breach window" style="html=1;endArrow=open;dashed=1;fontSize=10;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="445" y="200" as="sourcePoint"/><mxPoint x="235" y="200" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell value="4: build_features(C)  // mask to C's signals" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="235" y="235" as="sourcePoint"/><mxPoint x="625" y="235" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell value="5: X_C" style="html=1;endArrow=open;dashed=1;fontSize=10;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="625" y="265" as="sourcePoint"/><mxPoint x="235" y="265" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell value="6: predict per window (tuned for developing fault)" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="235" y="300" as="sourcePoint"/><mxPoint x="790" y="300" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell value="7: first sustained alarm @ window t" style="html=1;endArrow=open;dashed=1;fontSize=10;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="790" y="330" as="sourcePoint"/><mxPoint x="235" y="330" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell value="8: record lead = breach &#8722; t" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="235" y="395" as="sourcePoint"/><mxPoint x="945" y="395" as="targetPoint"/></mxGeometry></mxCell>
+
+        <mxCell value="9: lead time per configuration (C1&#8594;C4)" style="html=1;endArrow=open;dashed=1;fontSize=10;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="235" y="470" as="sourcePoint"/><mxPoint x="60" y="470" as="targetPoint"/></mxGeometry></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

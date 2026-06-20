@@ -107,15 +107,18 @@ management, alerting lead time.
 
 ---
 
-## RQ-O — Observability for performance optimisation  *(feasibility: Medium–Hard — new subsystem)*
+## RQ-O — Observability-cost optimisation for detection  *(on-topic; reuses RQ-A + cost)*
 
-**RQ-O.** *Beyond detecting failures, can observability data be used to **optimise** system
-performance — i.e., to guide configuration/resource decisions toward better latency–cost
-outcomes — and does telemetry-guided optimisation beat telemetry-blind baselines?*
+**RQ-O.** *Given a telemetry/instrumentation budget, which observability configuration —
+modality mix (metrics/logs/traces/events) and trace-sampling rate — maximises detection quality
+per unit cost; and is full MELT actually cost-optimal, or is a cheaper configuration
+Pareto-dominant?*
 
-This deliberately echoes the dissertation's structural template (Chen & Li, *"Do Performance
-Aspirations Matter for Guiding Software Configuration Tuning?"*, TOSEM 2023): a multi-objective
-(latency vs cost) search where the question is whether observed signals should *guide* the search.
+This keeps RQ-O squarely on the **anomaly-detection** topic: it optimises *the observability the
+thesis is about* rather than the system, turning the "does observability matter?" ablation into a
+multi-objective **detection-F1 vs telemetry-cost** Pareto study (echoing the Chen & Li
+"performance aspirations" template). Implementation reuses the RQ-A trace-sampling operator and the
+C1–C4 feature gating; traces are weighted as the expensive pillar, scaled by the sampling rate.
 
 Sub-questions: (O1) does an observability-guided optimiser reach a target SLO with fewer trials
 than telemetry-blind search? (O2) Pareto-front quality (latency–cost hypervolume) guided vs blind;
@@ -158,3 +161,43 @@ optimisation, AIOps for optimisation (not just detection).
 
 Each experiment writes CSV+figure into `aiops/data/results/` and is runnable via a documented CLI,
 consistent with the existing `run_experiment` / `online_vs_offline` harnesses.
+
+---
+
+## Results so far (experiments implemented & run)
+
+All three experiment modules are implemented and produce real, thesis-supporting results.
+
+### RQ-A — robustness (`ml/experiments/robustness.py` → `rqA_robustness.csv`)
+Clean C4 F1 = **0.993**. Detection degrades **gracefully** with trace sampling
+(F1 0.99→0.81 from 100%→5% sampling) and noise (robust to σ=0.2, falls at σ=0.4), but the
+**modality-dropout fragility ranking is decisive: traces ΔF1 = 0.18, logs 0.001, events 0.000**.
+→ *The single most valuable signal (traces) is also the most fragile* — a new, citable finding
+that complements the old RQ3.
+
+### RQ-D — early detection / lead-time (`ml/experiments/early_detection.py` → `rqD_leadtime.csv`)
+With a gradual fault ramp and SLO breach at median window 11: the **reactive** detector gives a
+median **1-window** lead (66% early-warning, 0% false alarms); the **proactive forecaster** gives a
+median **2-window** lead (89% early-warning) at the cost of a **9%** false-alarm rate.
+→ *Forecasting buys earlier warning along a clear earliness↔precision trade-off.*
+
+### RQ-O — observability-cost optimisation for detection (`ml/experiments/optimise.py` → `rqO_obs_cost.csv`)
+*(Reframed to stay directly on the detection topic: optimise the **observability configuration**,
+not the system.)* Sweep 20 configurations = modality subset (metrics always on; logs/traces/events
+on/off) × trace-sampling rate, scoring detection F1 against a telemetry cost (traces are the
+expensive pillar, scaled by sampling). Findings on the **F1-vs-cost Pareto front**:
+- **Full MELT is Pareto-optimal but only at the extreme** (cost 7.8, F1 0.994 — the highest F1).
+- **Knee = metrics+traces** (cost 6.0, F1 0.991) — **23% cheaper than full MELT for −0.003 F1**.
+- **Logs never reach the efficient frontier** (M+L configs are dominated); **traces dominate**.
+- **Sampling slashes cost cheaply**: M+T+E at 10% trace sampling reaches F1 0.96 at cost 1.8 —
+  **~97% of full-MELT F1 at ~23% of its cost**.
+→ *"More observability is better" is true only at the high-F1 extreme; for almost any budget a
+traces-centric, sampled configuration dominates.* This answers the dissertation's core question as
+a cost-optimisation and yields a concrete minimum-viable-observability recommendation.
+
+**Run all three:**
+```
+python -m ml.experiments.robustness      --episodes 200 --out data/results
+python -m ml.experiments.early_detection --episodes 300 --out data/results
+python -m ml.experiments.optimise        --episodes 200 --out data/results
+```

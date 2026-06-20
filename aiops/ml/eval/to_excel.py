@@ -48,9 +48,9 @@ def _autofit_and_style(ws, df_ncols: int, freeze: str = "A2"):
 
 def main():
     results = Path(sys.argv[1] if len(sys.argv) > 1 else "data/results")
-    det = pd.read_csv(results / "rq4_online_vs_offline.csv")
-    cost = pd.read_csv(results / "rq4_cost.csv")
-    timeline = pd.read_csv(results / "rq4_timeline.csv")
+    det = pd.read_csv(results / "rq3_online_vs_offline.csv")
+    cost = pd.read_csv(results / "rq3_cost.csv")
+    timeline = pd.read_csv(results / "rq3_timeline.csv")
 
     # --- headline: F1 on the operational future, config x model ---
     future = det[det.segment.isin(["overall_future", "overall_allregimes"])].copy()
@@ -77,7 +77,7 @@ def main():
                     .reindex(columns=[m for m in MODEL_ORDER if m != "offline_full"])
                     .reset_index())
 
-    out = results / "rq4_offline_vs_online_comparison.xlsx"
+    out = results / "rq3_offline_vs_online_comparison.xlsx"
     with pd.ExcelWriter(out, engine="openpyxl") as xl:
         f1_pivot.round(4).to_excel(xl, sheet_name="Summary", index=False)
         f1_pivot.round(4).to_excel(xl, sheet_name="Detection_F1", index=False)

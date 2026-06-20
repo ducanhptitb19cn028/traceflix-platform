@@ -38,9 +38,9 @@ warmed up (test-then-train, unscored) over the same R0 prefix; all are then
 scored on the identical post-R0 stream (R1..R3), the operational future.
 
 Outputs (to --out):
-  rq4_online_vs_offline.csv  precision/recall/f1/auc per (config, segment, model)
-  rq4_timeline.csv           block-wise rolling F1 over the stream, both models
-  rq4_summary.json           headline numbers + drift/adaptation events
+  rq3_online_vs_offline.csv  precision/recall/f1/auc per (config, segment, model)
+  rq3_timeline.csv           block-wise rolling F1 over the stream, both models
+  rq3_summary.json           headline numbers + drift/adaptation events
 
 Run:
     python -m ml.experiments.online_vs_offline --episodes 320 --out data/results
@@ -267,8 +267,8 @@ def main():
     res = pd.DataFrame(all_rows)[
         ["config", "name", "model", "segment", "regime",
          "precision", "recall", "f1", "auc_roc", "n"]]
-    res.to_csv(out / "rq4_online_vs_offline.csv", index=False)
-    pd.DataFrame(all_tl).to_csv(out / "rq4_timeline.csv", index=False)
+    res.to_csv(out / "rq3_online_vs_offline.csv", index=False)
+    pd.DataFrame(all_tl).to_csv(out / "rq3_timeline.csv", index=False)
 
     # headline: F1 on the operational future for the three realistic models
     def _f1(sub, name):
@@ -299,9 +299,9 @@ def main():
         "headline_f1_future": headline,
         "per_config": infos,
     }
-    (out / "rq4_summary.json").write_text(json.dumps(summary, indent=2))
-    print(f"\n[*] Results -> {out}/  (rq4_online_vs_offline.csv, "
-          f"rq4_timeline.csv, rq4_summary.json)")
+    (out / "rq3_summary.json").write_text(json.dumps(summary, indent=2))
+    print(f"\n[*] Results -> {out}/  (rq3_online_vs_offline.csv, "
+          f"rq3_timeline.csv, rq3_summary.json)")
 
 
 if __name__ == "__main__":

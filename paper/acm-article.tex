@@ -625,7 +625,7 @@ C4 Full MELT           & 0.5112 & 0.8905 & \textbf{0.9834} & $+0.4722$ & $+0.092
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.86\textwidth]{fig_rq4_headline.pdf}
+\includegraphics[width=0.86\textwidth]{fig_rq3_headline.pdf}
 \caption{RQ4 headline --- F1 on the drifted future stream by learning policy and configuration. The frozen static model (grey) is flat and low regardless of telemetry; periodic retraining (orange) recovers partially; the online-adaptive model (green) dominates everywhere and, under C3/C4, exceeds the all-regimes oracle (dashed). Contrast with the monotonic stationary ceiling of Fig.~\ref{fig:rq1}.}\label{fig:rq4head}
 \end{figure}
 
@@ -726,7 +726,7 @@ Config & Learner & F1 & Max ms/win & Size (KB) & Retained win. & Total s \\
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.86\textwidth]{fig_rq4_cost.pdf}
+\includegraphics[width=0.86\textwidth]{fig_rq3_cost.pdf}
 \caption{RQ4 cost/quality trade-off (periodic vs.\ online). The online learner (green) sits top-left---higher F1 at an order-of-magnitude lower tail latency---with a tiny footprint (marker area $\propto$ model size), while periodic retraining (orange) pays $\sim$600\,ms refit spikes and a multi-megabyte footprint for lower F1.}\label{fig:rq4cost}
 \end{figure}
 

@@ -105,7 +105,7 @@ C4 Full MELT          0.511             0.891              0.983               0
 - **`offline_periodic` (scheduled retrain) helps but is not enough** — it
   recovers a lot (0.51 → 0.89) yet still trails by 6–9 F1 points, because each
   regime shift opens a **drift-response gap** until the next refresh. See the
-  sawtooth in `data/results/figures/rq4_timeline.png`.
+  sawtooth in `data/results/figures/rq3_timeline.png`.
 - **`online_adaptive` recovers to oracle level** (0.82 → 0.98) updating *per
   sample* — adaptive normalisation tracks the evolving normal, incremental
   learning + a self-selecting hyper-parameter pool keep it calibrated, no batch
@@ -117,8 +117,8 @@ C4 Full MELT          0.511             0.891              0.983               0
 Open the figures:
 
 ```
-data/results/figures/rq4_timeline.png          # rolling F1 over the drifting stream
-data/results/figures/rq4_online_vs_offline.png # F1 bars: static < periodic < online ≈ oracle
+data/results/figures/rq3_timeline.png          # rolling F1 over the drifting stream
+data/results/figures/rq3_online_vs_offline.png # F1 bars: static < periodic < online ≈ oracle
 ```
 
 ## A3. Cost — is online affordable? (the honest follow-up)
@@ -226,9 +226,9 @@ TF_LIVE=1 PROM_URL=http://localhost:9090 LOKI_URL=http://localhost:3100 \
 | `aiops/data/results/rq1_completeness.csv` | RQ1 detection vs C1–C4 |
 | `aiops/data/results/rq2_algorithms.csv` | RQ2 algorithm comparison |
 | `aiops/data/results/rq3_rca.csv` | RQ3 Top-k RCA, traces excluded vs included |
-| `aiops/data/results/rq4_online_vs_offline.csv` | RQ4 per-regime detection, all 4 models |
-| `aiops/data/results/rq4_timeline.csv` | RQ4 rolling F1 over the drifting stream |
-| `aiops/data/results/rq4_cost.csv` | RQ4 cost: latency, model size, retained buffer |
+| `aiops/data/results/rq3_online_vs_offline.csv` | RQ4 per-regime detection, all 4 models |
+| `aiops/data/results/rq3_timeline.csv` | RQ4 rolling F1 over the drifting stream |
+| `aiops/data/results/rq3_cost.csv` | RQ4 cost: latency, model size, retained buffer |
 | `aiops/data/results/*_summary.json` | machine-readable headlines |
 | `aiops/data/results/figures/*.png` | publication-ready figures for the write-up |
 

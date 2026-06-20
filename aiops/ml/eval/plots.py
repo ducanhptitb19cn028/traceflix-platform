@@ -14,7 +14,7 @@ def plot_online_vs_offline(d: Path, out: Path):
     """RQ4 figures: (a) rolling-F1 timeline of the static batch model vs the
     online adaptive model across drifting regimes; (b) per-config F1 bars for
     static / online / oracle. Skipped quietly if RQ4 CSVs are absent."""
-    tl_path, tab_path = d / "rq4_timeline.csv", d / "rq4_online_vs_offline.csv"
+    tl_path, tab_path = d / "rq3_timeline.csv", d / "rq3_online_vs_offline.csv"
     if not (tl_path.exists() and tab_path.exists()):
         return
 
@@ -40,7 +40,7 @@ def plot_online_vs_offline(d: Path, out: Path):
         ax.set_title(f"RQ4: detection over a drifting stream -- {cfg}")
         ax.set_ylabel("rolling F1"); ax.set_ylim(0, 1.03)
         ax.set_xlabel("stream position (window index)"); ax.legend(loc="lower left")
-    plt.tight_layout(); plt.savefig(out / "rq4_timeline.png", dpi=150); plt.close()
+    plt.tight_layout(); plt.savefig(out / "rq3_timeline.png", dpi=150); plt.close()
 
     # (b) per-config overall F1 bars (static vs online vs oracle ceiling)
     tab = pd.read_csv(tab_path)
@@ -56,7 +56,7 @@ def plot_online_vs_offline(d: Path, out: Path):
     ax.set_title("RQ4: F1 on the operational future (post-drift)\n"
                  "frozen vs scheduled-retrain vs online adaptive vs all-regime oracle")
     ax.set_ylabel("F1"); plt.xticks(rotation=0); plt.tight_layout()
-    plt.savefig(out / "rq4_online_vs_offline.png", dpi=150); plt.close()
+    plt.savefig(out / "rq3_online_vs_offline.png", dpi=150); plt.close()
     print(f"RQ4 figures -> {out}/")
 
 
@@ -75,20 +75,20 @@ def main(results_dir: str = "data/results"):
     ax.set_ylabel("score"); plt.tight_layout()
     plt.savefig(out / "rq1_completeness.png", dpi=150); plt.close()
 
-    rq2 = pd.read_csv(d / "rq2_algorithms.csv")
-    ax = rq2.plot(x="model", y=["precision", "recall", "f1"], kind="bar",
-                  figsize=(8, 4))
-    ax.set_title("RQ2: Algorithm comparison on full MELT (C4)")
+    mf = pd.read_csv(d / "rq4_model_family.csv")     # paper RQ4 (model family)
+    ax = mf.plot(x="model", y=["precision", "recall", "f1"], kind="bar",
+                 figsize=(8, 4))
+    ax.set_title("Model-family comparison on full MELT (C4)")
     plt.xticks(rotation=20); plt.tight_layout()
-    plt.savefig(out / "rq2_algorithms.png", dpi=150); plt.close()
+    plt.savefig(out / "rq4_model_family.png", dpi=150); plt.close()
 
-    rq3 = pd.read_csv(d / "rq3_rca.csv")
-    pivot = rq3.pivot(index="k", columns="approach", values="topk_accuracy")
+    loc = pd.read_csv(d / "rq2_localisation.csv")     # paper RQ2 (localisation)
+    pivot = loc.pivot(index="k", columns="approach", values="topk_accuracy")
     ax = pivot.plot(kind="bar", figsize=(7, 4), ylim=(0, 1.05))
-    ax.set_title("RQ3: Top-k RCA, traces excluded vs included\n"
+    ax.set_title("Top-k root-cause localisation, traces excluded vs included\n"
                  "(note: 3-service mesh -> Top-1 is the discriminating metric)")
     ax.set_ylabel("Top-k accuracy"); plt.tight_layout()
-    plt.savefig(out / "rq3_rca.png", dpi=150); plt.close()
+    plt.savefig(out / "rq2_localisation.png", dpi=150); plt.close()
     print(f"Figures -> {out}/")
 
 

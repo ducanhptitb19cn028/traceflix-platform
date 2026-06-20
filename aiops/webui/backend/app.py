@@ -47,28 +47,28 @@ app.add_middleware(
 # experiment registry: key -> (python -m module, arg builder, output files)
 EXPERIMENTS = {
     "rq123": {
-        "label": "RQ1–RQ3 — completeness, algorithms, RCA",
+        "label": "RQ1/RQ2/RQ4 — completeness, localisation, model family",
         "module": "ml.experiments.run_experiment",
         "args": lambda ep, cfgs: ["--episodes", str(ep), "--out", "data/results"],
-        "outputs": ["rq1_completeness.csv", "rq2_algorithms.csv", "rq3_rca.csv"],
+        "outputs": ["rq1_completeness.csv", "rq2_localisation.csv", "rq4_model_family.csv"],
     },
     "rq4": {
-        "label": "RQ4 — offline vs online detection (drift)",
+        "label": "RQ3 — static vs periodic vs online detection under drift",
         "module": "ml.experiments.online_vs_offline",
         "args": lambda ep, cfgs: ["--episodes", str(ep), "--configs", cfgs, "--out", "data/results"],
-        "outputs": ["rq4_online_vs_offline.csv", "rq4_timeline.csv"],
+        "outputs": ["rq3_online_vs_offline.csv", "rq3_timeline.csv"],
     },
     "cost": {
-        "label": "RQ4 — cost comparison",
+        "label": "RQ3 — cost comparison (drift)",
         "module": "ml.experiments.cost_compare",
         "args": lambda ep, cfgs: ["--episodes", str(ep), "--configs", cfgs, "--out", "data/results"],
-        "outputs": ["rq4_cost.csv"],
+        "outputs": ["rq3_cost.csv"],
     },
     "excel": {
         "label": "Export → comparison workbook (Excel)",
         "module": "ml.eval.to_excel",
         "args": lambda ep, cfgs: ["data/results"],
-        "outputs": ["rq4_offline_vs_online_comparison.xlsx"],
+        "outputs": ["rq3_offline_vs_online_comparison.xlsx"],
     },
     "observability": {
         "label": "Export → observability MELT data (Excel/CSV)",
@@ -169,7 +169,7 @@ def _df(name: str):
 
 @app.get("/api/results/comparison")
 def comparison():
-    det = _df("rq4_online_vs_offline.csv")
+    det = _df("rq3_online_vs_offline.csv")
     if det is None:
         raise HTTPException(404, "no results yet — run RQ4 in Offline Mode")
     models = ["offline_static", "offline_periodic", "online_adaptive", "offline_full"]
@@ -185,8 +185,8 @@ def comparison():
                      .reindex(columns=[m for m in models if m != "offline_full"])
                      .reset_index().round(4))
 
-    tl = _df("rq4_timeline.csv")
-    cost = _df("rq4_cost.csv")
+    tl = _df("rq3_timeline.csv")
+    cost = _df("rq3_cost.csv")
     figs = sorted(p.name for p in FIGURES.glob("*.png")) if FIGURES.exists() else []
 
     def recs(d):

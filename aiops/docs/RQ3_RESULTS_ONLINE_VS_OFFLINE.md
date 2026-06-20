@@ -1,15 +1,15 @@
-# Online vs Offline Model Pipeline: Consolidated Results (RQ1, RQ3, RQ4)
+# Online vs Offline Model Pipeline: Consolidated Results (RQ1, RQ2, RQ3)
 
 This document collects **all** experimental results for the anomaly-detection
 study: detection completeness across telemetry configurations (**RQ1**),
-root-cause localisation (**RQ3**), and the head-to-head comparison between the
+root-cause localisation (**RQ2**), and the head-to-head comparison between the
 **offline (batch)** and **online (streaming)** pipelines across all four
-configurations and four operating regimes (**RQ4**). It ends with a single
+configurations and four operating regimes (**RQ3**). It ends with a single
 overall conclusion.
 
-- **Source data:** `aiops/data/results/` (`rq1_completeness.csv`, `rq3_rca.csv`,
-  `rq4_online_vs_offline.csv`, `rq4_cost.csv`, `rq4_timeline.csv`,
-  `summary.json`, `rq4_summary.json`, `rq4_cost_summary.json`)
+- **Source data:** `aiops/data/results/` (`rq1_completeness.csv`, `rq2_localisation.csv`,
+  `rq3_online_vs_offline.csv`, `rq3_cost.csv`, `rq3_timeline.csv`,
+  `summary.json`, `rq3_summary.json`, `rq3_cost_summary.json`)
 - **Conceptual background:** [`ONLINE_VS_OFFLINE.md`](ONLINE_VS_OFFLINE.md),
   [`ONLINE_PIPELINE.md`](ONLINE_PIPELINE.md)
 
@@ -63,15 +63,15 @@ Best-performing batch model per config. Higher is better.
 The biggest jump is **adding traces** (C2→C3: F1 0.933 → 0.988), which lifts both
 precision and recall together — traces resolve the cross-service signal that
 metrics and logs alone miss. Full MELT (C4) is marginally the best at F1 ≈ 0.994.
-This is the stationary, single-pass ceiling; RQ4 below shows how that ceiling
+This is the stationary, single-pass ceiling; RQ3 below shows how that ceiling
 behaves once the stream drifts.
 
 ---
 
-## 3. RQ3 — Root-cause localisation (top-k accuracy)
+## 3. RQ2 — Root-cause localisation (top-k accuracy)
 
 Once an anomaly is detected, can the pipeline name the culprit service? Top-k
-localisation accuracy over the injected fault episodes (`rq3_rca.csv`). Higher is
+localisation accuracy over the injected fault episodes (`rq2_localisation.csv`). Higher is
 better.
 
 | Approach | top-1 accuracy | top-2 accuracy |
@@ -87,7 +87,7 @@ from correlated symptoms. This mirrors RQ1: traces are the decisive signal.
 
 ---
 
-## 4. RQ4 — Headline result: F1 on the future (drifted) stream
+## 4. RQ3 — Headline result: F1 on the future (drifted) stream
 
 F1 over the 8,640 post-warm-up windows (`overall_future`). Higher is better.
 
@@ -106,7 +106,7 @@ reaching **~0.98** under full MELT — and even beats the all-regime oracle
 
 ---
 
-## 5. RQ4 — Per-regime F1 breakdown
+## 5. RQ3 — Per-regime F1 breakdown
 
 F1 by model × regime, per configuration. Bold marks the best learner in each regime.
 
@@ -151,10 +151,10 @@ the classic "stale normal" failure mode.
 
 ---
 
-## 6. RQ4 — Cost / efficiency comparison (periodic vs online)
+## 6. RQ3 — Cost / efficiency comparison (periodic vs online)
 
 Operational measurements (latency, footprint, retained windows, CPU) come from a
-dedicated cost-profiling run (`rq4_cost.csv`, `rq4_cost_summary.json`); because
+dedicated cost-profiling run (`rq3_cost.csv`, `rq3_cost_summary.json`); because
 they reflect the *mechanism* rather than the dataset size, they are reported here
 alongside the Run-B `overall_future` F1 (§4) so a single F1 value is used
 throughout.
@@ -198,9 +198,9 @@ steady-state CPU.
 
 ---
 
-## 7. RQ4 — Online-model adaptation behaviour
+## 7. RQ3 — Online-model adaptation behaviour
 
-From `rq4_summary.json` (`per_config`). The champion-by-F1 bandit re-selects
+From `rq3_summary.json` (`per_config`). The champion-by-F1 bandit re-selects
 hyper-parameters as drift appears; richer telemetry needs fewer corrective
 adapt events.
 
@@ -220,12 +220,12 @@ both raises accuracy and stabilises the adaptation process.
 
 ## 8. Conclusion
 
-**RQ1 (completeness)** and **RQ3 (localisation)** establish that telemetry
+**RQ1 (completeness)** and **RQ2 (localisation)** establish that telemetry
 richness drives both detection and root-cause quality: F1 climbs monotonically
 from 0.906 (Metrics-Only) to 0.994 (Full MELT), and **traces are the decisive
 signal** — they push detection F1 from 0.933 to 0.988 and root-cause top-1
 accuracy from 0.91 to a perfect 1.0. But RQ1 measures a *stationary* ceiling;
-RQ4 shows what happens once the stream drifts.
+RQ3 shows what happens once the stream drifts.
 
 Across **every** configuration and the **large majority of regimes**, the **online
 adaptive pipeline dominates the offline pipelines** on detection quality, and it

@@ -1,0 +1,459 @@
+%% Verified references for the THREE NEW RQs (RQ-D early detection, RQ-A robustness,
+%% RQ-O observability-for-optimisation). 2022-2026, verified against DBLP (real DOIs).
+%% Target ~70 total (~23 per RQ). Reusable from the paper's bib: xu2024forecasting
+%% (System States Forecasting), wette2024omlad (online AD), huang2025mint /
+%% wu2025tracesampling (trace sampling -> RQ-A), leest2025mlmonitoring (model decay).
+
+%% ===================== RQ-D: early detection / lead-time =====================
+
+@inproceedings{lu2024misp,
+  author    = {Xianting Lu and Yunong Wang and Yu Fu and Qi Sun and Xuhua Ma and Xudong Zheng and Cheng Zhuo},
+  title     = {{MISP}: A Multimodal-based Intelligent Server Failure Prediction Model for Cloud Computing Systems},
+  booktitle = {Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD)},
+  pages     = {5509--5520},
+  year      = {2024},
+  doi       = {10.1145/3637528.3671568}
+}
+%% supports: proactive server/failure prediction before incident (RQ-D)
+
+@article{darban2025dltsad,
+  author  = {Zahra Zamanzadeh Darban and Geoffrey I. Webb and Shirui Pan and Charu Aggarwal and Mahsa Salehi},
+  title   = {Deep Learning for Time Series Anomaly Detection: A Survey},
+  journal = {ACM Computing Surveys},
+  volume  = {57},
+  number  = {1},
+  pages   = {15:1--15:42},
+  year    = {2025},
+  doi     = {10.1145/3691338}
+}
+%% supports: forecasting/reconstruction-based TS anomaly detection survey (RQ-D)
+
+@article{wang2024incident,
+  author  = {Hanzhang Wang and Gowtham Kumar Tangirala and Gilkara Pranav Naidu and Charles Mayville and Arighna Roy and Joanne Sun and Ramesh Babu Mandava},
+  title   = {Anomaly Detection for Incident Response at Scale},
+  journal = {arXiv preprint arXiv:2404.16887},
+  year    = {2024},
+  doi     = {10.48550/arXiv.2404.16887}
+}
+%% supports: early alerting, MTTD reduction, lead-time at industrial scale (RQ-D)
+
+@inproceedings{zhao2023robust,
+  author    = {Chenyu Zhao and Minghua Ma and Zhenyu Zhong and Shenglin Zhang and Zhiyuan Tan and Xiao Xiong and LuLu Yu and Jiayi Feng and Yongqian Sun and Yuzhi Zhang and Dan Pei and Qingwei Lin and Dongmei Zhang},
+  title     = {Robust Multimodal Failure Detection for Microservice Systems},
+  booktitle = {Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD)},
+  year      = {2023},
+  doi       = {10.1145/3580305.3599902}
+}
+%% supports: multimodal failure detection in microservices (RQ-D / RQ-A)
+
+@article{wadinger2024changepoint,
+  author  = {Marek Wadinger and Michal Kvasnica and Yoshinobu Kawahara},
+  title   = {Change-Point Detection in Industrial Data Streams based on Online Dynamic Mode Decomposition with Control},
+  journal = {arXiv preprint arXiv:2407.05976},
+  year    = {2024},
+  doi     = {10.48550/arXiv.2407.05976}
+}
+%% supports: online change-point detection in streaming data (RQ-D)
+
+@article{li2024changepoint,
+  author  = {Jie Li and Paul Fearnhead and Piotr Fryzlewicz and Tengyao Wang},
+  title   = {Automatic change-point detection in time series via deep learning},
+  journal = {Journal of the Royal Statistical Society Series B: Statistical Methodology},
+  volume  = {86},
+  year    = {2024},
+  doi     = {10.1093/jrsssb/qkae004}
+}
+%% supports: deep-learning change-point detection (RQ-D early signal)
+
+@article{guruge2025autoscaling,
+  author  = {Pasan Bhanu Guruge and Y. H. P. P. Priyadarshana},
+  title   = {Time series forecasting-based {Kubernetes} autoscaling using {Facebook Prophet} and {Long Short-Term Memory}},
+  journal = {Frontiers in Computer Science},
+  volume  = {7},
+  year    = {2025},
+  doi     = {10.3389/fcomp.2025.1509165}
+}
+%% supports: proactive forecasting -> act before degradation (RQ-D)
+
+%% ===================== RQ-A: robustness to telemetry degradation ============
+%% reusable from paper bib: huang2025mint, wu2025tracesampling (trace sampling).
+
+@article{wu2024missingsurvey,
+  author  = {Renjie Wu and Hu Wang and Hsiang-Ting Chen},
+  title   = {A Comprehensive Survey on Deep Multimodal Learning with Missing Modality},
+  journal = {arXiv preprint arXiv:2409.07825},
+  year    = {2024},
+  doi     = {10.48550/arXiv.2409.07825}
+}
+%% supports: robustness to missing modalities (RQ-A modality dropout)
+
+@inproceedings{humblot2024noisy,
+  author    = {Galadrielle Humblot-Renaux and Sergio Escalera and Thomas B. Moeslund},
+  title     = {A Noisy Elephant in the Room: Is Your Out-of-Distribution Detector Robust to Label Noise?},
+  booktitle = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2024},
+  doi       = {10.1109/CVPR52733.2024.02135}
+}
+%% supports: robustness of detection to noise (RQ-A noise)
+
+@inproceedings{wu2024heterophilic,
+  author    = {Junhang Wu and Ruimin Hu and Dengshi Li and Zijun Huang and Lingfei Ren and Yilong Zang},
+  title     = {Robust Heterophilic Graph Learning against Label Noise for Anomaly Detection},
+  booktitle = {Proceedings of the 33rd International Joint Conference on Artificial Intelligence (IJCAI)},
+  pages     = {2451--2459},
+  year      = {2024},
+  url       = {https://www.ijcai.org/proceedings/2024/271}
+}
+%% supports: noise-robust anomaly detection (RQ-A noise)
+
+@inproceedings{zhao2023admoe,
+  author    = {Yue Zhao and Guoqing Zheng and Subhabrata Mukherjee and Robert McCann and Ahmed Awadallah},
+  title     = {{ADMoE}: Anomaly Detection with Mixture-of-Experts from Noisy Labels},
+  booktitle = {Proceedings of the 37th AAAI Conference on Artificial Intelligence (AAAI)},
+  year      = {2023},
+  doi       = {10.1609/aaai.v37i4.25620}
+}
+%% supports: anomaly detection under noisy labels (RQ-A robustness)
+
+@article{kumari2024investigation,
+  author  = {Shalini Kumari and Chander Prabha and Asif Karim and Md. Mehedi Hassan and Sami Azam},
+  title   = {A Comprehensive Investigation of Anomaly Detection Methods in Deep Learning and Machine Learning: 2019--2023},
+  journal = {IET Information Security},
+  volume  = {2024},
+  number  = {1},
+  year    = {2024},
+  doi     = {10.1049/2024/8821891}
+}
+%% supports: AD methods survey incl. robustness/data-quality (RQ-A)
+
+%% ===================== RQ-O: observability-cost optimisation for detection ===
+%% reusable from paper bib: huang2025mint, wu2025tracesampling, hausenblas2023roi.
+
+@article{grabher2025modeling,
+  author  = {Gabriel Job Antunes Grabher and Fumio Machida and Thomas Ropars},
+  title   = {Modeling Anomaly Detection in Cloud Services: Analysis of the Properties that Impact Latency and Resource Consumption},
+  journal = {arXiv preprint arXiv:2511.17119},
+  year    = {2025},
+  doi     = {10.48550/arXiv.2511.17119}
+}
+%% supports: detection accuracy (precision/recall/freq) vs latency/cost trade-off (RQ-O core)
+
+@article{sezgin2025multiobjective,
+  author  = {An{\i}l Sezgin and Mustafa Ula{\c{s}} and Aytug Boyac{\i}},
+  title   = {Multi-Objective Feature Selection for Intrusion Detection Systems: A Comparative Analysis of Bio-Inspired Optimization Algorithms},
+  journal = {Sensors},
+  volume  = {25},
+  number  = {19},
+  pages   = {6099},
+  year    = {2025},
+  doi     = {10.3390/s25196099}
+}
+%% supports: multi-objective (detection vs cost/feature-budget) Pareto selection (RQ-O)
+
+@inproceedings{chen2024tracemesh,
+  author    = {Zhuangbin Chen and Zhihan Jiang and Yuxin Su and Michael R. Lyu and Zibin Zheng},
+  title     = {{Tracemesh}: Scalable and Streaming Sampling for Distributed Traces},
+  booktitle = {17th IEEE International Conference on Cloud Computing (CLOUD)},
+  year      = {2024},
+  doi       = {10.1109/CLOUD62652.2024.00016}
+}
+%% supports: which traces to keep -> cost vs RCA-coverage (RQ-O trace-sampling lever)
+
+@inproceedings{gias2023samplehst,
+  author    = {Alim Ul Gias and Yicheng Gao and Matthew Sheldon and Jos{\'e} A. Perusqu{\'i}a and Owen O'Brien and Giuliano Casale},
+  title     = {{SampleHST}: Efficient On-the-Fly Selection of Distributed Traces},
+  booktitle = {NOMS 2023 IEEE/IFIP Network Operations and Management Symposium},
+  pages     = {1--9},
+  year      = {2023},
+  doi       = {10.1109/NOMS56928.2023.10154383}
+}
+%% supports: efficient trace selection under budget (RQ-O)
+
+@article{zhang2024logcleaner,
+  author  = {Lingzhe Zhang and Tong Jia and Kangjin Wang and Mengxi Jia and Yang Yong and Ying Li},
+  title   = {Reducing Events to Augment Log-based Anomaly Detection Models: An Empirical Study},
+  journal = {arXiv preprint arXiv:2409.04834},
+  year    = {2024},
+  doi     = {10.48550/arXiv.2409.04834}
+}
+%% supports: log reduction (cut 70% events) keeps detection -> cost lever (RQ-O)
+
+@article{fernando2025efficient,
+  author  = {Duneesha Fernando and Maria A. Rodriguez and Patricia Arroba and Leila Ismail and Rajkumar Buyya},
+  title   = {Efficient Training Approaches for Performance Anomaly Detection Models in Edge Computing Environments},
+  journal = {ACM Transactions on Autonomous and Adaptive Systems},
+  year    = {2025},
+  doi     = {10.1145/3725736}
+}
+%% supports: accuracy vs training/compute cost trade-off for detection (RQ-O)
+
+%% ----- additional RQ-A (robustness) -----
+@article{wu2025oodts,
+  author  = {Xin Wu and Fei Teng and Xingwang Li and Ji Zhang and Tianrui Li and Qiang Duan},
+  title   = {Out-of-Distribution Generalization in Time Series: A Survey},
+  journal = {arXiv preprint arXiv:2503.13868},
+  year    = {2025},
+  doi     = {10.48550/arXiv.2503.13868}
+}
+%% supports: robustness to distribution shift (RQ-A)
+
+@article{xu2024llmood,
+  author  = {Ruiyao Xu and Kaize Ding},
+  title   = {Large Language Models for Anomaly and Out-of-Distribution Detection: A Survey},
+  journal = {arXiv preprint arXiv:2409.01980},
+  year    = {2024},
+  doi     = {10.48550/arXiv.2409.01980}
+}
+%% supports: OOD/novelty robustness in detection (RQ-A)
+
+@article{yuan2022trustworthy,
+  author  = {Shuhan Yuan and Xintao Wu},
+  title   = {Trustworthy Anomaly Detection: A Survey},
+  journal = {arXiv preprint arXiv:2202.07787},
+  year    = {2022}
+}
+%% supports: robustness/trust dimensions of detection (RQ-A)
+
+@article{wang2024imputation,
+  author  = {Jun Wang and Wenjie Du and Wei Cao and Keli Zhang and Wenjia Wang and Yuxuan Liang and Qingsong Wen},
+  title   = {Deep Learning for Multivariate Time Series Imputation: A Survey},
+  journal = {arXiv preprint arXiv:2402.04059},
+  year    = {2024},
+  doi     = {10.48550/arXiv.2402.04059}
+}
+%% supports: handling missing/incomplete telemetry (RQ-A missing data)
+
+%% ----- additional RQ-D (early detection) -----
+@inproceedings{jiang2024hdd,
+  author    = {Chao Jiang and Dan He},
+  title     = {Hard disk drive failure prediction model based on Temporal Convolutional Network combined with Auto-Encoder},
+  booktitle = {Proceedings of the 2024 8th International Conference on Computer Science and Artificial Intelligence (CSAI)},
+  year      = {2024},
+  doi       = {10.1145/3709026.3709057}
+}
+%% supports: proactive hardware failure prediction (RQ-D)
+
+@article{wu2024rul,
+  author  = {Fuhui Wu and Qingbo Wu and Yusong Tan and Xinghua Xu},
+  title   = {Remaining Useful Life Prediction Based on Deep Learning: A Survey},
+  journal = {Sensors},
+  volume  = {24},
+  number  = {11},
+  pages   = {3454},
+  year    = {2024},
+  doi     = {10.3390/s24113454}
+}
+%% supports: prognostics / time-to-failure prediction framing (RQ-D)
+
+@article{poenaru2025prepared,
+  author  = {Lorena Poenaru-Olaru and Wouter van 't Hof and Adrian Stando and Arkadiusz P. Trawinski and Eileen Kapel and Jan S. Rellermeyer and Luis Cruz and Arie van Deursen},
+  title   = {Prepared for the Unknown: Adapting {AIOps} Capacity Forecasting Models to Data Changes},
+  journal = {arXiv preprint arXiv:2510.10320},
+  year    = {2025},
+  doi     = {10.48550/arXiv.2510.10320}
+}
+%% supports: forecasting models adapting to change (RQ-D / RQ-A)
+
+%% ----- additional RQ-O (observability-cost / efficiency / AIOps) -----
+@article{cheng2023aiops,
+  author  = {Qian Cheng and Doyen Sahoo and Amrita Saha and Wenzhuo Yang and Chenghao Liu and Gerald Woo and Manpreet Singh and Silvio Savarese and Steven C. H. Hoi},
+  title   = {{AI} for {IT} Operations ({AIOps}) on Cloud Platforms: Reviews, Opportunities and Challenges},
+  journal = {arXiv preprint arXiv:2304.04661},
+  year    = {2023},
+  doi     = {10.48550/arXiv.2304.04661}
+}
+%% supports: AIOps scope incl. cost/efficiency of operations analytics (RQ-O)
+
+@inproceedings{li2023clover,
+  author    = {Baolin Li and Siddharth Samsi and Vijay Gadepally and Devesh Tiwari},
+  title     = {{Clover}: Toward Sustainable {AI} with Carbon-Aware Machine Learning Inference Service},
+  booktitle = {Proceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis (SC)},
+  year      = {2023},
+  doi       = {10.1145/3581784.3607034}
+}
+%% supports: accuracy vs carbon/energy cost trade-off for ML services (RQ-O)
+
+@article{gu2026kpiroot,
+  author  = {Wenwei Gu and Renyi Zhong and Guangba Yu and Xinying Sun and Jinyang Liu and Yintong Huo and Zhuangbin Chen and Jianping Zhang and Jiazhen Gu and Yongqiang Yang and Michael R. Lyu},
+  title   = {{KPIRoot+}: An efficient integrated framework for anomaly detection and root cause analysis in large-scale cloud systems},
+  journal = {Empirical Software Engineering},
+  year    = {2026},
+  doi     = {10.1007/s10664-025-10769-0}
+}
+%% supports: efficiency (time-cost reduction) in large-scale detection (RQ-O)
+
+%% ----- additional RQ-A (robustness, contamination, noise) -----
+@inproceedings{wang2025noiseresilient,
+  author    = {Yaxuan Wang and Hao Cheng and Jing Xiong and Qingsong Wen and Han Jia and Ruixuan Song and Liyuan Zhang and Zhaowei Zhu and Yang Liu},
+  title     = {Noise-Resilient Point-wise Anomaly Detection in Time Series Using Weak Segment Labels},
+  booktitle = {Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD)},
+  year      = {2025},
+  doi       = {10.1145/3690624.3709257}
+}
+%% supports: noise-resilient detection (RQ-A noise)
+
+@article{zhang2025cleanet,
+  author  = {Songhan Zhang and Yuanhao Lai and Pengfei Zheng and Boxi Yu and Xiaoying Tang and Qiuai Fu and Pinjia He},
+  title   = {{CLEANet}: Robust and Efficient Anomaly Detection in Contaminated Multivariate Time Series},
+  journal = {arXiv preprint arXiv:2510.22619},
+  year    = {2025},
+  doi     = {10.48550/arXiv.2510.22619}
+}
+%% supports: robust + efficient detection on contaminated data (RQ-A / RQ-O)
+
+@article{takahashi2024pu,
+  author  = {Hiroshi Takahashi and Tomoharu Iwata and Atsutoshi Kumagai and Yuki Yamanaka},
+  title   = {Deep Positive-Unlabeled Anomaly Detection for Contaminated Unlabeled Data},
+  journal = {arXiv preprint arXiv:2405.18929},
+  year    = {2024},
+  doi     = {10.48550/arXiv.2405.18929}
+}
+%% supports: robustness to contaminated/imperfect labels (RQ-A)
+
+%% ----- additional RQ-D (SLA-breach / failure-propagation prediction) -----
+@inproceedings{fehresti2025sla,
+  author    = {Sara Fehresti and Farhoud Jafari Kaleibar and Marin Litoiu},
+  title     = {Framework for {SLA}-Breach Prediction in Cloud-Native Microservices},
+  booktitle = {2025 IEEE International Conference on Collaborative Advances in Software and Computing (CASCON)},
+  pages     = {108--117},
+  year      = {2025},
+  doi       = {10.1109/cascon66301.2025.00033}
+}
+%% supports: predict SLO/SLA breach before it happens (RQ-D core)
+
+@article{li2026propagation,
+  author  = {Linling Li},
+  title   = {Service dependency modeling and failure propagation prediction in distributed systems based on graph neural networks},
+  journal = {Discover Artificial Intelligence},
+  volume  = {6},
+  year    = {2026},
+  doi     = {10.1007/s44163-026-01213-3}
+}
+%% supports: predicting failure propagation ahead of impact (RQ-D)
+
+%% ----- batch: RQ-O sampling/autoscaling + RQ-A imbalance + RQ-D -----
+@article{huang2024trastrainer,
+  author  = {Haiyu Huang and Xiaoyu Zhang and Pengfei Chen and Zilong He and Zhiming Chen and Guangba Yu and Hongyang Chen and Chen Sun},
+  title   = {{TraStrainer}: Adaptive Sampling for Distributed Traces with System Runtime State},
+  journal = {Proceedings of the ACM on Software Engineering},
+  volume  = {1},
+  number  = {FSE},
+  pages   = {473--493},
+  year    = {2024},
+  doi     = {10.1145/3643748}
+}
+%% supports: runtime-state-aware adaptive trace sampling (RQ-O sampling lever)
+
+@article{xie2024pbscaler,
+  author  = {Shuaiyu Xie and Jian Wang and Bing Li and Zekun Zhang and Duantengchuan Li and Patrick C. K. Hung},
+  title   = {{PBScaler}: A Bottleneck-Aware Autoscaling Framework for Microservice-Based Applications},
+  journal = {IEEE Transactions on Services Computing},
+  year    = {2024},
+  doi     = {10.1109/TSC.2024.3376202}
+}
+%% supports: telemetry-driven bottleneck-aware scaling decisions (RQ-O / RQ-D)
+
+@article{mehran2025adapt,
+  author  = {Narges Mehran and Nikolay Nikolov and Radu Prodan and Dumitru Roman and Dragi Kimovski and Frank Pallas and Peter Dorfinger},
+  title   = {{ADApt}: Edge Device Anomaly Detection and Microservice Replica Prediction},
+  journal = {arXiv preprint arXiv:2504.03698},
+  year    = {2025},
+  doi     = {10.48550/arXiv.2504.03698}
+}
+%% supports: detection + proactive replica prediction (RQ-D)
+
+@article{wang2024costsensitive,
+  author  = {Xiaofeng Wang and Ying Zhang and Ningning Bai and Qinhua Yu and Qin Wang},
+  title   = {Class-imbalanced time series anomaly detection method based on cost-sensitive hybrid network},
+  journal = {Expert Systems with Applications},
+  volume  = {238},
+  year    = {2024},
+  doi     = {10.1016/j.eswa.2023.122192}
+}
+%% supports: imbalance/cost-sensitive detection (RQ-A robustness to skew)
+
+%% ----- batch: GNN/forecasting detectors (RQ-D / RQ-A) -----
+@article{xue2025forecasting,
+  author  = {Zhihao Xue and Yun Zi and Nia Qi and Ming Gong and Yujun Zou},
+  title   = {Multi-Level Service Performance Forecasting via Spatiotemporal Graph Neural Networks},
+  journal = {arXiv preprint arXiv:2508.07122},
+  year    = {2025},
+  doi     = {10.48550/arXiv.2508.07122}
+}
+%% supports: forecasting service performance to act early (RQ-D)
+
+@article{xu2024hypergraph,
+  author  = {Hongyi Xu},
+  title   = {Hypergraph-based multi-scale spatio-temporal graph convolution network for Time-Series anomaly detection},
+  journal = {arXiv preprint arXiv:2410.22256},
+  year    = {2024},
+  doi     = {10.48550/arXiv.2410.22256}
+}
+%% supports: spatio-temporal detection (RQ-D / RQ-A)
+
+@article{huang2024graphmoe,
+  author  = {Xiaoyu Huang and Weidong Chen and Bo Hu and Zhendong Mao},
+  title   = {Graph Mixture of Experts and Memory-augmented Routers for Multivariate Time Series Anomaly Detection},
+  journal = {arXiv preprint arXiv:2412.19108},
+  year    = {2024},
+  doi     = {10.48550/arXiv.2412.19108}
+}
+%% supports: robust multivariate detection (RQ-A)
+
+@article{yang2025webservice,
+  author  = {Xixuan Yang and Xin Huang and Chiming Duan and Tong Jia and Shandong Dong and Ying Li and Gang Huang},
+  title   = {Enhancing Web Service Anomaly Detection via Fine-grained Multi-modal Association and Frequency Domain Analysis},
+  journal = {arXiv preprint arXiv:2501.16875},
+  year    = {2025},
+  doi     = {10.48550/arXiv.2501.16875}
+}
+%% supports: multimodal association robustness (RQ-A)
+
+%% ----- final batch: localization, monitoring, AD surveys/eval -----
+@inproceedings{somashekar2024gamma,
+  author    = {Gagan Somashekar and Anurag Dutt and Mainak Adak and Tania Lorido-Botran and Anshul Gandhi},
+  title     = {{GAMMA}: Graph Neural Network-Based Multi-Bottleneck Localization for Microservices Applications},
+  booktitle = {Proceedings of the ACM Web Conference (WWW)},
+  year      = {2024},
+  doi       = {10.1145/3589334.3645665}
+}
+%% supports: bottleneck localization to act on (RQ-D / RQ-O)
+
+@article{galagali2022monitoring,
+  author  = {Nikhil Galagali},
+  title   = {Practical data monitoring in the internet-services domain},
+  journal = {arXiv preprint arXiv:2203.08067},
+  year    = {2022},
+  doi     = {10.48550/arXiv.2203.08067}
+}
+%% supports: practical monitoring at scale, false-alarm/cost (RQ-O)
+
+@article{liu2025diffusion,
+  author  = {Jing Liu and Zhenchao Ma and Zepu Wang and Yang Liu and Zehua Wang and Peng Sun and Liang Song and Bo Hu and Azzedine Boukerche and Victor C. M. Leung},
+  title   = {A Survey on Diffusion Models for Anomaly Detection},
+  journal = {arXiv preprint arXiv:2501.11430},
+  year    = {2025},
+  doi     = {10.48550/arXiv.2501.11430}
+}
+%% supports: modern generative AD methods landscape (RQ-A / general)
+
+@article{yahya2025reconstruction,
+  author  = {Mohammed A. Yahya and Antonio R. Moya and Sebasti{\'a}n Ventura},
+  title   = {Deep learning for multivariate time series anomaly detection: an evaluation of reconstruction-based methods},
+  journal = {Artificial Intelligence Review},
+  volume  = {58},
+  number  = {12},
+  year    = {2025},
+  doi     = {10.1007/s10462-025-11401-9}
+}
+%% supports: evaluation/robustness of reconstruction-based detectors (RQ-A)
+
+@inproceedings{zhang2021robustkpi,
+  author    = {Shenglin Zhang and Chenyu Zhao and Yicheng Sui and Ya Su and Yongqian Sun and Yuzhi Zhang and Dan Pei and Yizhe Wang},
+  title     = {Robust {KPI} Anomaly Detection for Large-Scale Software Services with Partial Labels},
+  booktitle = {32nd IEEE International Symposium on Software Reliability Engineering (ISSRE)},
+  pages     = {103--114},
+  year      = {2021},
+  doi       = {10.1109/ISSRE52982.2021.00023}
+}
+%% supports: robust detection with partial/weak labels (RQ-A); seminal, just pre-window

@@ -1,0 +1,44 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="System Architecture (RQ-D/A/O)" id="arch">
+    <mxGraphModel dx="1000" dy="800" grid="0" pageWidth="960" pageHeight="760" math="0">
+      <root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+
+        <mxCell id="svc" value="TraceFlix microservices&#10;(movie &#8594; actor &#215;N, review)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="240" height="56" as="geometry"/></mxCell>
+        <mxCell id="flt" value="Fault injection&#10;(Chaos Mesh / _FAULT_SHIFT: cpu, mem, latency, pod-kill, net)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1"><mxGeometry x="320" y="40" width="280" height="56" as="geometry"/></mxCell>
+        <mxCell id="gen" value="Synthetic telemetry generator&#10;dataset.generate_run() / telemetry._synth()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="40" y="130" width="560" height="48" as="geometry"/></mxCell>
+        <mxCell id="win" value="Window  (MELT: metrics &#183; logs &#183; traces &#183; events) + fault label" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="40" y="206" width="560" height="44" as="geometry"/></mxCell>
+        <mxCell id="feat" value="Configuration-aware feature extraction&#10;build_features()  &#183;  C1 &#8834; C2 &#8834; C3 &#8834; C4 (ObsConfig)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="40" y="278" width="560" height="52" as="geometry"/></mxCell>
+
+        <mxCell id="laneD" value="RQ-D  Early Detection (timeliness)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#e8f0fe;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="20" y="380" width="290" height="200" as="geometry"/></mxCell>
+        <mxCell id="dr1" value="gradual fault ramp + SLO-breach window" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="1"><mxGeometry x="36" y="412" width="258" height="36" as="geometry"/></mxCell>
+        <mxCell id="dr2" value="single reactive detector (RF)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="1"><mxGeometry x="36" y="456" width="124" height="36" as="geometry"/></mxCell>
+        <mxCell id="dr3" value="swept across C1 to C4 configs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="1"><mxGeometry x="170" y="456" width="124" height="36" as="geometry"/></mxCell>
+        <mxCell id="dr4" value="lead-time per configuration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde9d9;" vertex="1" parent="1"><mxGeometry x="36" y="500" width="258" height="34" as="geometry"/></mxCell>
+
+        <mxCell id="laneA" value="RQ-A  Robustness" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#fff4e6;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="330" y="380" width="290" height="200" as="geometry"/></mxCell>
+        <mxCell id="ar1" value="degradation operator&#10;sampling &#183; noise &#183; modality dropout" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="1"><mxGeometry x="346" y="412" width="258" height="46" as="geometry"/></mxCell>
+        <mxCell id="ar2" value="RandomForest detector" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="1"><mxGeometry x="346" y="466" width="258" height="32" as="geometry"/></mxCell>
+        <mxCell id="ar3" value="signal-fragility ranking (&#916;F1)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde9d9;" vertex="1" parent="1"><mxGeometry x="346" y="506" width="258" height="32" as="geometry"/></mxCell>
+
+        <mxCell id="laneO" value="RQ-O  Cost-Optimisation" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#e6f6ec;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="640" y="380" width="290" height="200" as="geometry"/></mxCell>
+        <mxCell id="or1" value="modality &#215; trace-sampling config sweep" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="1"><mxGeometry x="656" y="412" width="258" height="36" as="geometry"/></mxCell>
+        <mxCell id="or2" value="telemetry cost model (traces weighted &#215; sampling)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="1"><mxGeometry x="656" y="456" width="258" height="36" as="geometry"/></mxCell>
+        <mxCell id="or3" value="F1-vs-cost Pareto front" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde9d9;" vertex="1" parent="1"><mxGeometry x="656" y="500" width="258" height="34" as="geometry"/></mxCell>
+
+        <mxCell id="eval" value="Evaluation &amp; reporting:  precision / recall / F1 / AUC &#183; lead-time &#183; Pareto &#8594; CSV + figures (data/results)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="20" y="616" width="910" height="44" as="geometry"/></mxCell>
+
+        <mxCell style="endArrow=block;html=1;" edge="1" parent="1" source="svc" target="gen"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell style="endArrow=block;html=1;dashed=1;strokeColor=#b85450;" edge="1" parent="1" source="flt" target="gen"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell style="endArrow=block;html=1;" edge="1" parent="1" source="gen" target="win"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell style="endArrow=block;html=1;" edge="1" parent="1" source="win" target="feat"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell style="endArrow=block;html=1;" edge="1" parent="1" source="feat" target="laneD"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell style="endArrow=block;html=1;" edge="1" parent="1" source="feat" target="laneA"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell style="endArrow=block;html=1;" edge="1" parent="1" source="feat" target="laneO"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell style="endArrow=block;html=1;" edge="1" parent="1" source="laneD" target="eval"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell style="endArrow=block;html=1;" edge="1" parent="1" source="laneA" target="eval"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell style="endArrow=block;html=1;" edge="1" parent="1" source="laneO" target="eval"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

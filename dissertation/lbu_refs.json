@@ -1,0 +1,278 @@
+{
+ "lu2024misp": {
+  "intext": "(Lu et al., 2024)",
+  "short": "Lu et al.",
+  "year": "2024",
+  "full": "Lu, X., Wang, Y., Fu, Y., Sun, Q., Ma, X., Zheng, X. and Zhuo, C. (2024) 'MISP: A Multimodal-based Intelligent Server Failure Prediction Model for Cloud Computing Systems', in Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD), pp. 5509-5520. Available at: https://doi.org/10.1145/3637528.3671568 (Accessed: 19 June 2026)."
+ },
+ "darban2025dltsad": {
+  "intext": "(Darban et al., 2025)",
+  "short": "Darban et al.",
+  "year": "2025",
+  "full": "Darban, Z. Z., Webb, G. I., Pan, S., Aggarwal, C. and Salehi, M. (2025) 'Deep Learning for Time Series Anomaly Detection: A Survey', ACM Computing Surveys, 57(1), pp. 15:1-15:42. Available at: https://doi.org/10.1145/3691338 (Accessed: 19 June 2026)."
+ },
+ "wang2024incident": {
+  "intext": "(Wang et al., 2024)",
+  "short": "Wang et al.",
+  "year": "2024",
+  "full": "Wang, H., Tangirala, G. K., Naidu, G. P., Mayville, C., Roy, A., Sun, J. and Mandava, R. B. (2024) 'Anomaly Detection for Incident Response at Scale', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2404.16887 (Accessed: 19 June 2026)."
+ },
+ "zhao2023robust": {
+  "intext": "(Zhao et al., 2023)",
+  "short": "Zhao et al.",
+  "year": "2023",
+  "full": "Zhao, C., Ma, M., Zhong, Z., Zhang, S., Tan, Z., Xiong, X., Yu, L., Feng, J., Sun, Y., Zhang, Y., Pei, D., Lin, Q. and Zhang, D. (2023) 'Robust Multimodal Failure Detection for Microservice Systems', in Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD). Available at: https://doi.org/10.1145/3580305.3599902 (Accessed: 19 June 2026)."
+ },
+ "wadinger2024changepoint": {
+  "intext": "(Wadinger et al., 2024)",
+  "short": "Wadinger et al.",
+  "year": "2024",
+  "full": "Wadinger, M., Kvasnica, M. and Kawahara, Y. (2024) 'Change-Point Detection in Industrial Data Streams based on Online Dynamic Mode Decomposition with Control', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2407.05976 (Accessed: 19 June 2026)."
+ },
+ "li2024changepoint": {
+  "intext": "(Li et al., 2024)",
+  "short": "Li et al.",
+  "year": "2024",
+  "full": "Li, J., Fearnhead, P., Fryzlewicz, P. and Wang, T. (2024) 'Automatic change-point detection in time series via deep learning', Journal of the Royal Statistical Society Series B: Statistical Methodology, 86. Available at: https://doi.org/10.1093/jrsssb/qkae004 (Accessed: 19 June 2026)."
+ },
+ "guruge2025autoscaling": {
+  "intext": "(Guruge and Priyadarshana, 2025)",
+  "short": "Guruge and Priyadarshana",
+  "year": "2025",
+  "full": "Guruge, P. B. and Priyadarshana, Y. H. P. P. (2025) 'Time series forecasting-based Kubernetes autoscaling using Facebook Prophet and Long Short-Term Memory', Frontiers in Computer Science, 7. Available at: https://doi.org/10.3389/fcomp.2025.1509165 (Accessed: 19 June 2026)."
+ },
+ "wu2024missingsurvey": {
+  "intext": "(Wu et al., 2024)",
+  "short": "Wu et al.",
+  "year": "2024",
+  "full": "Wu, R., Wang, H. and Chen, H. (2024) 'A Comprehensive Survey on Deep Multimodal Learning with Missing Modality', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2409.07825 (Accessed: 19 June 2026)."
+ },
+ "humblot2024noisy": {
+  "intext": "(Humblot-Renaux et al., 2024)",
+  "short": "Humblot-Renaux et al.",
+  "year": "2024",
+  "full": "Humblot-Renaux, G., Escalera, S. and Moeslund, T. B. (2024) 'A Noisy Elephant in the Room: Is Your Out-of-Distribution Detector Robust to Label Noise?', in IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). Available at: https://doi.org/10.1109/CVPR52733.2024.02135 (Accessed: 19 June 2026)."
+ },
+ "wu2024heterophilic": {
+  "intext": "(Wu et al., 2024)",
+  "short": "Wu et al.",
+  "year": "2024",
+  "full": "Wu, J., Hu, R., Li, D., Huang, Z., Ren, L. and Zang, Y. (2024) 'Robust Heterophilic Graph Learning against Label Noise for Anomaly Detection', in Proceedings of the 33rd International Joint Conference on Artificial Intelligence (IJCAI), pp. 2451-2459. Available at: https://www.ijcai.org/proceedings/2024/271 (Accessed: 19 June 2026)."
+ },
+ "zhao2023admoe": {
+  "intext": "(Zhao et al., 2023)",
+  "short": "Zhao et al.",
+  "year": "2023",
+  "full": "Zhao, Y., Zheng, G., Mukherjee, S., McCann, R. and Awadallah, A. (2023) 'ADMoE: Anomaly Detection with Mixture-of-Experts from Noisy Labels', in Proceedings of the 37th AAAI Conference on Artificial Intelligence (AAAI). Available at: https://doi.org/10.1609/aaai.v37i4.25620 (Accessed: 19 June 2026)."
+ },
+ "kumari2024investigation": {
+  "intext": "(Kumari et al., 2024)",
+  "short": "Kumari et al.",
+  "year": "2024",
+  "full": "Kumari, S., Prabha, C., Karim, A., Hassan, M. M. and Azam, S. (2024) 'A Comprehensive Investigation of Anomaly Detection Methods in Deep Learning and Machine Learning: 2019–2023', IET Information Security, 2024(1). Available at: https://doi.org/10.1049/2024/8821891 (Accessed: 19 June 2026)."
+ },
+ "grabher2025modeling": {
+  "intext": "(Grabher et al., 2025)",
+  "short": "Grabher et al.",
+  "year": "2025",
+  "full": "Grabher, G. J. A., Machida, F. and Ropars, T. (2025) 'Modeling Anomaly Detection in Cloud Services: Analysis of the Properties that Impact Latency and Resource Consumption', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2511.17119 (Accessed: 19 June 2026)."
+ },
+ "sezgin2025multiobjective": {
+  "intext": "(Sezgin et al., 2025)",
+  "short": "Sezgin et al.",
+  "year": "2025",
+  "full": "Sezgin, A., Ulas, M. and Boyaci, A. (2025) 'Multi-Objective Feature Selection for Intrusion Detection Systems: A Comparative Analysis of Bio-Inspired Optimization Algorithms', Sensors, 25(19), pp. 6099. Available at: https://doi.org/10.3390/s25196099 (Accessed: 19 June 2026)."
+ },
+ "chen2024tracemesh": {
+  "intext": "(Chen et al., 2024)",
+  "short": "Chen et al.",
+  "year": "2024",
+  "full": "Chen, Z., Jiang, Z., Su, Y., Lyu, M. R. and Zheng, Z. (2024) 'Tracemesh: Scalable and Streaming Sampling for Distributed Traces', in 17th IEEE International Conference on Cloud Computing (CLOUD). Available at: https://doi.org/10.1109/CLOUD62652.2024.00016 (Accessed: 19 June 2026)."
+ },
+ "gias2023samplehst": {
+  "intext": "(Gias et al., 2023)",
+  "short": "Gias et al.",
+  "year": "2023",
+  "full": "Gias, A. U., Gao, Y., Sheldon, M., Perusquia, J. A., O'Brien, O. and Casale, G. (2023) 'SampleHST: Efficient On-the-Fly Selection of Distributed Traces', in NOMS 2023 IEEE/IFIP Network Operations and Management Symposium, pp. 1-9. Available at: https://doi.org/10.1109/NOMS56928.2023.10154383 (Accessed: 19 June 2026)."
+ },
+ "zhang2024logcleaner": {
+  "intext": "(Zhang et al., 2024)",
+  "short": "Zhang et al.",
+  "year": "2024",
+  "full": "Zhang, L., Jia, T., Wang, K., Jia, M., Yong, Y. and Li, Y. (2024) 'Reducing Events to Augment Log-based Anomaly Detection Models: An Empirical Study', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2409.04834 (Accessed: 19 June 2026)."
+ },
+ "fernando2025efficient": {
+  "intext": "(Fernando et al., 2025)",
+  "short": "Fernando et al.",
+  "year": "2025",
+  "full": "Fernando, D., Rodriguez, M. A., Arroba, P., Ismail, L. and Buyya, R. (2025) 'Efficient Training Approaches for Performance Anomaly Detection Models in Edge Computing Environments', ACM Transactions on Autonomous and Adaptive Systems. Available at: https://doi.org/10.1145/3725736 (Accessed: 19 June 2026)."
+ },
+ "wu2025oodts": {
+  "intext": "(Wu et al., 2025)",
+  "short": "Wu et al.",
+  "year": "2025",
+  "full": "Wu, X., Teng, F., Li, X., Zhang, J., Li, T. and Duan, Q. (2025) 'Out-of-Distribution Generalization in Time Series: A Survey', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2503.13868 (Accessed: 19 June 2026)."
+ },
+ "xu2024llmood": {
+  "intext": "(Xu and Ding, 2024)",
+  "short": "Xu and Ding",
+  "year": "2024",
+  "full": "Xu, R. and Ding, K. (2024) 'Large Language Models for Anomaly and Out-of-Distribution Detection: A Survey', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2409.01980 (Accessed: 19 June 2026)."
+ },
+ "yuan2022trustworthy": {
+  "intext": "(Yuan and Wu, 2022)",
+  "short": "Yuan and Wu",
+  "year": "2022",
+  "full": "Yuan, S. and Wu, X. (2022) 'Trustworthy Anomaly Detection: A Survey', arXiv preprint."
+ },
+ "wang2024imputation": {
+  "intext": "(Wang et al., 2024)",
+  "short": "Wang et al.",
+  "year": "2024",
+  "full": "Wang, J., Du, W., Cao, W., Zhang, K., Wang, W., Liang, Y. and Wen, Q. (2024) 'Deep Learning for Multivariate Time Series Imputation: A Survey', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2402.04059 (Accessed: 19 June 2026)."
+ },
+ "jiang2024hdd": {
+  "intext": "(Jiang and He, 2024)",
+  "short": "Jiang and He",
+  "year": "2024",
+  "full": "Jiang, C. and He, D. (2024) 'Hard disk drive failure prediction model based on Temporal Convolutional Network combined with Auto-Encoder', in Proceedings of the 2024 8th International Conference on Computer Science and Artificial Intelligence (CSAI). Available at: https://doi.org/10.1145/3709026.3709057 (Accessed: 19 June 2026)."
+ },
+ "wu2024rul": {
+  "intext": "(Wu et al., 2024)",
+  "short": "Wu et al.",
+  "year": "2024",
+  "full": "Wu, F., Wu, Q., Tan, Y. and Xu, X. (2024) 'Remaining Useful Life Prediction Based on Deep Learning: A Survey', Sensors, 24(11), pp. 3454. Available at: https://doi.org/10.3390/s24113454 (Accessed: 19 June 2026)."
+ },
+ "poenaru2025prepared": {
+  "intext": "(Poenaru-Olaru et al., 2025)",
+  "short": "Poenaru-Olaru et al.",
+  "year": "2025",
+  "full": "Poenaru-Olaru, L., van 't Hof, W., Stando, A., Trawinski, A. P., Kapel, E., Rellermeyer, J. S., Cruz, L. and van Deursen, A. (2025) 'Prepared for the Unknown: Adapting AIOps Capacity Forecasting Models to Data Changes', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2510.10320 (Accessed: 19 June 2026)."
+ },
+ "cheng2023aiops": {
+  "intext": "(Cheng et al., 2023)",
+  "short": "Cheng et al.",
+  "year": "2023",
+  "full": "Cheng, Q., Sahoo, D., Saha, A., Yang, W., Liu, C., Woo, G., Singh, M., Savarese, S. and Hoi, S. C. H. (2023) 'AI for IT Operations (AIOps) on Cloud Platforms: Reviews, Opportunities and Challenges', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2304.04661 (Accessed: 19 June 2026)."
+ },
+ "li2023clover": {
+  "intext": "(Li et al., 2023)",
+  "short": "Li et al.",
+  "year": "2023",
+  "full": "Li, B., Samsi, S., Gadepally, V. and Tiwari, D. (2023) 'Clover: Toward Sustainable AI with Carbon-Aware Machine Learning Inference Service', in Proceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis (SC). Available at: https://doi.org/10.1145/3581784.3607034 (Accessed: 19 June 2026)."
+ },
+ "gu2026kpiroot": {
+  "intext": "(Gu et al., 2026)",
+  "short": "Gu et al.",
+  "year": "2026",
+  "full": "Gu, W., Zhong, R., Yu, G., Sun, X., Liu, J., Huo, Y., Chen, Z., Zhang, J., Gu, J., Yang, Y. and Lyu, M. R. (2026) 'KPIRoot+: An efficient integrated framework for anomaly detection and root cause analysis in large-scale cloud systems', Empirical Software Engineering. Available at: https://doi.org/10.1007/s10664-025-10769-0 (Accessed: 19 June 2026)."
+ },
+ "wang2025noiseresilient": {
+  "intext": "(Wang et al., 2025)",
+  "short": "Wang et al.",
+  "year": "2025",
+  "full": "Wang, Y., Cheng, H., Xiong, J., Wen, Q., Jia, H., Song, R., Zhang, L., Zhu, Z. and Liu, Y. (2025) 'Noise-Resilient Point-wise Anomaly Detection in Time Series Using Weak Segment Labels', in Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD). Available at: https://doi.org/10.1145/3690624.3709257 (Accessed: 19 June 2026)."
+ },
+ "zhang2025cleanet": {
+  "intext": "(Zhang et al., 2025)",
+  "short": "Zhang et al.",
+  "year": "2025",
+  "full": "Zhang, S., Lai, Y., Zheng, P., Yu, B., Tang, X., Fu, Q. and He, P. (2025) 'CLEANet: Robust and Efficient Anomaly Detection in Contaminated Multivariate Time Series', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2510.22619 (Accessed: 19 June 2026)."
+ },
+ "takahashi2024pu": {
+  "intext": "(Takahashi et al., 2024)",
+  "short": "Takahashi et al.",
+  "year": "2024",
+  "full": "Takahashi, H., Iwata, T., Kumagai, A. and Yamanaka, Y. (2024) 'Deep Positive-Unlabeled Anomaly Detection for Contaminated Unlabeled Data', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2405.18929 (Accessed: 19 June 2026)."
+ },
+ "fehresti2025sla": {
+  "intext": "(Fehresti et al., 2025)",
+  "short": "Fehresti et al.",
+  "year": "2025",
+  "full": "Fehresti, S., Kaleibar, F. J. and Litoiu, M. (2025) 'Framework for SLA-Breach Prediction in Cloud-Native Microservices', in 2025 IEEE International Conference on Collaborative Advances in Software and Computing (CASCON), pp. 108-117. Available at: https://doi.org/10.1109/cascon66301.2025.00033 (Accessed: 19 June 2026)."
+ },
+ "li2026propagation": {
+  "intext": "(Li, 2026)",
+  "short": "Li",
+  "year": "2026",
+  "full": "Li, L. (2026) 'Service dependency modeling and failure propagation prediction in distributed systems based on graph neural networks', Discover Artificial Intelligence, 6. Available at: https://doi.org/10.1007/s44163-026-01213-3 (Accessed: 19 June 2026)."
+ },
+ "huang2024trastrainer": {
+  "intext": "(Huang et al., 2024)",
+  "short": "Huang et al.",
+  "year": "2024",
+  "full": "Huang, H., Zhang, X., Chen, P., He, Z., Chen, Z., Yu, G., Chen, H. and Sun, C. (2024) 'TraStrainer: Adaptive Sampling for Distributed Traces with System Runtime State', Proceedings of the ACM on Software Engineering, 1(FSE), pp. 473-493. Available at: https://doi.org/10.1145/3643748 (Accessed: 19 June 2026)."
+ },
+ "xie2024pbscaler": {
+  "intext": "(Xie et al., 2024)",
+  "short": "Xie et al.",
+  "year": "2024",
+  "full": "Xie, S., Wang, J., Li, B., Zhang, Z., Li, D. and Hung, P. C. K. (2024) 'PBScaler: A Bottleneck-Aware Autoscaling Framework for Microservice-Based Applications', IEEE Transactions on Services Computing. Available at: https://doi.org/10.1109/TSC.2024.3376202 (Accessed: 19 June 2026)."
+ },
+ "mehran2025adapt": {
+  "intext": "(Mehran et al., 2025)",
+  "short": "Mehran et al.",
+  "year": "2025",
+  "full": "Mehran, N., Nikolov, N., Prodan, R., Roman, D., Kimovski, D., Pallas, F. and Dorfinger, P. (2025) 'ADApt: Edge Device Anomaly Detection and Microservice Replica Prediction', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2504.03698 (Accessed: 19 June 2026)."
+ },
+ "wang2024costsensitive": {
+  "intext": "(Wang et al., 2024)",
+  "short": "Wang et al.",
+  "year": "2024",
+  "full": "Wang, X., Zhang, Y., Bai, N., Yu, Q. and Wang, Q. (2024) 'Class-imbalanced time series anomaly detection method based on cost-sensitive hybrid network', Expert Systems with Applications, 238. Available at: https://doi.org/10.1016/j.eswa.2023.122192 (Accessed: 19 June 2026)."
+ },
+ "xue2025forecasting": {
+  "intext": "(Xue et al., 2025)",
+  "short": "Xue et al.",
+  "year": "2025",
+  "full": "Xue, Z., Zi, Y., Qi, N., Gong, M. and Zou, Y. (2025) 'Multi-Level Service Performance Forecasting via Spatiotemporal Graph Neural Networks', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2508.07122 (Accessed: 19 June 2026)."
+ },
+ "xu2024hypergraph": {
+  "intext": "(Xu, 2024)",
+  "short": "Xu",
+  "year": "2024",
+  "full": "Xu, H. (2024) 'Hypergraph-based multi-scale spatio-temporal graph convolution network for Time-Series anomaly detection', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2410.22256 (Accessed: 19 June 2026)."
+ },
+ "huang2024graphmoe": {
+  "intext": "(Huang et al., 2024)",
+  "short": "Huang et al.",
+  "year": "2024",
+  "full": "Huang, X., Chen, W., Hu, B. and Mao, Z. (2024) 'Graph Mixture of Experts and Memory-augmented Routers for Multivariate Time Series Anomaly Detection', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2412.19108 (Accessed: 19 June 2026)."
+ },
+ "yang2025webservice": {
+  "intext": "(Yang et al., 2025)",
+  "short": "Yang et al.",
+  "year": "2025",
+  "full": "Yang, X., Huang, X., Duan, C., Jia, T., Dong, S., Li, Y. and Huang, G. (2025) 'Enhancing Web Service Anomaly Detection via Fine-grained Multi-modal Association and Frequency Domain Analysis', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2501.16875 (Accessed: 19 June 2026)."
+ },
+ "somashekar2024gamma": {
+  "intext": "(Somashekar et al., 2024)",
+  "short": "Somashekar et al.",
+  "year": "2024",
+  "full": "Somashekar, G., Dutt, A., Adak, M., Lorido-Botran, T. and Gandhi, A. (2024) 'GAMMA: Graph Neural Network-Based Multi-Bottleneck Localization for Microservices Applications', in Proceedings of the ACM Web Conference (WWW). Available at: https://doi.org/10.1145/3589334.3645665 (Accessed: 19 June 2026)."
+ },
+ "galagali2022monitoring": {
+  "intext": "(Galagali, 2022)",
+  "short": "Galagali",
+  "year": "2022",
+  "full": "Galagali, N. (2022) 'Practical data monitoring in the internet-services domain', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2203.08067 (Accessed: 19 June 2026)."
+ },
+ "liu2025diffusion": {
+  "intext": "(Liu et al., 2025)",
+  "short": "Liu et al.",
+  "year": "2025",
+  "full": "Liu, J., Ma, Z., Wang, Z., Liu, Y., Wang, Z., Sun, P., Song, L., Hu, B., Boukerche, A. and Leung, V. C. M. (2025) 'A Survey on Diffusion Models for Anomaly Detection', arXiv preprint. Available at: https://doi.org/10.48550/arXiv.2501.11430 (Accessed: 19 June 2026)."
+ },
+ "yahya2025reconstruction": {
+  "intext": "(Yahya et al., 2025)",
+  "short": "Yahya et al.",
+  "year": "2025",
+  "full": "Yahya, M. A., Moya, A. R. and Ventura, S. (2025) 'Deep learning for multivariate time series anomaly detection: an evaluation of reconstruction-based methods', Artificial Intelligence Review, 58(12). Available at: https://doi.org/10.1007/s10462-025-11401-9 (Accessed: 19 June 2026)."
+ },
+ "zhang2021robustkpi": {
+  "intext": "(Zhang et al., 2021)",
+  "short": "Zhang et al.",
+  "year": "2021",
+  "full": "Zhang, S., Zhao, C., Sui, Y., Su, Y., Sun, Y., Zhang, Y., Pei, D. and Wang, Y. (2021) 'Robust KPI Anomaly Detection for Large-Scale Software Services with Partial Labels', in 32nd IEEE International Symposium on Software Reliability Engineering (ISSRE), pp. 103-114. Available at: https://doi.org/10.1109/ISSRE52982.2021.00023 (Accessed: 19 June 2026)."
+ }
+}

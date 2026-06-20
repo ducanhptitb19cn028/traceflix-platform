@@ -76,9 +76,9 @@ scored on the `R1–R3` future:
 
 **Outputs** (to `--out`, default `data/results`):
 
-- `rq4_online_vs_offline.csv` — precision/recall/f1/auc per (config, segment, model)
-- `rq4_timeline.csv` — block-wise rolling F1 over the stream, all models
-- `rq4_summary.json` — headline numbers + drift/adaptation events
+- `rq3_online_vs_offline.csv` — precision/recall/f1/auc per (config, segment, model)
+- `rq3_timeline.csv` — block-wise rolling F1 over the stream, all models
+- `rq3_summary.json` — headline numbers + drift/adaptation events
 
 ## The headline result
 
@@ -97,7 +97,7 @@ F1 on the *operational future* (regimes R1–R3), all models on identical featur
 - **Scheduled retraining is not enough either.** `offline_periodic` recovers a
   lot of the loss but still trails online by 6–9 F1 points and never reaches the
   oracle — every regime shift opens a **drift-response gap** until the next
-  refresh (the sawtooth in `rq4_timeline.png`), and each refresh is a full batch
+  refresh (the sawtooth in `rq3_timeline.png`), and each refresh is a full batch
   re-fit.
 - **Online recovers to oracle level** (0.82 → 0.98) updating per sample, and
   *exceeds* the all-regime oracle under C3/C4 because tracking the evolving
@@ -127,7 +127,7 @@ bounded-latency, stateless stream.
 
 ```bash
 cd aiops
-./scripts/run_online_offline.sh 320   # -> rq4_*.csv, rq4_cost.csv, figures
+./scripts/run_online_offline.sh 320   # -> rq3_*.csv, rq3_cost.csv, figures
 ```
 
 This runs `online_vs_offline` (detection) + `cost_compare` (cost) + `ml.eval.plots`.

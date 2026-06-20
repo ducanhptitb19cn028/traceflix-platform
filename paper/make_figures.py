@@ -41,30 +41,41 @@ def save(fig, name):
 
 # ---------------------------------------------------------------- RQ1
 def fig_rq1():
+    # Completeness UNDER NON-STATIONARITY. Detection F1 by configuration in two
+    # settings: the controlled held-out baseline (rq1_completeness.csv) and the
+    # drifted future stream for the deployable continual-learning detector
+    # (online_adaptive, Run B / rq3_online_vs_offline.csv). Completeness improves
+    # detection in both, and traces (C2->C3) are the decisive increment -- the
+    # trace jump being larger on the drifted stream.
     rows = list(csv.DictReader(open(os.path.join(RESULTS, "rq1_completeness.csv"))))
-    metrics = [("precision", "Precision"), ("recall", "Recall"),
-               ("f1", "F1"), ("auc_roc", "AUC-ROC")]
-    x = range(len(CONFIGS))
-    w = 0.2
-    fig, ax = plt.subplots(figsize=(6.2, 3.4))
-    colours = [C_GREY, C_ORANGE, C_BLUE, C_GREEN]
-    for i, (key, lab) in enumerate(metrics):
-        vals = [float(r[key]) for r in rows]
-        ax.bar([xi + (i - 1.5) * w for xi in x], vals, w, label=lab,
-               color=colours[i], edgecolor="black", linewidth=0.4)
-    ax.set_xticks(list(x))
+    baseline = [float(r["f1"]) for r in rows]              # 0.906 .. 0.994
+    drifted = [0.8174, 0.8347, 0.9817, 0.9834]            # continual learning, drifted
+    x = list(range(len(CONFIGS)))
+    fig, ax = plt.subplots(figsize=(6.4, 3.6))
+    ax.plot(x, baseline, "o-", color=C_BLUE, lw=2, ms=7, label="held-out baseline")
+    ax.plot(x, drifted, "s-", color=C_GREEN, lw=2, ms=7,
+            label="drifted stream (continual learning)")
+    for xi, (b, d) in enumerate(zip(baseline, drifted)):
+        ax.annotate(f"{b:.3f}", (xi, b), textcoords="offset points",
+                    xytext=(0, 7), ha="center", fontsize=7.5, color=C_BLUE)
+        ax.annotate(f"{d:.3f}", (xi, d), textcoords="offset points",
+                    xytext=(0, -12), ha="center", fontsize=7.5, color=C_GREEN)
+    ax.annotate("+traces:\ndecisive increment", xy=(2, drifted[2]),
+                xytext=(0.45, 0.87), fontsize=9, fontweight="bold",
+                arrowprops=dict(arrowstyle="->", color=C_GREEN, lw=1.3))
+    ax.set_xticks(x)
     ax.set_xticklabels([f"{c}\n({r['n_features']}f)" for c, r in zip(CONFIGS, rows)])
-    ax.set_ylim(0.80, 1.005)
-    ax.set_ylabel("Score")
+    ax.set_ylim(0.78, 1.02)
+    ax.set_ylabel("Detection F1")
     ax.set_xlabel("Telemetry configuration")
-    ax.legend(ncol=4, loc="lower right", framealpha=0.9)
+    ax.legend(loc="lower right", framealpha=0.9)
     save(fig, "fig_rq1_completeness.pdf")
 
 
 # ---------------------------------------------------------------- RQ4 headline
-def fig_rq4_headline():
+def fig_rq3_headline():
     # F1 on the future (drifted) stream -- Run B (320 episodes), consistent
-    # with manuscript Table 7 / rq4_summary.json headline_f1_future.
+    # with manuscript Table 7 / rq3_summary.json headline_f1_future.
     static  = [0.4894, 0.4921, 0.5097, 0.5112]
     periodic = [0.7574, 0.7776, 0.8904, 0.8905]
     online  = [0.8174, 0.8347, 0.9817, 0.9834]
@@ -86,13 +97,13 @@ def fig_rq4_headline():
     ax.set_ylabel("F1 on drifted future stream")
     ax.set_xlabel("Telemetry configuration")
     ax.legend(ncol=2, loc="upper left", framealpha=0.9)
-    save(fig, "fig_rq4_headline.pdf")
+    save(fig, "fig_rq3_headline.pdf")
 
 
 # ---------------------------------------------------------------- RQ4 cost
-def fig_rq4_cost():
+def fig_rq3_cost():
     # Operational measurements (latency, footprint) come from the dedicated
-    # cost-profiling run (rq4_cost.csv); F1 is reconciled to the Run B
+    # cost-profiling run (rq3_cost.csv); F1 is reconciled to the Run B
     # headline so a single F1 value is used throughout the manuscript.
     f1_runB = {
         ("offline_periodic", "C1"): 0.7574, ("online_adaptive", "C1"): 0.8174,
@@ -100,7 +111,7 @@ def fig_rq4_cost():
         ("offline_periodic", "C3"): 0.8904, ("online_adaptive", "C3"): 0.9817,
         ("offline_periodic", "C4"): 0.8905, ("online_adaptive", "C4"): 0.9834,
     }
-    rows = list(csv.DictReader(open(os.path.join(RESULTS, "rq4_cost.csv"))))
+    rows = list(csv.DictReader(open(os.path.join(RESULTS, "rq3_cost.csv"))))
     fig, ax = plt.subplots(figsize=(6.2, 3.8))
     seen = set()
     for r in rows:
@@ -126,11 +137,11 @@ def fig_rq4_cost():
     ax.set_ylim(0.6, 1.02)
     ax.legend(loc="lower left", framealpha=0.9,
               title="marker area $\\propto$ model footprint")
-    save(fig, "fig_rq4_cost.pdf")
+    save(fig, "fig_rq3_cost.pdf")
 
 
 if __name__ == "__main__":
     fig_rq1()
-    fig_rq4_headline()
-    fig_rq4_cost()
+    fig_rq3_headline()
+    fig_rq3_cost()
     print("done")

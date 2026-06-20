@@ -212,15 +212,15 @@ def main():
               f"(constant per-window work vs bursty refits)")
 
     res = pd.DataFrame(all_rows)
-    res.to_csv(out / "rq4_cost.csv", index=False)
-    (out / "rq4_cost_summary.json").write_text(json.dumps({
+    res.to_csv(out / "rq3_cost.csv", index=False)
+    (out / "rq3_cost_summary.json").write_text(json.dumps({
         "episodes": args.episodes,
         "periodic": {"retrain_every": args.retrain_every,
                      "train_window": args.train_window},
         "configs": cfg_keys,
         "ratios_periodic_vs_online": ratios,
     }, indent=2))
-    print(f"\n[*] Results -> {out}/  (rq4_cost.csv, rq4_cost_summary.json)")
+    print(f"\n[*] Results -> {out}/  (rq3_cost.csv, rq3_cost_summary.json)")
 
 
 if __name__ == "__main__":
