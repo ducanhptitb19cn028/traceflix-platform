@@ -25,6 +25,7 @@
 \usepackage{listings}%
 \usepackage{tikz}%
 \usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc,shapes.geometric}%
+\usepackage[edges]{forest}%
 %%%%
 
 \theoremstyle{thmstyleone}%
@@ -116,7 +117,7 @@ To answer these questions we built \emph{TraceFlix}, a Kubernetes microservice a
     \item[\emph{To RQ1:}] under non-stationarity, telemetry completeness still improves detection: for a detector that keeps current, drifted-stream F1 rises \emph{monotonically} from $0.82$ to $0.98$ across the configurations (mirroring $0.906 \rightarrow 0.994$ on a held-out reference), with distributed traces the single most valuable pillar---and decisively so under drift, where the trace increment ($+0.147$ F1) dwarfs that of logs or events.
     \item[\emph{To RQ2:}] adding traces lifts root-cause top-1 localisation from $0.91$ to a perfect $1.0$ on our topology, isolating tracing as the decisive localisation signal.
     \item[\emph{To RQ3:}] under drift the result \emph{inverts}---a frozen batch model collapses to F1 $\approx 0.49$--$0.51$ \emph{regardless} of telemetry, periodic retraining only partially recovers, and a lightweight online-adaptive detector dominates at every configuration and in $10$ of $12$ regime cells, reaching F1 $\approx 0.98$ and even beating an all-regimes oracle, while being $17$--$32\times$ better on tail latency and $\sim 200$--$550\times$ smaller.
-    \item[\emph{To RQ4 (answered last):}] ensemble trees are the strongest family on multimodal tabular telemetry, which is also \emph{why a lightweight normalised linear model---not a tree---is the right detector for the online setting} established by RQ3.
+    \item[\emph{To RQ4:}] ensemble trees are the strongest family on multimodal tabular telemetry, which is also \emph{why a lightweight normalised linear model---not a tree---is the right detector for the online setting} established by RQ3.
   \end{itemize}
   \item \textbf{An operational-cost analysis} that reframes the choice of learning paradigm as a service-level rather than a purely accuracy decision (\S\ref{sec:results}, \S\ref{sec:lessons}).
   \item \textbf{Practical guidance} on minimum-viable observability and on when continual learning is mandatory rather than optional (\S\ref{sec:lessons}).
@@ -124,13 +125,66 @@ To answer these questions we built \emph{TraceFlix}, a Kubernetes microservice a
 
 To support open science, the testbed configuration, pipeline code and result datasets underpinning every table are available for reproducibility.
 
-The remainder of this article is organised as follows. Section~\ref{sec:problem} formalises windowed detection, concept drift and the two-axis design. Section~\ref{sec:method} describes the TraceFlix testbed, fault injection, the telemetry configurations and drift regimes, the competing learners, and the evaluation protocol. Section~\ref{sec:results} reports the results, establishing the held-out baseline findings first and returning to the model-family question (RQ4) last, once the online setting is established. Section~\ref{sec:lessons} distils the lessons learned and Section~\ref{sec:threats} examines the threats to validity. Section~\ref{sec:background} situates the work within the related literature, and Section~\ref{sec:conclusion} concludes.
+The remainder of this article is organised as follows. Section~\ref{sec:foundations} fixes the necessary background and develops a taxonomy of cloud-native anomaly detection that locates the study within the design space. Section~\ref{sec:problem} formalises windowed detection, concept drift and the two-axis design. Section~\ref{sec:method} describes the TraceFlix testbed, fault injection, the telemetry configurations and drift regimes, the competing learners, and the evaluation protocol. Section~\ref{sec:results} reports the results, establishing the held-out baseline findings first and returning to the model-family question (RQ4) last, once the online setting is established. Section~\ref{sec:lessons} distils the lessons learned and Section~\ref{sec:threats} examines the threats to validity. Section~\ref{sec:background} situates the work within the related literature, and Section~\ref{sec:conclusion} concludes.
+
+%%===========================================================%%
+\section{Background and a Taxonomy of Cloud-Native Anomaly Detection}\label{sec:foundations}
+%%===========================================================%%
+
+Before formalising the study it is worth fixing vocabulary and, more usefully, drawing a map of the design space the study inhabits. Cloud-native anomaly detection is not a single technique but a family of them, and the choices that distinguish one detector from another---what telemetry it consumes, what model it fits, how it learns as the system changes, and what it is asked to decide---are precisely the choices this paper treats as variables rather than as fixed background assumptions. This section establishes the concepts the rest of the article relies on (\S\ref{sec:fnd-concepts}) and organises the field into a taxonomy (\S\ref{sec:fnd-taxonomy}, Figure~\ref{fig:taxonomy}) whose axes make both the structure of the field and the region this study occupies legible. The detailed, study-by-study comparison against the most directly related work is deferred to \S\ref{sec:background}, once our own results are in hand.
+
+\subsection{Concepts and vocabulary}\label{sec:fnd-concepts}
+
+\paragraph{Observability and the MELT model.} A system is \emph{observable} when its internal state can be reconstructed from its external outputs \cite{kosinska2023}. In a microservice deployment those outputs are telemetry, conventionally organised into the MELT model: \emph{metrics} (numeric time series such as latency percentiles or CPU utilisation), \emph{events} (discrete lifecycle records such as a pod restart), \emph{logs} (timestamped, semi-structured text), and \emph{traces} (per-request trees of spans that record how a request propagates across services) \cite{boten2022,chapman2023}. The pillars differ both in operational cost and in the information they carry: metrics are cheap and aggregate, logs are semantically rich but unstructured, traces alone encode the cross-service causal structure of a request---and are the most expensive pillar to collect and store---and events mark coarse state transitions. That a richer pillar costs more is exactly what makes the marginal detection value of each one an empirical question rather than a foregone conclusion.
+
+\paragraph{The detection task and its relatives.} A detector consumes a window of telemetry and decides whether the system is behaving normally. Three operational tasks are usefully separated. \emph{Detection} asks whether something is wrong; \emph{localisation}, or root-cause analysis, asks which service or signal is responsible \cite{han2024}; and \emph{prediction} asks whether a violation is imminent, so that remediation can precede impact \cite{mart2020}. The three are sequential in operations---one must detect before localising---and they make different demands on the telemetry. This article concerns detection and localisation.
+
+\paragraph{Non-stationarity and concept drift.} A cloud-native telemetry stream is \emph{non-stationary}. \emph{Concept drift} denotes a change over time in the joint distribution $P(\mathbf{x}, y)$ of features $\mathbf{x}$ and labels $y$ \cite{arora2024drift,lukats2025drift}. In operational terms, a deployment alters the telemetry that healthy behaviour produces, an autoscaling event shifts resource-utilisation baselines, and a traffic surge moves latency and throughput distributions at once; a decision boundary fitted to last week's normal then misclassifies this week's. Whether, and how, a detector copes with drift is therefore not a peripheral implementation detail but a defining property---and it is one of the two axes this study manipulates.
+
+\subsection{A taxonomy of the design space}\label{sec:fnd-taxonomy}
+
+Figure~\ref{fig:taxonomy} organises cloud-native anomaly detection along six dimensions. The first four classify a detector's \emph{design}; the last two classify the \emph{conditions} under which it is evaluated.
+
+\begin{figure}[t]
+\centering
+\begin{forest}
+  for tree={
+    grow'=0, parent anchor=east, child anchor=west, anchor=west,
+    font=\sffamily\footnotesize, draw, rounded corners, align=left,
+    inner sep=2.6pt, l sep=13pt, s sep=2.4pt,
+  },
+  forked edges,
+  where level=0{fill=black!12, font=\sffamily\bfseries\footnotesize}{},
+  where level=1{fill=blue!8, font=\sffamily\bfseries\footnotesize}{},
+  hl/.style={fill=green!18},
+  [Cloud-native\\anomaly\\detection
+    [D1: Telemetry input
+      [metrics,hl][+logs,hl][+traces,hl][full MELT,hl]]
+    [D2: Detection model
+      [statistical / threshold][classical ML][deep learning][graph / topology]]
+    [D3: Learning paradigm
+      [static-batch,hl][periodic retrain,hl][online / continual,hl]]
+    [D4: Task
+      [detection,hl][localisation / RCA,hl][prediction]]
+    [D5: Drift posture
+      [stationary][drift-aware,hl]]
+    [D6: Evaluation setting
+      [benchmark / synthetic][controlled-drift testbed,hl][production]]]
+\end{forest}
+\caption{A taxonomy of cloud-native anomaly detection along six dimensions---four of \emph{design} (D1--D4) and two of \emph{evaluation} (D5--D6). Shaded leaves mark the region the present study occupies: it holds the detection model fixed (D2) as a control while sweeping telemetry completeness (D1) and the learning paradigm (D3) \emph{together}, evaluating detection and localisation under controlled drift (D5--D6). The bulk of prior work fixes D3 to static-batch and D5 to stationary.}\label{fig:taxonomy}
+\end{figure}
+
+\emph{Telemetry input} (D1) is the signal a detector consumes, ranging from a single modality---most often metrics \cite{lomio2022,mart2020}---through progressively richer combinations to full MELT, the multimodal end at which the strongest recent results cluster \cite{han2024,wang2025multimodal}. \emph{Detection model} (D2) is the function it fits: statistical and threshold rules; classical machine learning such as tree ensembles, isolation forests and one-class methods \cite{lomio2022}; deep learning such as autoencoders, recurrent and transformer architectures \cite{dkmak2025,wang2025mtssurvey}; and graph models that encode the service topology and its span timings \cite{chen2023tracegra,han2024}. \emph{Learning paradigm} (D3) is how, and how often, the model is updated: a \emph{static} model is trained once and frozen; a \emph{periodically-retrained} model is refitted on a sliding buffer at fixed intervals; and an \emph{online} model updates incrementally on every window \cite{wette2024omlad,li2023autoencoder}. This dimension is orthogonal to the choice of model---any model family can in principle be deployed in any paradigm---and it is the second axis the study manipulates. \emph{Task} (D4) is detection, localisation or prediction, as above.
+
+The two evaluation dimensions are easy to overlook yet decisive. \emph{Drift posture} (D5) records whether a detector is tested on a held-fixed distribution (stationary, single-snapshot) or on a moving one (drift-aware) \cite{lukats2025drift}. \emph{Evaluation setting} (D6) records the provenance of the telemetry: a public benchmark or synthetic generator \cite{bakhtin2025lo2,pham2025rcaeval}; an operational production system \cite{islam2021,hrusto2026}; or---the middle path this study takes---a production-representative testbed under controlled fault injection and controlled drift.
+
+Read against this map, the field is unevenly populated. Dimensions D1, D2 and D4 are densely and actively worked: the literature has produced an abundance of modalities, models and tasks, and continues to advance each. Dimensions D3 and D5, by contrast, are nearly collapsed. The overwhelming majority of cloud-native detectors are static-batch models evaluated on a stationary slice of a single distribution \cite{lomio2022,dkmak2025,han2024}, even though adaptability to a moving distribution is a named---and, by recent accounting, systematically unmet---requirement \cite{raeiszadeh2026}. The shaded leaves in Figure~\ref{fig:taxonomy} mark the region this paper occupies. Rather than advance any single cell, it holds the detection model fixed (D2, a deliberate control) and sweeps the telemetry-input axis (D1) and the learning-paradigm axis (D3) \emph{together}, evaluating both detection and localisation (D4) under drift (D5) on a controlled-drift testbed (D6). It is the crossing of D1 with D3---not progress within either alone---that the study contributes, and the formal apparatus for that crossing is the subject of the next section.
 
 %%===========================================================%%
 \section{Problem Formulation}\label{sec:problem}
 %%===========================================================%%
 
-We now make the task and the two design axes precise.
+We now make the task and the two design axes precise: the \emph{telemetry-completeness} axis (dimension~D1) and the \emph{learning-paradigm} axis (dimension~D3) of the taxonomy in Figure~\ref{fig:taxonomy}, whose crossing was identified there as the under-explored region this study occupies.
 
 \subsection{Windowed detection}\label{sec:prob-detect}
 

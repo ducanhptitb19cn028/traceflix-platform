@@ -381,111 +381,39 @@ WIREs Data Mining and Knowledge Discovery
 \endbibitem
 
 %%% 22
-\bibitem[\protect\citeauthoryear{Pedroso et~al.}{2025}]{pedroso2025}
-\begin{barticle}
-\bauthor{\bsnm{Pedroso}, \binits{D.F.}},
-\bauthor{\bsnm{Almeida}, \binits{L.}},
-\bauthor{\bsnm{Pulcinelli}, \binits{L.E.G.}},
-\bauthor{\bsnm{Aisawa}, \binits{W.A.A.}},
-\bauthor{\bsnm{Dutra}, \binits{I.}},
-\bauthor{\bsnm{Bruschi}, \binits{S.M.}}:
-\batitle{Anomaly detection and root cause analysis in cloud-native environments
-  using large language models and bayesian networks}.
-\bjtitle{IEEE Access}
-\bvolume{13},
-\bfpage{77550}--\blpage{77571}
-(\byear{2025})
-\doiurl{10.1109/ACCESS.2025.3556193}
-\end{barticle}
+\bibitem[\protect\citeauthoryear{Lukats et~al.}{2025}]{lukats2025drift}
+\begin{botherref}
+\oauthor{\bsnm{Lukats}, \binits{D.}},
+\oauthor{\bsnm{Zielinski}, \binits{O.}},
+\oauthor{\bsnm{Hahn}, \binits{A.}},
+\oauthor{\bsnm{Stahl}, \binits{F.T.}}:
+A benchmark and survey of fully unsupervised concept drift detectors on
+  real-world data streams.
+International Journal of Data Science and Analytics
+\textbf{19}
+(2025)
+\doiurl{10.1007/s41060-024-00620-y}
+\end{botherref}
 \endbibitem
 
 %%% 23
-\bibitem[\protect\citeauthoryear{{Amazon Web Services}}{2022}]{aws2022obs}
+\bibitem[\protect\citeauthoryear{Wang et~al.}{2025a}]{wang2025multimodal}
 \begin{botherref}
-\oauthor{\bsnm{{Amazon Web Services}}}:
-Cloud-native observability ({eBook} 5).
-Technical report,
-AWS Marketplace
-(2022)
+\oauthor{\bsnm{Wang}, \binits{P.}},
+\oauthor{\bsnm{Zhang}, \binits{X.}},
+\oauthor{\bsnm{Chen}, \binits{Y.}},
+\oauthor{\bsnm{Cao}, \binits{Z.}}:
+Unsupervised microservice system anomaly detection via contrastive multi-modal
+  representation clustering.
+Information Processing \& Management
+\textbf{62}
+(2025)
+\doiurl{10.1016/j.ipm.2024.104013}
 \end{botherref}
 \endbibitem
 
 %%% 24
-\bibitem[\protect\citeauthoryear{Faseeha
-  et~al.}{2025}]{faseeha2025observability}
-\begin{botherref}
-\oauthor{\bsnm{Faseeha}, \binits{U.}},
-\oauthor{\bsnm{Syed}, \binits{H.J.}},
-\oauthor{\bsnm{Samad}, \binits{F.}},
-\oauthor{\bsnm{Zehra}, \binits{S.}},
-\oauthor{\bsnm{Ahmed}, \binits{H.}}:
-Observability in microservices: An in-depth exploration of frameworks,
-  challenges, and deployment paradigms.
-IEEE Access
-\textbf{13}
-(2025)
-\doiurl{10.1109/ACCESS.2025.3562125}
-\end{botherref}
-\endbibitem
-
-%%% 25
-\bibitem[\protect\citeauthoryear{{Honeycomb}}{2021}]{beginnersobs}
-\begin{botherref}
-\oauthor{\bsnm{{Honeycomb}}}:
-A beginner's guide to observability.
-Technical report,
-Honeycomb.io
-(2021)
-\end{botherref}
-\endbibitem
-
-%%% 26
-\bibitem[\protect\citeauthoryear{{OpenTelemetry
-  Authors}}{2024}]{opentelemetry2024spec}
-\begin{botherref}
-\oauthor{\bsnm{{OpenTelemetry Authors}}}:
-{OpenTelemetry} Specification.
-\url{https://opentelemetry.io/docs/specs/otel/}.
-Cloud Native Computing Foundation; specification v1.x
-(2024)
-\end{botherref}
-\endbibitem
-
-%%% 27
-\bibitem[\protect\citeauthoryear{Wu et~al.}{2025}]{wu2025tracesampling}
-\begin{barticle}
-\bauthor{\bsnm{Wu}, \binits{Y.}},
-\bauthor{\bsnm{Yu}, \binits{G.}},
-\bauthor{\bsnm{Jiang}, \binits{Z.}},
-\bauthor{\bsnm{Li}, \binits{Y.}},
-\bauthor{\bsnm{Lyu}, \binits{M.R.}}:
-\batitle{Trace sampling 2.0: Code knowledge enhanced span-level sampling for
-  distributed tracing}.
-\bjtitle{arXiv preprint arXiv:2509.13852}
-(\byear{2025})
-\doiurl{10.48550/arXiv.2509.13852}
-\end{barticle}
-\endbibitem
-
-%%% 28
-\bibitem[\protect\citeauthoryear{Ashok et~al.}{2024}]{ashok2024traceweaver}
-\begin{bchapter}
-\bauthor{\bsnm{Ashok}, \binits{S.}},
-\bauthor{\bsnm{Harsh}, \binits{V.}},
-\bauthor{\bsnm{Godfrey}, \binits{B.}},
-\bauthor{\bsnm{Mittal}, \binits{R.}},
-\bauthor{\bsnm{Parthasarathy}, \binits{S.}},
-\bauthor{\bsnm{Shwartz}, \binits{L.}}:
-\bctitle{{TraceWeaver}: Distributed request tracing for microservices without
-  application modification}.
-In: \bbtitle{Proceedings of the ACM SIGCOMM 2024 Conference}
-(\byear{2024}).
-\doiurl{10.1145/3651890.3672254}
-\end{bchapter}
-\endbibitem
-
-%%% 29
-\bibitem[\protect\citeauthoryear{Wang et~al.}{2025}]{wang2025mtssurvey}
+\bibitem[\protect\citeauthoryear{Wang et~al.}{2025b}]{wang2025mtssurvey}
 \begin{barticle}
 \bauthor{\bsnm{Wang}, \binits{F.}},
 \bauthor{\bsnm{Jiang}, \binits{Y.}},
@@ -503,100 +431,7 @@ In: \bbtitle{Proceedings of the ACM SIGCOMM 2024 Conference}
 \end{barticle}
 \endbibitem
 
-%%% 30
-\bibitem[\protect\citeauthoryear{Xia et~al.}{2024}]{xia2024coupled}
-\begin{barticle}
-\bauthor{\bsnm{Xia}, \binits{F.}},
-\bauthor{\bsnm{Chen}, \binits{X.}},
-\bauthor{\bsnm{Yu}, \binits{S.}},
-\bauthor{\bsnm{Hou}, \binits{M.}},
-\bauthor{\bsnm{Liu}, \binits{M.}},
-\bauthor{\bsnm{You}, \binits{L.}}:
-\batitle{Coupled attention networks for multivariate time series anomaly
-  detection}.
-\bjtitle{IEEE Transactions on Emerging Topics in Computing}
-(\byear{2024})
-\doiurl{10.1109/TETC.2023.3280577}
-\end{barticle}
-\endbibitem
-
-%%% 31
-\bibitem[\protect\citeauthoryear{Choi et~al.}{2024}]{choi2024selfsup}
-\begin{barticle}
-\bauthor{\bsnm{Choi}, \binits{K.}},
-\bauthor{\bsnm{Yi}, \binits{J.}},
-\bauthor{\bsnm{Mok}, \binits{J.}},
-\bauthor{\bsnm{Yoon}, \binits{S.}}:
-\batitle{Self-supervised time-series anomaly detection using learnable data
-  augmentation}.
-\bjtitle{arXiv preprint arXiv:2406.12260}
-(\byear{2024})
-\doiurl{10.48550/arXiv.2406.12260}
-\end{barticle}
-\endbibitem
-
-%%% 32
-\bibitem[\protect\citeauthoryear{Singal et~al.}{2025}]{singal2025metric}
-\begin{barticle}
-\bauthor{\bsnm{Singal}, \binits{A.}},
-\bauthor{\bsnm{Pathak}, \binits{D.}},
-\bauthor{\bsnm{Ray}, \binits{K.}},
-\bauthor{\bsnm{George}, \binits{F.}},
-\bauthor{\bsnm{Verma}, \binits{M.}},
-\bauthor{\bsnm{Moogi}, \binits{P.}}:
-\batitle{Metric criticality identification for cloud microservices}.
-\bjtitle{arXiv preprint arXiv:2501.03547}
-(\byear{2025})
-\doiurl{10.48550/arXiv.2501.03547}
-\end{barticle}
-\endbibitem
-
-%%% 33
-\bibitem[\protect\citeauthoryear{Wagner et~al.}{2025}]{wagner2025metrics}
-\begin{barticle}
-\bauthor{\bsnm{Wagner}, \binits{D.}},
-\bauthor{\bsnm{Nair}, \binits{A.}},
-\bauthor{\bsnm{Franks}, \binits{B.J.}}, \betal:
-\batitle{Formally exploring time-series anomaly detection evaluation metrics}.
-\bjtitle{arXiv preprint arXiv:2510.17562}
-(\byear{2025})
-\doiurl{10.48550/arXiv.2510.17562}
-\end{barticle}
-\endbibitem
-
-%%% 34
-\bibitem[\protect\citeauthoryear{Guan et~al.}{2024}]{guan2024logllm}
-\begin{barticle}
-\bauthor{\bsnm{Guan}, \binits{W.}},
-\bauthor{\bsnm{Cao}, \binits{J.}},
-\bauthor{\bsnm{Qian}, \binits{S.}},
-\bauthor{\bsnm{Gao}, \binits{J.}}:
-\batitle{{LogLLM}: Log-based anomaly detection using large language models}.
-\bjtitle{arXiv preprint arXiv:2411.08561}
-(\byear{2024})
-\doiurl{10.48550/arXiv.2411.08561}
-\end{barticle}
-\endbibitem
-
-%%% 35
-\bibitem[\protect\citeauthoryear{Pospieszny
-  et~al.}{2025}]{pospieszny2025adalog}
-\begin{bchapter}
-\bauthor{\bsnm{Pospieszny}, \binits{P.}},
-\bauthor{\bsnm{Mormul}, \binits{W.}},
-\bauthor{\bsnm{Szyndler}, \binits{K.}},
-\bauthor{\bsnm{Kumar}, \binits{S.}}:
-\bctitle{{ADALog}: Adaptive unsupervised anomaly detection in logs with
-  self-attention masked language model}.
-In: \bbtitle{10th International Conference on Machine Learning Technologies
-  (ICMLT)},
-pp. \bfpage{248}--\blpage{256}
-(\byear{2025}).
-\doiurl{10.1109/ICMLT65785.2025.11193311}
-\end{bchapter}
-\endbibitem
-
-%%% 36
+%%% 25
 \bibitem[\protect\citeauthoryear{Chen et~al.}{2023}]{chen2023tracegra}
 \begin{barticle}
 \bauthor{\bsnm{Chen}, \binits{J.}},
@@ -616,7 +451,267 @@ pp. \bfpage{248}--\blpage{256}
 \end{barticle}
 \endbibitem
 
+%%% 26
+\bibitem[\protect\citeauthoryear{Wette and Heinrichs}{2024}]{wette2024omlad}
+\begin{barticle}
+\bauthor{\bsnm{Wette}, \binits{S.}},
+\bauthor{\bsnm{Heinrichs}, \binits{F.}}:
+\batitle{{OML-AD}: Online machine learning for anomaly detection in time series
+  data}.
+\bjtitle{arXiv preprint arXiv:2409.09742}
+(\byear{2024})
+\doiurl{10.48550/arXiv.2409.09742}
+\end{barticle}
+\endbibitem
+
+%%% 27
+\bibitem[\protect\citeauthoryear{Li et~al.}{2023}]{li2023autoencoder}
+\begin{bchapter}
+\bauthor{\bsnm{Li}, \binits{J.}},
+\bauthor{\bsnm{Malialis}, \binits{K.}},
+\bauthor{\bsnm{Polycarpou}, \binits{M.M.}}:
+\bctitle{Autoencoder-based anomaly detection in streaming data with incremental
+  learning and concept drift adaptation}.
+In: \bbtitle{International Joint Conference on Neural Networks (IJCNN)},
+pp. \bfpage{1}--\blpage{8}
+(\byear{2023}).
+\doiurl{10.1109/IJCNN54540.2023.10191328}
+\end{bchapter}
+\endbibitem
+
+%%% 28
+\bibitem[\protect\citeauthoryear{Bakhtin et~al.}{2025}]{bakhtin2025lo2}
+\begin{bchapter}
+\bauthor{\bsnm{Bakhtin}, \binits{A.}},
+\bauthor{\bsnm{Nyyss{\"o}l{\"a}}, \binits{J.}},
+\bauthor{\bsnm{Wang}, \binits{Y.}},
+\bauthor{\bsnm{Ahmad}, \binits{N.}},
+\bauthor{\bsnm{Ping}, \binits{K.}},
+\bauthor{\bsnm{Esposito}, \binits{M.}},
+\bauthor{\bsnm{M{\"a}ntyl{\"a}}, \binits{M.}},
+\bauthor{\bsnm{Taibi}, \binits{D.}}:
+\bctitle{{LO2}: Microservice {API} anomaly dataset of logs and metrics}.
+In: \bbtitle{Proceedings of the 21st International Conference on Predictive
+  Models and Data Analytics in Software Engineering (PROMISE)}
+(\byear{2025}).
+\doiurl{10.1145/3727582.3728682}
+\end{bchapter}
+\endbibitem
+
+%%% 29
+\bibitem[\protect\citeauthoryear{Pham et~al.}{2025}]{pham2025rcaeval}
+\begin{bchapter}
+\bauthor{\bsnm{Pham}, \binits{L.}},
+\bauthor{\bsnm{Zhang}, \binits{H.}},
+\bauthor{\bsnm{Ha}, \binits{H.}},
+\bauthor{\bsnm{Salim}, \binits{F.}},
+\bauthor{\bsnm{Zhang}, \binits{X.}}:
+\bctitle{{RCAEval}: A benchmark for root cause analysis of microservice systems
+  with telemetry data}.
+In: \bbtitle{Companion Proceedings of the ACM Web Conference (WWW)}
+(\byear{2025}).
+\doiurl{10.1145/3701716.3715290}
+\end{bchapter}
+\endbibitem
+
+%%% 30
+\bibitem[\protect\citeauthoryear{Pedroso et~al.}{2025}]{pedroso2025}
+\begin{barticle}
+\bauthor{\bsnm{Pedroso}, \binits{D.F.}},
+\bauthor{\bsnm{Almeida}, \binits{L.}},
+\bauthor{\bsnm{Pulcinelli}, \binits{L.E.G.}},
+\bauthor{\bsnm{Aisawa}, \binits{W.A.A.}},
+\bauthor{\bsnm{Dutra}, \binits{I.}},
+\bauthor{\bsnm{Bruschi}, \binits{S.M.}}:
+\batitle{Anomaly detection and root cause analysis in cloud-native environments
+  using large language models and bayesian networks}.
+\bjtitle{IEEE Access}
+\bvolume{13},
+\bfpage{77550}--\blpage{77571}
+(\byear{2025})
+\doiurl{10.1109/ACCESS.2025.3556193}
+\end{barticle}
+\endbibitem
+
+%%% 31
+\bibitem[\protect\citeauthoryear{{Amazon Web Services}}{2022}]{aws2022obs}
+\begin{botherref}
+\oauthor{\bsnm{{Amazon Web Services}}}:
+Cloud-native observability ({eBook} 5).
+Technical report,
+AWS Marketplace
+(2022)
+\end{botherref}
+\endbibitem
+
+%%% 32
+\bibitem[\protect\citeauthoryear{Faseeha
+  et~al.}{2025}]{faseeha2025observability}
+\begin{botherref}
+\oauthor{\bsnm{Faseeha}, \binits{U.}},
+\oauthor{\bsnm{Syed}, \binits{H.J.}},
+\oauthor{\bsnm{Samad}, \binits{F.}},
+\oauthor{\bsnm{Zehra}, \binits{S.}},
+\oauthor{\bsnm{Ahmed}, \binits{H.}}:
+Observability in microservices: An in-depth exploration of frameworks,
+  challenges, and deployment paradigms.
+IEEE Access
+\textbf{13}
+(2025)
+\doiurl{10.1109/ACCESS.2025.3562125}
+\end{botherref}
+\endbibitem
+
+%%% 33
+\bibitem[\protect\citeauthoryear{{Honeycomb}}{2021}]{beginnersobs}
+\begin{botherref}
+\oauthor{\bsnm{{Honeycomb}}}:
+A beginner's guide to observability.
+Technical report,
+Honeycomb.io
+(2021)
+\end{botherref}
+\endbibitem
+
+%%% 34
+\bibitem[\protect\citeauthoryear{{OpenTelemetry
+  Authors}}{2024}]{opentelemetry2024spec}
+\begin{botherref}
+\oauthor{\bsnm{{OpenTelemetry Authors}}}:
+{OpenTelemetry} Specification.
+\url{https://opentelemetry.io/docs/specs/otel/}.
+Cloud Native Computing Foundation; specification v1.x
+(2024)
+\end{botherref}
+\endbibitem
+
+%%% 35
+\bibitem[\protect\citeauthoryear{Wu et~al.}{2025}]{wu2025tracesampling}
+\begin{barticle}
+\bauthor{\bsnm{Wu}, \binits{Y.}},
+\bauthor{\bsnm{Yu}, \binits{G.}},
+\bauthor{\bsnm{Jiang}, \binits{Z.}},
+\bauthor{\bsnm{Li}, \binits{Y.}},
+\bauthor{\bsnm{Lyu}, \binits{M.R.}}:
+\batitle{Trace sampling 2.0: Code knowledge enhanced span-level sampling for
+  distributed tracing}.
+\bjtitle{arXiv preprint arXiv:2509.13852}
+(\byear{2025})
+\doiurl{10.48550/arXiv.2509.13852}
+\end{barticle}
+\endbibitem
+
+%%% 36
+\bibitem[\protect\citeauthoryear{Ashok et~al.}{2024}]{ashok2024traceweaver}
+\begin{bchapter}
+\bauthor{\bsnm{Ashok}, \binits{S.}},
+\bauthor{\bsnm{Harsh}, \binits{V.}},
+\bauthor{\bsnm{Godfrey}, \binits{B.}},
+\bauthor{\bsnm{Mittal}, \binits{R.}},
+\bauthor{\bsnm{Parthasarathy}, \binits{S.}},
+\bauthor{\bsnm{Shwartz}, \binits{L.}}:
+\bctitle{{TraceWeaver}: Distributed request tracing for microservices without
+  application modification}.
+In: \bbtitle{Proceedings of the ACM SIGCOMM 2024 Conference}
+(\byear{2024}).
+\doiurl{10.1145/3651890.3672254}
+\end{bchapter}
+\endbibitem
+
 %%% 37
+\bibitem[\protect\citeauthoryear{Xia et~al.}{2024}]{xia2024coupled}
+\begin{barticle}
+\bauthor{\bsnm{Xia}, \binits{F.}},
+\bauthor{\bsnm{Chen}, \binits{X.}},
+\bauthor{\bsnm{Yu}, \binits{S.}},
+\bauthor{\bsnm{Hou}, \binits{M.}},
+\bauthor{\bsnm{Liu}, \binits{M.}},
+\bauthor{\bsnm{You}, \binits{L.}}:
+\batitle{Coupled attention networks for multivariate time series anomaly
+  detection}.
+\bjtitle{IEEE Transactions on Emerging Topics in Computing}
+(\byear{2024})
+\doiurl{10.1109/TETC.2023.3280577}
+\end{barticle}
+\endbibitem
+
+%%% 38
+\bibitem[\protect\citeauthoryear{Choi et~al.}{2024}]{choi2024selfsup}
+\begin{barticle}
+\bauthor{\bsnm{Choi}, \binits{K.}},
+\bauthor{\bsnm{Yi}, \binits{J.}},
+\bauthor{\bsnm{Mok}, \binits{J.}},
+\bauthor{\bsnm{Yoon}, \binits{S.}}:
+\batitle{Self-supervised time-series anomaly detection using learnable data
+  augmentation}.
+\bjtitle{arXiv preprint arXiv:2406.12260}
+(\byear{2024})
+\doiurl{10.48550/arXiv.2406.12260}
+\end{barticle}
+\endbibitem
+
+%%% 39
+\bibitem[\protect\citeauthoryear{Singal et~al.}{2025}]{singal2025metric}
+\begin{barticle}
+\bauthor{\bsnm{Singal}, \binits{A.}},
+\bauthor{\bsnm{Pathak}, \binits{D.}},
+\bauthor{\bsnm{Ray}, \binits{K.}},
+\bauthor{\bsnm{George}, \binits{F.}},
+\bauthor{\bsnm{Verma}, \binits{M.}},
+\bauthor{\bsnm{Moogi}, \binits{P.}}:
+\batitle{Metric criticality identification for cloud microservices}.
+\bjtitle{arXiv preprint arXiv:2501.03547}
+(\byear{2025})
+\doiurl{10.48550/arXiv.2501.03547}
+\end{barticle}
+\endbibitem
+
+%%% 40
+\bibitem[\protect\citeauthoryear{Wagner et~al.}{2025}]{wagner2025metrics}
+\begin{barticle}
+\bauthor{\bsnm{Wagner}, \binits{D.}},
+\bauthor{\bsnm{Nair}, \binits{A.}},
+\bauthor{\bsnm{Franks}, \binits{B.J.}}, \betal:
+\batitle{Formally exploring time-series anomaly detection evaluation metrics}.
+\bjtitle{arXiv preprint arXiv:2510.17562}
+(\byear{2025})
+\doiurl{10.48550/arXiv.2510.17562}
+\end{barticle}
+\endbibitem
+
+%%% 41
+\bibitem[\protect\citeauthoryear{Guan et~al.}{2024}]{guan2024logllm}
+\begin{barticle}
+\bauthor{\bsnm{Guan}, \binits{W.}},
+\bauthor{\bsnm{Cao}, \binits{J.}},
+\bauthor{\bsnm{Qian}, \binits{S.}},
+\bauthor{\bsnm{Gao}, \binits{J.}}:
+\batitle{{LogLLM}: Log-based anomaly detection using large language models}.
+\bjtitle{arXiv preprint arXiv:2411.08561}
+(\byear{2024})
+\doiurl{10.48550/arXiv.2411.08561}
+\end{barticle}
+\endbibitem
+
+%%% 42
+\bibitem[\protect\citeauthoryear{Pospieszny
+  et~al.}{2025}]{pospieszny2025adalog}
+\begin{bchapter}
+\bauthor{\bsnm{Pospieszny}, \binits{P.}},
+\bauthor{\bsnm{Mormul}, \binits{W.}},
+\bauthor{\bsnm{Szyndler}, \binits{K.}},
+\bauthor{\bsnm{Kumar}, \binits{S.}}:
+\bctitle{{ADALog}: Adaptive unsupervised anomaly detection in logs with
+  self-attention masked language model}.
+In: \bbtitle{10th International Conference on Machine Learning Technologies
+  (ICMLT)},
+pp. \bfpage{248}--\blpage{256}
+(\byear{2025}).
+\doiurl{10.1109/ICMLT65785.2025.11193311}
+\end{bchapter}
+\endbibitem
+
+%%% 43
 \bibitem[\protect\citeauthoryear{Akmeemana et~al.}{2025}]{akmeemana2025galmad}
 \begin{barticle}
 \bauthor{\bsnm{Akmeemana}, \binits{L.}},
@@ -631,7 +726,7 @@ pp. \bfpage{248}--\blpage{256}
 \end{barticle}
 \endbibitem
 
-%%% 38
+%%% 44
 \bibitem[\protect\citeauthoryear{Zhang et~al.}{2025}]{zhang2025graphneural}
 \begin{barticle}
 \bauthor{\bsnm{Zhang}, \binits{Q.}},
@@ -648,7 +743,7 @@ pp. \bfpage{248}--\blpage{256}
 \end{barticle}
 \endbibitem
 
-%%% 39
+%%% 45
 \bibitem[\protect\citeauthoryear{Al-Omari}{2025}]{alomari2025context}
 \begin{barticle}
 \bauthor{\bsnm{Al-Omari}, \binits{T.}}:
@@ -662,23 +757,7 @@ pp. \bfpage{248}--\blpage{256}
 \end{barticle}
 \endbibitem
 
-%%% 40
-\bibitem[\protect\citeauthoryear{Wang et~al.}{2025}]{wang2025multimodal}
-\begin{botherref}
-\oauthor{\bsnm{Wang}, \binits{P.}},
-\oauthor{\bsnm{Zhang}, \binits{X.}},
-\oauthor{\bsnm{Chen}, \binits{Y.}},
-\oauthor{\bsnm{Cao}, \binits{Z.}}:
-Unsupervised microservice system anomaly detection via contrastive multi-modal
-  representation clustering.
-Information Processing \& Management
-\textbf{62}
-(2025)
-\doiurl{10.1016/j.ipm.2024.104013}
-\end{botherref}
-\endbibitem
-
-%%% 41
+%%% 46
 \bibitem[\protect\citeauthoryear{Zhang et~al.}{2026}]{zhang2026modify}
 \begin{barticle}
 \bauthor{\bsnm{Zhang}, \binits{W.}},
@@ -698,7 +777,7 @@ Information Processing \& Management
 \end{barticle}
 \endbibitem
 
-%%% 42
+%%% 47
 \bibitem[\protect\citeauthoryear{Zhuang et~al.}{2024}]{zhuang2024multimodal}
 \begin{barticle}
 \bauthor{\bsnm{Zhuang}, \binits{J.}},
@@ -715,7 +794,7 @@ Information Processing \& Management
 \end{barticle}
 \endbibitem
 
-%%% 43
+%%% 48
 \bibitem[\protect\citeauthoryear{Zhang et~al.}{2024}]{zhang2024aiops}
 \begin{barticle}
 \bauthor{\bsnm{Zhang}, \binits{L.}},
@@ -736,7 +815,7 @@ Information Processing \& Management
 \end{barticle}
 \endbibitem
 
-%%% 44
+%%% 49
 \bibitem[\protect\citeauthoryear{Xu et~al.}{2024}]{xu2024forecasting}
 \begin{barticle}
 \bauthor{\bsnm{Xu}, \binits{Y.}},
@@ -753,20 +832,7 @@ Information Processing \& Management
 \end{barticle}
 \endbibitem
 
-%%% 45
-\bibitem[\protect\citeauthoryear{Wette and Heinrichs}{2024}]{wette2024omlad}
-\begin{barticle}
-\bauthor{\bsnm{Wette}, \binits{S.}},
-\bauthor{\bsnm{Heinrichs}, \binits{F.}}:
-\batitle{{OML-AD}: Online machine learning for anomaly detection in time series
-  data}.
-\bjtitle{arXiv preprint arXiv:2409.09742}
-(\byear{2024})
-\doiurl{10.48550/arXiv.2409.09742}
-\end{barticle}
-\endbibitem
-
-%%% 46
+%%% 50
 \bibitem[\protect\citeauthoryear{Wang and Qi}{2024}]{wang2024rcasurvey}
 \begin{barticle}
 \bauthor{\bsnm{Wang}, \binits{T.}},
@@ -779,7 +845,7 @@ Information Processing \& Management
 \end{barticle}
 \endbibitem
 
-%%% 47
+%%% 51
 \bibitem[\protect\citeauthoryear{Pham et~al.}{2024}]{pham2024rca}
 \begin{bchapter}
 \bauthor{\bsnm{Pham}, \binits{L.}},
@@ -795,7 +861,7 @@ pp. \bfpage{706}--\blpage{715}
 \end{bchapter}
 \endbibitem
 
-%%% 48
+%%% 52
 \bibitem[\protect\citeauthoryear{Yao et~al.}{2024}]{yao2024chainofevent}
 \begin{bchapter}
 \bauthor{\bsnm{Yao}, \binits{Z.}},
@@ -817,7 +883,7 @@ pp. \bfpage{50}--\blpage{61}
 \end{bchapter}
 \endbibitem
 
-%%% 49
+%%% 53
 \bibitem[\protect\citeauthoryear{Pham et~al.}{2024}]{pham2024baro}
 \begin{barticle}
 \bauthor{\bsnm{Pham}, \binits{L.}},
@@ -833,7 +899,7 @@ pp. \bfpage{50}--\blpage{61}
 \end{barticle}
 \endbibitem
 
-%%% 50
+%%% 54
 \bibitem[\protect\citeauthoryear{Chen et~al.}{2024}]{chen2024rca}
 \begin{bchapter}
 \bauthor{\bsnm{Chen}, \binits{Y.}},
@@ -863,7 +929,7 @@ In: \bbtitle{Proceedings of the Nineteenth European Conference on Computer
 \end{bchapter}
 \endbibitem
 
-%%% 51
+%%% 55
 \bibitem[\protect\citeauthoryear{Zhang et~al.}{2025}]{zhang2025thinkfl}
 \begin{barticle}
 \bauthor{\bsnm{Zhang}, \binits{L.}},
@@ -883,23 +949,7 @@ In: \bbtitle{Proceedings of the Nineteenth European Conference on Computer
 \end{barticle}
 \endbibitem
 
-%%% 52
-\bibitem[\protect\citeauthoryear{Pham et~al.}{2025}]{pham2025rcaeval}
-\begin{bchapter}
-\bauthor{\bsnm{Pham}, \binits{L.}},
-\bauthor{\bsnm{Zhang}, \binits{H.}},
-\bauthor{\bsnm{Ha}, \binits{H.}},
-\bauthor{\bsnm{Salim}, \binits{F.}},
-\bauthor{\bsnm{Zhang}, \binits{X.}}:
-\bctitle{{RCAEval}: A benchmark for root cause analysis of microservice systems
-  with telemetry data}.
-In: \bbtitle{Companion Proceedings of the ACM Web Conference (WWW)}
-(\byear{2025}).
-\doiurl{10.1145/3701716.3715290}
-\end{bchapter}
-\endbibitem
-
-%%% 53
+%%% 56
 \bibitem[\protect\citeauthoryear{Hovakimyan and
   Bravo}{2024}]{hovakimyan2024drift}
 \begin{barticle}
@@ -915,38 +965,7 @@ In: \bbtitle{Companion Proceedings of the ACM Web Conference (WWW)}
 \end{barticle}
 \endbibitem
 
-%%% 54
-\bibitem[\protect\citeauthoryear{Lukats et~al.}{2025}]{lukats2025drift}
-\begin{botherref}
-\oauthor{\bsnm{Lukats}, \binits{D.}},
-\oauthor{\bsnm{Zielinski}, \binits{O.}},
-\oauthor{\bsnm{Hahn}, \binits{A.}},
-\oauthor{\bsnm{Stahl}, \binits{F.T.}}:
-A benchmark and survey of fully unsupervised concept drift detectors on
-  real-world data streams.
-International Journal of Data Science and Analytics
-\textbf{19}
-(2025)
-\doiurl{10.1007/s41060-024-00620-y}
-\end{botherref}
-\endbibitem
-
-%%% 55
-\bibitem[\protect\citeauthoryear{Li et~al.}{2023}]{li2023autoencoder}
-\begin{bchapter}
-\bauthor{\bsnm{Li}, \binits{J.}},
-\bauthor{\bsnm{Malialis}, \binits{K.}},
-\bauthor{\bsnm{Polycarpou}, \binits{M.M.}}:
-\bctitle{Autoencoder-based anomaly detection in streaming data with incremental
-  learning and concept drift adaptation}.
-In: \bbtitle{International Joint Conference on Neural Networks (IJCNN)},
-pp. \bfpage{1}--\blpage{8}
-(\byear{2023}).
-\doiurl{10.1109/IJCNN54540.2023.10191328}
-\end{bchapter}
-\endbibitem
-
-%%% 56
+%%% 57
 \bibitem[\protect\citeauthoryear{Li et~al.}{2024}]{li2024incremental}
 \begin{bchapter}
 \bauthor{\bsnm{Li}, \binits{J.}},
@@ -961,7 +980,7 @@ In: \bbtitle{International Joint Conference on Neural Networks (IJCNN)}
 \end{bchapter}
 \endbibitem
 
-%%% 57
+%%% 58
 \bibitem[\protect\citeauthoryear{Leest et~al.}{2025}]{leest2025mlmonitoring}
 \begin{barticle}
 \bauthor{\bsnm{Leest}, \binits{J.}},
@@ -976,7 +995,7 @@ In: \bbtitle{International Joint Conference on Neural Networks (IJCNN)}
 \end{barticle}
 \endbibitem
 
-%%% 58
+%%% 59
 \bibitem[\protect\citeauthoryear{Islam et~al.}{2025}]{islam2025cloud}
 \begin{bchapter}
 \bauthor{\bsnm{Islam}, \binits{M.S.}},
@@ -992,25 +1011,6 @@ In: \bbtitle{47th IEEE/ACM International Conference on Software Engineering:
 pp. \bfpage{377}--\blpage{388}
 (\byear{2025}).
 \doiurl{10.1109/ICSE-SEIP66354.2025.00039}
-\end{bchapter}
-\endbibitem
-
-%%% 59
-\bibitem[\protect\citeauthoryear{Bakhtin et~al.}{2025}]{bakhtin2025lo2}
-\begin{bchapter}
-\bauthor{\bsnm{Bakhtin}, \binits{A.}},
-\bauthor{\bsnm{Nyyss{\"o}l{\"a}}, \binits{J.}},
-\bauthor{\bsnm{Wang}, \binits{Y.}},
-\bauthor{\bsnm{Ahmad}, \binits{N.}},
-\bauthor{\bsnm{Ping}, \binits{K.}},
-\bauthor{\bsnm{Esposito}, \binits{M.}},
-\bauthor{\bsnm{M{\"a}ntyl{\"a}}, \binits{M.}},
-\bauthor{\bsnm{Taibi}, \binits{D.}}:
-\bctitle{{LO2}: Microservice {API} anomaly dataset of logs and metrics}.
-In: \bbtitle{Proceedings of the 21st International Conference on Predictive
-  Models and Data Analytics in Software Engineering (PROMISE)}
-(\byear{2025}).
-\doiurl{10.1145/3727582.3728682}
 \end{bchapter}
 \endbibitem
 
