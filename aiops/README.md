@@ -27,13 +27,13 @@ This layer **does not modify your services**. It sits beside them and:
 
 ## The research questions, as runnable code
 
-- **RQ1** `ml/experiments/run_experiment.py::rq1` — same model, configs C1→C4.
-- **RQ2** `…::rq2` — RF / GB / XGBoost / LSTM / multimodal fusion under C4.
-- **RQ3** `…::rq3` — Top-k root-cause localisation, traces excluded vs included.
-- **RQ4** `ml/experiments/online_vs_offline.py` — **does detection need to be
+- **RQ1** `ml/experiments/run_experiment.py::completeness` — same model, configs C1→C4.
+- **RQ2** `…::localisation` — Top-k root-cause localisation, traces excluded vs included.
+- **RQ3** `ml/experiments/online_vs_offline.py` — **does detection need to be
   *online*?** A frozen batch model (traditional "train a snapshot, ship it")
   versus an online self-adapting model on a **non-stationary** stream where the
   operating baseline drifts (deploys, autoscaling, data growth — `ml/drift.py`).
+- **RQ4** `…::model_family` — RF / GB / XGBoost / LSTM / multimodal fusion under C4.
 
 ## Quick start — offline (no cluster)
 
@@ -50,21 +50,21 @@ Representative output (synthetic, seed 42, **3-service topology**):
 
 ```
 RQ1  C1 F1=0.906  C2 0.933  C3 0.988  C4 0.994     (completeness helps; traces drive the jump)
-RQ2  RF 0.994 / GB 0.991 / XGB 0.991 F1; fusion high-precision; LSTM needs torch
-RQ3  Top-1 RCA: metrics+logs 0.91  ->  +traces 1.00
+RQ2  Top-1 RCA: metrics+logs 0.91  ->  +traces 1.00
+RQ4  RF 0.994 / GB 0.991 / XGB 0.991 F1; fusion high-precision; LSTM needs torch
 ```
 
-> **Note on RQ3 scale.** With only three services, Top-2 covers two-thirds of
+> **Note on RQ2 scale.** With only three services, Top-2 covers two-thirds of
 > the mesh and saturates at 1.0; **Top-1 is the discriminating metric** and is
 > what the figures emphasise.
 
-## RQ4 — why traditional (offline) anomaly detection is not enough
+## RQ3 — why traditional (offline) anomaly detection is not enough
 
 > **Deep dive:** [`docs/ONLINE_PIPELINE.md`](docs/ONLINE_PIPELINE.md) walks through
 > the online pipeline end-to-end — the drift generator, the `OnlineModel` and its
 > four adaptation mechanisms, the experiment harness, and the cost comparison.
 
-RQ1–RQ3 hold on a **stationary** stream, where a model trained once stays
+RQ1, RQ2 and RQ4 hold on a **stationary** stream, where a model trained once stays
 calibrated and the batch detectors look excellent (F1 ≈ 0.99). Production
 telemetry is **not** stationary: a release regresses latency, autoscaling
 changes throughput, data growth raises the JVM memory footprint. None of these
@@ -165,7 +165,7 @@ risk, smaller footprint, and better accuracy.**
 This is the evidence that *operations matter*: in a modern distributed system
 the detector must learn continuously, because the ground truth of "normal" moves.
 
-Reproduce everything (RQ4 detection + cost + figures) with one command:
+Reproduce everything (RQ3 detection + cost + figures) with one command:
 
 ```bash
 ./scripts/run_online_offline.sh 320            # -> rq3_*.csv, rq3_cost.csv, figures
@@ -207,4 +207,4 @@ done
 
 See `docs/INTEGRATION.md` for the full data flow, metric-name mapping, and the
 fault-to-service injection plan, and
-[`docs/ONLINE_PIPELINE.md`](docs/ONLINE_PIPELINE.md) for the RQ4 online pipeline.
+[`docs/ONLINE_PIPELINE.md`](docs/ONLINE_PIPELINE.md) for the RQ3 online pipeline.

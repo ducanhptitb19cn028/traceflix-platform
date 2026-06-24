@@ -6,7 +6,7 @@ service is the injected root cause; because movie-service calls actor and review
 synchronously, a fault at a downstream service propagates a *secondary* latency
 symptom upstream to movie-service. This is encoded via is_origin=False so that
 only the true origin accumulates originating error spans -- the property RCA
-exploits and RQ3 measures.
+exploits and RQ2 measures.
 
 In LIVE mode this module is bypassed: windows come from collectors with TF_LIVE=1
 joined to the labels CSV produced by faults/run_episodes.py. The synthetic path

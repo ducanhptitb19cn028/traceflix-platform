@@ -1,7 +1,7 @@
 # Online vs Offline Learning — and where the techniques come from
 
 This note explains the difference between **offline (batch)** and **online
-(streaming)** learning as used in this repo's RQ4 pipeline, and links to the
+(streaming)** learning as used in this repo's RQ3 pipeline, and links to the
 external sources for every technique the online model is built on.
 
 ## The core difference
@@ -16,7 +16,7 @@ external sources for every technique the online model is built on.
 | **Failure mode** | Decays when "normal" drifts (false alarms on new normal) | Tracks the evolving normal |
 | **In this repo** | `offline_static`, `offline_periodic`, `offline_full` (RandomForest) | `online_adaptive` (`OnlineModel`) |
 
-The RQ4 result: on a non-stationary stream, the frozen batch model collapses to
+The RQ3 result: on a non-stationary stream, the frozen batch model collapses to
 **F1 ≈ 0.5** even with full MELT, scheduled retraining recovers to **~0.89** but
 lags at every regime shift, and the online model reaches **~0.98** at oracle
 level — updating per sample with zero retained data. See

@@ -11,9 +11,9 @@ import pandas as pd
 
 
 def plot_online_vs_offline(d: Path, out: Path):
-    """RQ4 figures: (a) rolling-F1 timeline of the static batch model vs the
+    """RQ3 figures: (a) rolling-F1 timeline of the static batch model vs the
     online adaptive model across drifting regimes; (b) per-config F1 bars for
-    static / online / oracle. Skipped quietly if RQ4 CSVs are absent."""
+    static / online / oracle. Skipped quietly if RQ3 CSVs are absent."""
     tl_path, tab_path = d / "rq3_timeline.csv", d / "rq3_online_vs_offline.csv"
     if not (tl_path.exists() and tab_path.exists()):
         return
@@ -37,7 +37,7 @@ def plot_online_vs_offline(d: Path, out: Path):
                     color="#e67e22", label="offline_periodic (scheduled retrain)")
         ax.plot(sub["t_center"], sub["online_adaptive_f1"], "s-",
                 color="#27ae60", label="online_adaptive")
-        ax.set_title(f"RQ4: detection over a drifting stream -- {cfg}")
+        ax.set_title(f"RQ3: detection over a drifting stream -- {cfg}")
         ax.set_ylabel("rolling F1"); ax.set_ylim(0, 1.03)
         ax.set_xlabel("stream position (window index)"); ax.legend(loc="lower left")
     plt.tight_layout(); plt.savefig(out / "rq3_timeline.png", dpi=150); plt.close()
@@ -53,11 +53,11 @@ def plot_online_vs_offline(d: Path, out: Path):
                                "offline_periodic": "#e67e22",
                                "online_adaptive": "#27ae60",
                                "offline_full": "#7f8c8d"})
-    ax.set_title("RQ4: F1 on the operational future (post-drift)\n"
+    ax.set_title("RQ3: F1 on the operational future (post-drift)\n"
                  "frozen vs scheduled-retrain vs online adaptive vs all-regime oracle")
     ax.set_ylabel("F1"); plt.xticks(rotation=0); plt.tight_layout()
     plt.savefig(out / "rq3_online_vs_offline.png", dpi=150); plt.close()
-    print(f"RQ4 figures -> {out}/")
+    print(f"RQ3 figures -> {out}/")
 
 
 def main(results_dir: str = "data/results"):
@@ -66,7 +66,7 @@ def main(results_dir: str = "data/results"):
     plot_online_vs_offline(d, out)
 
     if not (d / "rq1_completeness.csv").exists():
-        return   # RQ4-only run
+        return   # RQ3-only run
 
     rq1 = pd.read_csv(d / "rq1_completeness.csv")
     ax = rq1.plot(x="config", y=["precision", "recall", "f1", "auc_roc"],

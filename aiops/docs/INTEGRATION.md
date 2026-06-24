@@ -56,7 +56,7 @@ a fault at a downstream service raises latency on `movie-service` too. Metrics
 and logs alone therefore implicate both services. Tempo lets the localiser count
 spans whose error **originates** at a service (`error_spans`): only the true
 root cause accumulates them, so weighting that signal resolves the ambiguity —
-the HolisticRCA finding (Han et al., 2024) and the substance of RQ3.
+the HolisticRCA finding (Han et al., 2024) and the substance of RQ2.
 
 ## Fault → service injection plan
 
@@ -64,7 +64,7 @@ the HolisticRCA finding (Han et al., 2024) and the substance of RQ3.
 |-------|-----------|--------|-----------------|
 | cpu_saturation | StressChaos (cpu) | actor-service | leaf → clean root cause |
 | memory_leak | StressChaos (memory 300MB) | movie-service | + memory-limit patch → OOMKilled |
-| latency_spike | NetworkChaos (delay) | review-service | propagates upstream → tests RQ3 |
+| latency_spike | NetworkChaos (delay) | review-service | propagates upstream → tests RQ2 |
 | pod_kill | PodChaos (pod-kill) | actor-service | → CrashLoopBackOff / restart events |
 | network_partition | NetworkChaos (partition) | movie↛actor | partial-failure trace signature |
 

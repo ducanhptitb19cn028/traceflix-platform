@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Reproduce RQ1-RQ3 with the synthetic generator (no cluster required).
+# Reproduce the offline RQs -- RQ1 (completeness), RQ2 (localisation),
+# RQ4 (model family) -- with the synthetic generator (no cluster required).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 python -m ml.experiments.run_experiment --episodes "${1:-200}" --out data/results

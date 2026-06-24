@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-RQ4 cost comparison: offline_periodic (scheduled batch retrain) vs
+RQ3 cost comparison: offline_periodic (scheduled batch retrain) vs
 online_adaptive (per-sample update), on the same drifting stream.
 
 The detection-quality result (``online_vs_offline.py``) shows the online model
@@ -165,7 +165,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     cfg_keys = [c.strip() for c in args.configs.split(",") if c.strip()]
 
-    print(f"[*] RQ4 cost comparison -- drifting stream, {args.episodes} episodes")
+    print(f"[*] RQ3 cost comparison -- drifting stream, {args.episodes} episodes")
     print(f"    offline_periodic: refit every {args.retrain_every} windows on "
           f"the last {args.train_window}")
     windows, regimes = generate_drifting_run(

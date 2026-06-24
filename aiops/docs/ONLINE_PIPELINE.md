@@ -1,7 +1,7 @@
-# The Online ML Pipeline (RQ4)
+# The Online ML Pipeline (RQ3)
 
 The online ML pipeline is the **streaming, self-adapting anomaly detector** that
-answers **RQ4** — *"does anomaly detection need to be online in a non-stationary
+answers **RQ3** — *"does anomaly detection need to be online in a non-stationary
 system?"* Its purpose is to contrast a continuously-adapting detector against
 traditional frozen-batch detection on a telemetry stream whose definition of
 "normal" keeps drifting.

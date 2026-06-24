@@ -2,7 +2,7 @@
 
 Figures are written as vector PDFs into the paper/ directory and embedded by
 sn-article.tex. Numbers are taken from the result CSVs where stable across
-runs (RQ1) and from the consolidated RQ4 results doc otherwise, so that every
+runs (RQ1) and from the consolidated RQ3 results doc otherwise, so that every
 figure is consistent with the tables in the manuscript.
 """
 import csv
@@ -72,7 +72,7 @@ def fig_rq1():
     save(fig, "fig_rq1_completeness.pdf")
 
 
-# ---------------------------------------------------------------- RQ4 headline
+# ---------------------------------------------------------------- RQ3 headline
 def fig_rq3_headline():
     # F1 on the future (drifted) stream -- Run B (320 episodes), consistent
     # with manuscript Table 7 / rq3_summary.json headline_f1_future.
@@ -100,7 +100,7 @@ def fig_rq3_headline():
     save(fig, "fig_rq3_headline.pdf")
 
 
-# ---------------------------------------------------------------- RQ4 cost
+# ---------------------------------------------------------------- RQ3 cost
 def fig_rq3_cost():
     # Operational measurements (latency, footprint) come from the dedicated
     # cost-profiling run (rq3_cost.csv); F1 is reconciled to the Run B

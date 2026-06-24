@@ -21,7 +21,7 @@ export default function ResultComparison() {
 
   if (err) return <div className="page"><h1>📊 Result Comparison</h1>
     <div className="hint">No results yet ({err}). Generate them in <b>Offline Mode</b>
-      (run <i>RQ4 — offline vs online detection</i>).</div></div>;
+      (run <i>RQ3 — offline vs online detection</i>).</div></div>;
   if (!data) return <div className="page"><h1>📊 Result Comparison</h1><div className="hint">Loading…</div></div>;
 
   const f1 = data.f1_by_config;
@@ -107,7 +107,7 @@ export default function ResultComparison() {
         <>
           <h3>Cost: online vs periodic retraining</h3>
           {data.cost.length === 0
-            ? <div className="hint">Run <i>RQ4 — cost comparison</i> in Offline Mode.</div>
+            ? <div className="hint">Run <i>RQ3 — cost comparison</i> in Offline Mode.</div>
             : <table className="table">
                 <thead><tr>{Object.keys(data.cost[0]).map((k) => <th key={k}>{k}</th>)}</tr></thead>
                 <tbody>

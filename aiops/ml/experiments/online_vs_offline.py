@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-RQ4: does anomaly detection need to be *online* in a non-stationary system?
+RQ3: does anomaly detection need to be *online* in a non-stationary system?
 
-Motivation. RQ1-RQ3 hold on a stationary stream, where a model trained once
+Motivation. RQ1, RQ2 and RQ4 hold on a stationary stream, where a model trained once
 stays calibrated. Production telemetry is not stationary -- deploys, autoscaling
 and data growth shift the operating baseline (``ml/drift.py``). This experiment
 quantifies what that does to the traditional batch detector and whether an
@@ -238,7 +238,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     cfg_keys = [c.strip() for c in args.configs.split(",") if c.strip()]
 
-    print(f"[*] RQ4 online vs offline -- drifting stream, {args.episodes} episodes")
+    print(f"[*] RQ3 online vs offline -- drifting stream, {args.episodes} episodes")
     windows, regimes = generate_drifting_run(
         n_episodes=args.episodes, seed=args.seed)
     n_reg = len(set(regimes))
@@ -288,7 +288,7 @@ def main():
         }
 
     summary = {
-        "experiment": "RQ4_online_vs_offline",
+        "experiment": "RQ3_online_vs_offline",
         "episodes": args.episodes,
         "n_windows": len(windows),
         "n_regimes": n_reg,

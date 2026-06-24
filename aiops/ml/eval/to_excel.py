@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export the RQ4 offline-vs-online comparison to a formatted Excel workbook.
+"""Export the RQ3 offline-vs-online comparison to a formatted Excel workbook.
 
 Reads the CSVs produced by ml.experiments.online_vs_offline and
 ml.experiments.cost_compare, and writes a multi-sheet .xlsx:

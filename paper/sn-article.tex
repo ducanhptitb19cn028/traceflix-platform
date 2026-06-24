@@ -472,7 +472,7 @@ Because RQ3 reframes the choice of paradigm as an operational decision, we addit
 
 \subsection{Reproducibility}\label{sec:method-repro}
 
-All models are trained and evaluated under a fixed random seed, an identical train/test protocol and the same preprocessing, so cross-cell differences reflect configuration and policy rather than stochastic training variation. The synthetic prequential stream is generated deterministically. All tooling is open-source, and the result datasets (\texttt{rq1\_completeness}, \texttt{rq3\_rca}, \texttt{rq4\_online\_vs\_offline}, \texttt{rq4\_cost}, \texttt{rq4\_timeline} and their summaries) underpin every figure and table reported below.
+All models are trained and evaluated under a fixed random seed, an identical train/test protocol and the same preprocessing, so cross-cell differences reflect configuration and policy rather than stochastic training variation. The synthetic prequential stream is generated deterministically. All tooling is open-source, and the result datasets (\texttt{rq1\_completeness}, \texttt{rq2\_localisation}, \texttt{rq3\_online\_vs\_offline}, \texttt{rq3\_cost}, \texttt{rq3\_timeline}, \texttt{rq4\_model\_family} and their summaries) underpin every figure and table reported below.
 
 \subsection{Threats to validity}\label{sec:method-threats}
 
@@ -725,7 +725,7 @@ The lesson, on which the drift comparison of RQ3 has already drawn, is that the 
 This is the apparent tension the article's ordering was designed to resolve: if ensemble trees are the strongest \emph{batch} family, why is the \emph{online} learner---now shown to be the one that matters under drift---not also a tree? The answer is that the two settings reward different properties. A Random Forest is an excellent \emph{static} estimator but a poor \emph{incremental} one: it cannot be updated by a single example without either refitting (the expensive, bursty periodic path) or resorting to incremental-tree variants whose drift behaviour in the upper splits is fragile. The online setting prizes a bounded, smooth per-window update and graceful adaptation over raw stationary accuracy, and a normalised linear model delivers exactly that---its per-update cost is $O(d_c)$, its footprint is kilobytes, and, crucially, the configuration-aware features (\S\ref{sec:method-configs}) have already done the non-linear work of summarising raw telemetry into informative aggregates, leaving a decision surface that is close to linearly separable. The RQ3 results already reported vindicate the choice: the linear online model not only beats both batch paradigms on the drifted stream but, under full telemetry, exceeds the Random-Forest oracle itself (Table~\ref{tab:rq3-head}). The strongest \emph{static} model and the strongest \emph{streaming} model are simply not the same model, and conflating the two is one way the single-snapshot literature is misled.
 
 %%===========================================================%%
-\section{Lessons Learned}\label{sec:lessons}\label{sec:discussion}
+\section{Discussion}\label{sec:lessons}\label{sec:discussion}
 %%===========================================================%%
 
 \subsection{Drift, not completeness, is the deciding factor}\label{sec:disc-drift}

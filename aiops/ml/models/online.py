@@ -1,5 +1,5 @@
 """
-Online, self-adapting anomaly detector (RQ4).
+Online, self-adapting anomaly detector (RQ3).
 
 The detectors in ``models/detectors.py`` are *batch* learners: ``fit`` once on a
 static split, then frozen. That is the traditional AIOps deployment -- train on

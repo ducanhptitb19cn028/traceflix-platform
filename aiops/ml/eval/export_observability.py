@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export the raw observability (MELT) data behind the RQ4 comparison to Excel.
+"""Export the raw observability (MELT) data behind the RQ3 comparison to Excel.
 
 Regenerates the same non-stationary telemetry stream used by
 ml.experiments.online_vs_offline (same episodes/seed) and writes:

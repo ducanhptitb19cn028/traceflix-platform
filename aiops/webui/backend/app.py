@@ -171,7 +171,7 @@ def _df(name: str):
 def comparison():
     det = _df("rq3_online_vs_offline.csv")
     if det is None:
-        raise HTTPException(404, "no results yet — run RQ4 in Offline Mode")
+        raise HTTPException(404, "no results yet — run RQ3 in Offline Mode")
     models = ["offline_static", "offline_periodic", "online_adaptive", "offline_full"]
 
     fut = det[det.segment.isin(["overall_future", "overall_allregimes"])]

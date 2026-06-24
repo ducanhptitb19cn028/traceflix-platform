@@ -46,7 +46,7 @@ def test_traces_help_rca_top1():
     assert topk_accuracy(e3, 1, True) >= topk_accuracy(e2, 1, False)
 
 
-# --- RQ4: online vs offline under operational drift ------------------------
+# --- RQ3: online vs offline under operational drift ------------------------
 
 def test_drift_shifts_baseline_not_labels():
     """Later regimes raise the *normal* operating point (concept drift) while
@@ -63,7 +63,7 @@ def test_drift_shifts_baseline_not_labels():
 
 
 def test_online_beats_frozen_offline_under_drift():
-    """The core RQ4 claim: a frozen batch model decays on the operational
+    """The core RQ3 claim: a frozen batch model decays on the operational
     future, while the online adaptive model stays close to an all-regime
     oracle -- on identical features."""
     windows, regimes = generate_drifting_run(n_episodes=240, seed=5)

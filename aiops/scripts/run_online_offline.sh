@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# RQ4: online (self-adapting) vs offline (frozen batch) anomaly detection on a
+# RQ3: online (self-adapting) vs offline (frozen batch) anomaly detection on a
 # non-stationary stream. No cluster required -- the drift generator is synthetic.
 set -euo pipefail
 cd "$(dirname "$0")/.."

@@ -1,5 +1,5 @@
 """
-Root cause analysis (RQ3: do traces improve localisation?).
+Root cause analysis (RQ2: do traces improve localisation?).
 
 RCA here follows HolisticRCA's three dimensions (Han et al., 2024):
   1. entity localisation   : which service is the root cause
@@ -32,7 +32,7 @@ def _anomaly_score(df_service: pd.DataFrame, use_traces: bool) -> float:
         # service shows elevated latency (already counted above) but few
         # originating errors, so weighting error_spans heavily pulls the true
         # root cause to the top without rewarding services that merely inherit
-        # latency. This is the crux of RQ3 (Han et al., 2024).
+        # latency. This is the crux of RQ2 (Han et al., 2024).
         score += df_service.get("traces.error_spans", pd.Series([0])).mean() * 4.0
     return float(score)
 

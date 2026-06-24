@@ -1,5 +1,5 @@
 """
-Anomaly detection models (RQ2: which algorithms are most effective?).
+Anomaly detection models (RQ4: which algorithms are most effective?).
 
 Three families from the proposal:
   * Baseline classifiers : RandomForest, GradientBoosting/XGBoost on engineered

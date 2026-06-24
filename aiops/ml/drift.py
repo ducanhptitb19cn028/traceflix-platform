@@ -1,5 +1,5 @@
 """
-Non-stationary telemetry stream for RQ4 (online vs offline anomaly detection).
+Non-stationary telemetry stream for RQ3 (online vs offline anomaly detection).
 
 `dataset.generate_run` produces a *stationary* stream: the normal operating
 point is fixed, so a model trained once stays calibrated forever. Real
