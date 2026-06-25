@@ -1,0 +1,10 @@
+# Ollama recipe for the LoRA-tuned TraceFlix fault detector.
+# Built by export_ollama.sh, which merges the adapter into the base weights and
+# converts to GGUF. After `ollama create qwen2.5-3b-traceflix -f Modelfile`, point
+# the detector at it:  OLLAMA_MODEL=qwen2.5-3b-traceflix
+FROM ./gguf/qwen2.5-3b-traceflix-q4_k_m.gguf
+
+PARAMETER temperature 0
+PARAMETER num_ctx 2048
+
+SYSTEM """You are an SRE assistant that classifies one telemetry window of a 3-service mesh into a fault type and replies with ONLY a JSON object: {"anomaly": <bool>, "fault": "<normal|cpu_saturation|memory_leak|latency_spike|pod_kill|network_partition>", "confidence": <0..1>}."""

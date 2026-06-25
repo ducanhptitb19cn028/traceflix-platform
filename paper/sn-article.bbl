@@ -397,23 +397,7 @@ International Journal of Data Science and Analytics
 \endbibitem
 
 %%% 23
-\bibitem[\protect\citeauthoryear{Wang et~al.}{2025a}]{wang2025multimodal}
-\begin{botherref}
-\oauthor{\bsnm{Wang}, \binits{P.}},
-\oauthor{\bsnm{Zhang}, \binits{X.}},
-\oauthor{\bsnm{Chen}, \binits{Y.}},
-\oauthor{\bsnm{Cao}, \binits{Z.}}:
-Unsupervised microservice system anomaly detection via contrastive multi-modal
-  representation clustering.
-Information Processing \& Management
-\textbf{62}
-(2025)
-\doiurl{10.1016/j.ipm.2024.104013}
-\end{botherref}
-\endbibitem
-
-%%% 24
-\bibitem[\protect\citeauthoryear{Wang et~al.}{2025b}]{wang2025mtssurvey}
+\bibitem[\protect\citeauthoryear{Wang et~al.}{2025}]{wang2025mtssurvey}
 \begin{barticle}
 \bauthor{\bsnm{Wang}, \binits{F.}},
 \bauthor{\bsnm{Jiang}, \binits{Y.}},
@@ -431,7 +415,7 @@ Information Processing \& Management
 \end{barticle}
 \endbibitem
 
-%%% 25
+%%% 24
 \bibitem[\protect\citeauthoryear{Chen et~al.}{2023}]{chen2023tracegra}
 \begin{barticle}
 \bauthor{\bsnm{Chen}, \binits{J.}},
@@ -451,7 +435,69 @@ Information Processing \& Management
 \end{barticle}
 \endbibitem
 
+%%% 25
+\bibitem[\protect\citeauthoryear{Akmeemana et~al.}{2025}]{akmeemana2025galmad}
+\begin{barticle}
+\bauthor{\bsnm{Akmeemana}, \binits{L.}},
+\bauthor{\bsnm{Attanayake}, \binits{C.}},
+\bauthor{\bsnm{Faiz}, \binits{H.}},
+\bauthor{\bsnm{Wickramanayake}, \binits{S.}}:
+\batitle{{GAL-MAD}: Towards explainable anomaly detection in microservice
+  applications using graph attention networks}.
+\bjtitle{arXiv preprint arXiv:2504.00058}
+(\byear{2025})
+\doiurl{10.48550/arXiv.2504.00058}
+\end{barticle}
+\endbibitem
+
 %%% 26
+\bibitem[\protect\citeauthoryear{Guan et~al.}{2024}]{guan2024logllm}
+\begin{barticle}
+\bauthor{\bsnm{Guan}, \binits{W.}},
+\bauthor{\bsnm{Cao}, \binits{J.}},
+\bauthor{\bsnm{Qian}, \binits{S.}},
+\bauthor{\bsnm{Gao}, \binits{J.}}:
+\batitle{{LogLLM}: Log-based anomaly detection using large language models}.
+\bjtitle{arXiv preprint arXiv:2411.08561}
+(\byear{2024})
+\doiurl{10.48550/arXiv.2411.08561}
+\end{barticle}
+\endbibitem
+
+%%% 27
+\bibitem[\protect\citeauthoryear{Zhuang et~al.}{2024}]{zhuang2024multimodal}
+\begin{barticle}
+\bauthor{\bsnm{Zhuang}, \binits{J.}},
+\bauthor{\bsnm{Yan}, \binits{L.}},
+\bauthor{\bsnm{Zhang}, \binits{Z.}},
+\bauthor{\bsnm{Wang}, \binits{R.}},
+\bauthor{\bsnm{Zhang}, \binits{J.}},
+\bauthor{\bsnm{Gu}, \binits{Y.}}:
+\batitle{See it, think it, sorted: Large multimodal models are few-shot time
+  series anomaly analyzers}.
+\bjtitle{arXiv preprint arXiv:2411.02465}
+(\byear{2024})
+\doiurl{10.48550/arXiv.2411.02465}
+\end{barticle}
+\endbibitem
+
+%%% 28
+\bibitem[\protect\citeauthoryear{Wang et~al.}{2025}]{wang2025multimodal}
+\begin{botherref}
+\oauthor{\bsnm{Wang}, \binits{P.}},
+\oauthor{\bsnm{Zhang}, \binits{X.}},
+\oauthor{\bsnm{Chen}, \binits{Y.}},
+\oauthor{\bsnm{Cao}, \binits{Z.}}:
+Unsupervised microservice system anomaly detection via contrastive multi-modal
+  representation clustering.
+Information Processing \& Management
+\textbf{62}
+(2025)
+\doiurl{10.1016/j.ipm.2024.104013}
+\end{botherref}
+\endbibitem
+
+%%% 29
 \bibitem[\protect\citeauthoryear{Wette and Heinrichs}{2024}]{wette2024omlad}
 \begin{barticle}
 \bauthor{\bsnm{Wette}, \binits{S.}},
@@ -464,7 +510,7 @@ Information Processing \& Management
 \end{barticle}
 \endbibitem
 
-%%% 27
+%%% 30
 \bibitem[\protect\citeauthoryear{Li et~al.}{2023}]{li2023autoencoder}
 \begin{bchapter}
 \bauthor{\bsnm{Li}, \binits{J.}},
@@ -479,7 +525,7 @@ pp. \bfpage{1}--\blpage{8}
 \end{bchapter}
 \endbibitem
 
-%%% 28
+%%% 31
 \bibitem[\protect\citeauthoryear{Bakhtin et~al.}{2025}]{bakhtin2025lo2}
 \begin{bchapter}
 \bauthor{\bsnm{Bakhtin}, \binits{A.}},
@@ -498,7 +544,7 @@ In: \bbtitle{Proceedings of the 21st International Conference on Predictive
 \end{bchapter}
 \endbibitem
 
-%%% 29
+%%% 32
 \bibitem[\protect\citeauthoryear{Pham et~al.}{2025}]{pham2025rcaeval}
 \begin{bchapter}
 \bauthor{\bsnm{Pham}, \binits{L.}},
@@ -514,7 +560,7 @@ In: \bbtitle{Companion Proceedings of the ACM Web Conference (WWW)}
 \end{bchapter}
 \endbibitem
 
-%%% 30
+%%% 33
 \bibitem[\protect\citeauthoryear{Pedroso et~al.}{2025}]{pedroso2025}
 \begin{barticle}
 \bauthor{\bsnm{Pedroso}, \binits{D.F.}},
@@ -533,7 +579,7 @@ In: \bbtitle{Companion Proceedings of the ACM Web Conference (WWW)}
 \end{barticle}
 \endbibitem
 
-%%% 31
+%%% 34
 \bibitem[\protect\citeauthoryear{{Amazon Web Services}}{2022}]{aws2022obs}
 \begin{botherref}
 \oauthor{\bsnm{{Amazon Web Services}}}:
@@ -544,7 +590,7 @@ AWS Marketplace
 \end{botherref}
 \endbibitem
 
-%%% 32
+%%% 35
 \bibitem[\protect\citeauthoryear{Faseeha
   et~al.}{2025}]{faseeha2025observability}
 \begin{botherref}
@@ -562,7 +608,7 @@ IEEE Access
 \end{botherref}
 \endbibitem
 
-%%% 33
+%%% 36
 \bibitem[\protect\citeauthoryear{{Honeycomb}}{2021}]{beginnersobs}
 \begin{botherref}
 \oauthor{\bsnm{{Honeycomb}}}:
@@ -573,7 +619,7 @@ Honeycomb.io
 \end{botherref}
 \endbibitem
 
-%%% 34
+%%% 37
 \bibitem[\protect\citeauthoryear{{OpenTelemetry
   Authors}}{2024}]{opentelemetry2024spec}
 \begin{botherref}
@@ -585,7 +631,7 @@ Cloud Native Computing Foundation; specification v1.x
 \end{botherref}
 \endbibitem
 
-%%% 35
+%%% 38
 \bibitem[\protect\citeauthoryear{Wu et~al.}{2025}]{wu2025tracesampling}
 \begin{barticle}
 \bauthor{\bsnm{Wu}, \binits{Y.}},
@@ -601,7 +647,7 @@ Cloud Native Computing Foundation; specification v1.x
 \end{barticle}
 \endbibitem
 
-%%% 36
+%%% 39
 \bibitem[\protect\citeauthoryear{Ashok et~al.}{2024}]{ashok2024traceweaver}
 \begin{bchapter}
 \bauthor{\bsnm{Ashok}, \binits{S.}},
@@ -618,7 +664,7 @@ In: \bbtitle{Proceedings of the ACM SIGCOMM 2024 Conference}
 \end{bchapter}
 \endbibitem
 
-%%% 37
+%%% 40
 \bibitem[\protect\citeauthoryear{Xia et~al.}{2024}]{xia2024coupled}
 \begin{barticle}
 \bauthor{\bsnm{Xia}, \binits{F.}},
@@ -635,7 +681,7 @@ In: \bbtitle{Proceedings of the ACM SIGCOMM 2024 Conference}
 \end{barticle}
 \endbibitem
 
-%%% 38
+%%% 41
 \bibitem[\protect\citeauthoryear{Choi et~al.}{2024}]{choi2024selfsup}
 \begin{barticle}
 \bauthor{\bsnm{Choi}, \binits{K.}},
@@ -650,7 +696,7 @@ In: \bbtitle{Proceedings of the ACM SIGCOMM 2024 Conference}
 \end{barticle}
 \endbibitem
 
-%%% 39
+%%% 42
 \bibitem[\protect\citeauthoryear{Singal et~al.}{2025}]{singal2025metric}
 \begin{barticle}
 \bauthor{\bsnm{Singal}, \binits{A.}},
@@ -666,7 +712,7 @@ In: \bbtitle{Proceedings of the ACM SIGCOMM 2024 Conference}
 \end{barticle}
 \endbibitem
 
-%%% 40
+%%% 43
 \bibitem[\protect\citeauthoryear{Wagner et~al.}{2025}]{wagner2025metrics}
 \begin{barticle}
 \bauthor{\bsnm{Wagner}, \binits{D.}},
@@ -679,21 +725,7 @@ In: \bbtitle{Proceedings of the ACM SIGCOMM 2024 Conference}
 \end{barticle}
 \endbibitem
 
-%%% 41
-\bibitem[\protect\citeauthoryear{Guan et~al.}{2024}]{guan2024logllm}
-\begin{barticle}
-\bauthor{\bsnm{Guan}, \binits{W.}},
-\bauthor{\bsnm{Cao}, \binits{J.}},
-\bauthor{\bsnm{Qian}, \binits{S.}},
-\bauthor{\bsnm{Gao}, \binits{J.}}:
-\batitle{{LogLLM}: Log-based anomaly detection using large language models}.
-\bjtitle{arXiv preprint arXiv:2411.08561}
-(\byear{2024})
-\doiurl{10.48550/arXiv.2411.08561}
-\end{barticle}
-\endbibitem
-
-%%% 42
+%%% 44
 \bibitem[\protect\citeauthoryear{Pospieszny
   et~al.}{2025}]{pospieszny2025adalog}
 \begin{bchapter}
@@ -711,22 +743,7 @@ pp. \bfpage{248}--\blpage{256}
 \end{bchapter}
 \endbibitem
 
-%%% 43
-\bibitem[\protect\citeauthoryear{Akmeemana et~al.}{2025}]{akmeemana2025galmad}
-\begin{barticle}
-\bauthor{\bsnm{Akmeemana}, \binits{L.}},
-\bauthor{\bsnm{Attanayake}, \binits{C.}},
-\bauthor{\bsnm{Faiz}, \binits{H.}},
-\bauthor{\bsnm{Wickramanayake}, \binits{S.}}:
-\batitle{{GAL-MAD}: Towards explainable anomaly detection in microservice
-  applications using graph attention networks}.
-\bjtitle{arXiv preprint arXiv:2504.00058}
-(\byear{2025})
-\doiurl{10.48550/arXiv.2504.00058}
-\end{barticle}
-\endbibitem
-
-%%% 44
+%%% 45
 \bibitem[\protect\citeauthoryear{Zhang et~al.}{2025}]{zhang2025graphneural}
 \begin{barticle}
 \bauthor{\bsnm{Zhang}, \binits{Q.}},
@@ -743,7 +760,7 @@ pp. \bfpage{248}--\blpage{256}
 \end{barticle}
 \endbibitem
 
-%%% 45
+%%% 46
 \bibitem[\protect\citeauthoryear{Al-Omari}{2025}]{alomari2025context}
 \begin{barticle}
 \bauthor{\bsnm{Al-Omari}, \binits{T.}}:
@@ -757,7 +774,7 @@ pp. \bfpage{248}--\blpage{256}
 \end{barticle}
 \endbibitem
 
-%%% 46
+%%% 47
 \bibitem[\protect\citeauthoryear{Zhang et~al.}{2026}]{zhang2026modify}
 \begin{barticle}
 \bauthor{\bsnm{Zhang}, \binits{W.}},
@@ -774,23 +791,6 @@ pp. \bfpage{248}--\blpage{256}
 \bfpage{112844}
 (\byear{2026})
 \doiurl{10.1016/j.jss.2026.112844}
-\end{barticle}
-\endbibitem
-
-%%% 47
-\bibitem[\protect\citeauthoryear{Zhuang et~al.}{2024}]{zhuang2024multimodal}
-\begin{barticle}
-\bauthor{\bsnm{Zhuang}, \binits{J.}},
-\bauthor{\bsnm{Yan}, \binits{L.}},
-\bauthor{\bsnm{Zhang}, \binits{Z.}},
-\bauthor{\bsnm{Wang}, \binits{R.}},
-\bauthor{\bsnm{Zhang}, \binits{J.}},
-\bauthor{\bsnm{Gu}, \binits{Y.}}:
-\batitle{See it, think it, sorted: Large multimodal models are few-shot time
-  series anomaly analyzers}.
-\bjtitle{arXiv preprint arXiv:2411.02465}
-(\byear{2024})
-\doiurl{10.48550/arXiv.2411.02465}
 \end{barticle}
 \endbibitem
 

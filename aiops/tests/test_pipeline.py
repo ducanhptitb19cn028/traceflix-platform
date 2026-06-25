@@ -16,11 +16,28 @@ def _data():
 
 
 def test_topology_matches_real_services():
-    assert SERVICES == ["movie-service", "actor-service", "review-service"]
-    # movie-service is the only caller; actor/review are leaves
+    # gateway entrypoint wraps the unchanged movie/actor/review subtree, plus a
+    # ring of generic mesh-services (user/search/recommendation/auth/catalog).
+    assert SERVICES[0] == "gateway-service" and len(SERVICES) == 9
+    assert set(DEPENDENCIES["gateway-service"]) == {
+        "movie-service", "user-service", "search-service"}
+    # original subtree preserved
+    assert set(DEPENDENCIES["movie-service"]) == {"actor-service", "review-service"}
     assert DEPENDENCIES["actor-service"] == []
     assert DEPENDENCIES["review-service"] == []
-    assert set(DEPENDENCIES["movie-service"]) == {"actor-service", "review-service"}
+    # catalog-service is a shared fan-in leaf reached via search and recommendation
+    assert DEPENDENCIES["catalog-service"] == []
+    assert {"search-service", "recommendation-service"} <= {
+        c for c, deps in DEPENDENCIES.items() if "catalog-service" in deps}
+
+
+def test_multi_hop_symptom_propagation():
+    # a fault at the deepest leaf (catalog) propagates a secondary symptom up the
+    # whole call path, so several services look anomalous but only one is the root.
+    from ml.dataset import ancestors
+    assert ancestors("catalog-service") == {
+        "gateway-service", "user-service", "search-service", "recommendation-service"}
+    assert ancestors(None) == set()
 
 
 def test_feature_count_grows_with_config():
@@ -42,7 +59,8 @@ def test_traces_help_rca_top1():
     _, eps = _data()
     e2 = [(build_features(w, CONFIGS["C2"]), t) for w, t in eps]
     e3 = [(build_features(w, CONFIGS["C3"]), t) for w, t in eps]
-    # Top-1 is the discriminating metric on a 3-service mesh
+    # traces lift Top-1 localisation on the deep mesh (many services inherit
+    # latency; only the origin carries originating error spans)
     assert topk_accuracy(e3, 1, True) >= topk_accuracy(e2, 1, False)
 
 

@@ -1,0 +1,59 @@
+# VM3 (normal) — the telemetry data plane (MELT backends).
+# Prometheus + VictoriaMetrics (metrics), Loki (logs), Tempo (traces).
+#
+#   cd deploy/virtfusion/vm3-telemetry && docker compose --env-file ../.env up -d
+#
+# All listeners bind to 0.0.0.0 but are firewalled to the WireGuard interface (README §8).
+name: traceflix-telemetry
+
+services:
+  prometheus:
+    image: ${PROM_IMAGE}
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=6h"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom-data:/prometheus
+    ports: ["${VM3_TEL_IP}:9090:9090"]   # WG-only
+
+  # C4 historical / long-range baseline store (12-month retention), as in
+  # aiops/k8s/victoriametrics.yaml. Prometheus remote_writes here.
+  victoriametrics:
+    image: ${VM_IMAGE}
+    restart: unless-stopped
+    command:
+      - "-retentionPeriod=12"
+      - "-storageDataPath=/vmdata"
+      - "-selfScrapeInterval=10s"
+    volumes:
+      - vm-data:/vmdata
+    ports: ["${VM3_TEL_IP}:8428:8428"]   # WG-only
+
+  loki:
+    image: ${LOKI_IMAGE}
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+    volumes:
+      - ./loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/loki
+    ports: ["${VM3_TEL_IP}:3100:3100"]   # WG-only
+
+  tempo:
+    image: ${TEMPO_IMAGE}
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/tmp/tempo
+    ports:
+      # WG-only: Grafana (VM4), the aiops collector (VM1), and VM2's OTLP export all reach it over the mesh.
+      - "${VM3_TEL_IP}:3200:3200"   # query API (read by aiops TraceQL collector + Grafana)
+      - "${VM3_TEL_IP}:4317:4317"   # OTLP gRPC ingest from VM2 collector
+
+volumes:
+  prom-data:
+  vm-data:
+  loki-data:
+  tempo-data:

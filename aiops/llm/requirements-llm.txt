@@ -1,0 +1,11 @@
+# GPU-side LoRA fine-tuning deps (VM1). Kept OUT of aiops/requirements.txt so the
+# core offline pipeline stays lean. Install only where you fine-tune:
+#     pip install -r aiops/llm/requirements-llm.txt
+transformers>=4.46
+peft>=0.13
+trl>=0.12
+datasets>=3.0
+accelerate>=1.0
+bitsandbytes>=0.44     # 4-bit quantised training (CUDA)
+sentencepiece>=0.2
+# torch is already pinned in aiops/requirements.txt (CUDA wheel on VM1)

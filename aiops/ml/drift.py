@@ -33,7 +33,7 @@ from __future__ import annotations
 import random
 
 from .configs import FAULT_TYPES, SERVICES
-from .dataset import _CALLERS
+from .dataset import ancestors
 from collectors.telemetry import Window, collect_window
 
 # Which telemetry fields drift with operations. Error/originating-error signals
@@ -111,7 +111,7 @@ def generate_drifting_run(
         else:
             fault = rng.choice(fault_pool)
             root = rng.choice(SERVICES)
-        secondary = set(_CALLERS.get(root, [])) if root else set()
+        secondary = ancestors(root)   # multi-hop upstream latency propagation
 
         for _ in range(windows_per_episode):
             ts += 10.0

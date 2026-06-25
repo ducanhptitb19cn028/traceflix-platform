@@ -1,0 +1,64 @@
+# VM1 (GPU) — Kafka event backbone + local LLM, an ADDITIVE overlay on top of
+# docker-compose.yml. Brings up a single-node Kafka (KRaft, no ZooKeeper) and
+# Ollama serving Qwen2.5-3B, and injects their addresses into the aiops service.
+#
+#   cd deploy/virtfusion/vm1-gpu
+#   docker compose -f docker-compose.yml -f docker-compose.kafka-llm.yml \
+#     --env-file ../.env up -d --build
+#
+# Both new services bind to the VM's WireGuard IP only (same posture as the rest
+# of the overlay). Kafka co-locates here for a single-broker dev setup; move it to
+# VM3 by repointing TF_KAFKA_BOOTSTRAP — no code change.
+name: traceflix-aiops
+
+services:
+  kafka:
+    image: bitnami/kafka:3.7
+    restart: unless-stopped
+    environment:
+      KAFKA_CFG_NODE_ID: "0"
+      KAFKA_CFG_PROCESS_ROLES: "controller,broker"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "0@kafka:9093"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://${VM1_GPU_IP}:9092"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    volumes:
+      - kafka-data:/bitnami/kafka
+    ports:
+      - "${VM1_GPU_IP}:9092:9092"   # mesh-only
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    gpus: all
+    environment:
+      OLLAMA_KEEP_ALIVE: "30m"
+    volumes:
+      - ollama-models:/root/.ollama
+    ports:
+      - "${VM1_GPU_IP}:11434:11434"  # mesh-only
+
+  # One-shot: pull the base model so the detector works out of the box. Swap to
+  # the LoRA model (qwen2.5-3b-traceflix) after running aiops/llm/export_ollama.sh.
+  ollama-pull:
+    image: ollama/ollama:latest
+    depends_on: [ollama]
+    environment:
+      OLLAMA_HOST: "http://ollama:11434"
+    entrypoint: ["sh", "-c", "sleep 5 && ollama pull qwen2.5:3b"]
+    restart: "no"
+
+  aiops:
+    environment:
+      TF_KAFKA_BOOTSTRAP: "${VM1_GPU_IP}:9092"
+      OLLAMA_URL: "http://ollama:11434"
+      OLLAMA_MODEL: "qwen2.5:3b"
+      ENABLE_LLM: "1"
+    depends_on: [kafka, ollama]
+
+volumes:
+  kafka-data:
+  ollama-models:

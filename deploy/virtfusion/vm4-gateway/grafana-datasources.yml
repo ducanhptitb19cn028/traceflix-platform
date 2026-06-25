@@ -1,0 +1,30 @@
+# Grafana datasources -> telemetry VM (VM3) over the WireGuard mesh.
+# __VM3_TEL_IP__ is substituted at deploy time (README §7). Mirrors the datasources
+# in observability/on-demand-observability.yaml (prometheus + loki + tempo).
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus_ds
+    type: prometheus
+    access: proxy
+    url: http://__VM3_TEL_IP__:9090
+    isDefault: true
+
+  - name: VictoriaMetrics
+    uid: victoriametrics_ds
+    type: prometheus
+    access: proxy
+    url: http://__VM3_TEL_IP__:8428
+
+  - name: Loki
+    uid: loki_ds
+    type: loki
+    access: proxy
+    url: http://__VM3_TEL_IP__:3100
+
+  - name: Tempo
+    uid: tempo_ds
+    type: tempo
+    access: proxy
+    url: http://__VM3_TEL_IP__:3200

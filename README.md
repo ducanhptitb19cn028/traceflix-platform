@@ -84,7 +84,9 @@ cd aiops
 - **RQ2** — RF / GB / XGBoost / LSTM / multimodal fusion under full MELT (C4).
 - **RQ3** — Top-k root-cause localisation, traces excluded vs included.
 
-Representative offline numbers (synthetic, 3-service topology): detection F1
-climbs C1→C4 (~0.91 → ~0.99); Top-1 RCA rises from ~0.91 (metrics+logs) to ~1.00
-with traces. On a 3-service mesh, **Top-1 is the discriminating RCA metric**
-(Top-2 covers two-thirds of the mesh and saturates).
+Representative offline numbers: detection F1 climbs C1→C4 (~0.91 → ~0.99); Top-1
+RCA rises sharply with traces. The mesh is now a **9-service graph** (gateway +
+the original movie/actor/review subtree + user/search/recommendation/auth/catalog
+— see `aiops/docs/MESH_EXPANSION.md`): on it, Top-1 RCA is **~0.77 (metrics+logs)
+→ 1.00 (+traces)**, a wide, discriminating gap (the old 3-service mesh saturated at
+Top-2). Set the topology in `aiops/ml/configs.py`; everything else derives from it.

@@ -9,6 +9,8 @@ GET  /api/experiments                 list runnable offline experiments
 GET  /api/offline/run                 SSE: run an experiment, stream stdout lines
 GET  /api/results/comparison          offline-vs-online result tables (JSON)
 GET  /api/results/figures/{name}      a generated PNG figure
+GET  /api/streaming/info              Kafka topics + MELT pillars + LLM detector status
+GET  /api/streaming/stream            SSE: live event backbone (topics, MELT, LLM verdicts)
 
 Run:
     cd aiops
@@ -34,6 +36,8 @@ if str(AIOPS) not in sys.path:
 
 from ml.configs import CONFIGS                       # noqa: E402
 from ml.online_sim import run_simulation             # noqa: E402
+from streaming.webui_stream import (                 # noqa: E402
+    backbone_info, stream_backbone)
 
 RESULTS = AIOPS / "data" / "results"
 FIGURES = RESULTS / "figures"
@@ -127,6 +131,33 @@ async def online_stream(request: Request, config: str = "C4", episodes: int = 32
                 yield _sse({"type": "done"})
                 break
             yield _sse({"type": "snapshot", **snap.to_dict()})
+            if delay_ms:
+                await asyncio.sleep(delay_ms / 1000)
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
+
+
+@app.get("/api/streaming/info")
+def streaming_info():
+    """Topic catalogue, MELT pillars, and live LLM-detector status (llm/heuristic)."""
+    return backbone_info()
+
+
+@app.get("/api/streaming/stream")
+async def streaming_stream(request: Request, episodes: int = 40,
+                           max_windows: int = 2000, delay_ms: int = 60):
+    async def gen():
+        loop = asyncio.get_event_loop()
+        it = stream_backbone(episodes=episodes, max_windows=max_windows)
+        yield _sse({"type": "start"})
+        while True:
+            if await request.is_disconnected():
+                break
+            snap = await loop.run_in_executor(None, lambda: next(it, None))
+            if snap is None:
+                yield _sse({"type": "done"})
+                break
+            yield _sse({"type": "snapshot", **snap})
             if delay_ms:
                 await asyncio.sleep(delay_ms / 1000)
 

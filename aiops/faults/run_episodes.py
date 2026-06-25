@@ -14,6 +14,14 @@ The labels CSV is later joined against telemetry windows pulled by the live
 collectors (collectors/telemetry.py with TF_LIVE=1) to build the supervised
 dataset for the C1-C4 analysis.
 
+Scope: the Chaos Mesh scenarios below cover the original movie/actor/review subtree
+on Kubernetes. The expanded 9-service compose mesh (gateway/user/search/
+recommendation/auth/catalog -- see services/mesh-service + the vm2 mesh overlay) is
+fault-injected with Pumba via deploy/virtfusion/vm2-services/inject-fault.sh, which
+writes the identical labels-CSV schema. The synthetic generator already injects at
+all 9 services (root = random over ml.configs.SERVICES), so the offline analysis
+needs no cluster either way.
+
 Usage:
     python faults/run_episodes.py --episodes 30 --labels data/labels.csv
     python faults/run_episodes.py --dry-run        # print plan, touch nothing

@@ -120,7 +120,7 @@ class TemporalModel:
             labels.append(y[i + seq_len])
         return np.array(seqs), np.array(labels)
 
-    def fit(self, X, y, epochs: int = 8):
+    def fit(self, X, y, epochs: int = 30):
         if not self._available:
             return self
         torch = self._torch
@@ -131,7 +131,15 @@ class TemporalModel:
         xb = torch.tensor(seqs, dtype=torch.float32)
         yb = torch.tensor(labels, dtype=torch.long)
         opt = torch.optim.Adam(self.net.parameters(), lr=1e-3)
-        lossf = self._nn.CrossEntropyLoss()
+        # class-weighted loss: anomaly windows are the minority, and on a deep mesh
+        # (many leaf services normal) an unweighted loss collapses the LSTM to the
+        # majority class (F1=0). Inverse-frequency weighting keeps the baseline fair.
+        classes, counts = np.unique(labels, return_counts=True)
+        w = np.ones(self.n_classes, dtype="float32")
+        for c, cnt in zip(classes, counts):
+            w[int(c)] = len(labels) / (len(classes) * cnt)
+        lossf = self._nn.CrossEntropyLoss(
+            weight=torch.tensor(w, dtype=torch.float32))
         self.net.train()
         for _ in range(epochs):
             opt.zero_grad()

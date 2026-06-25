@@ -117,6 +117,17 @@ def model_family(windows) -> pd.DataFrame:
     r = _metrics(yte, fusion.predict(Xte), fpos)
     r["model"] = "multimodal_fusion"; rows.append(r)
 
+    # New model family: local-LLM detector (Qwen2.5-3B via Ollama, optionally
+    # LoRA-tuned). Opt-in via ENABLE_LLM=1 since it needs Ollama up to be a real
+    # LLM run; without it the detector reports a clearly-marked heuristic.
+    if os.getenv("ENABLE_LLM", "0") == "1":
+        from ..models.llm_detector import LLMDetector
+
+        llm = LLMDetector().fit(Xtr, ytr, feats)
+        proba = llm.predict_proba(Xte)
+        r = _metrics(yte, llm.predict(Xte), proba[:, 1])
+        r["model"] = f"llm_{llm.model}({llm.mode})"; rows.append(r)
+
     return pd.DataFrame(rows)[["model", "precision", "recall", "f1", "auc_roc"]]
 
 

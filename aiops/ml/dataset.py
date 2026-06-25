@@ -26,6 +26,27 @@ _CALLERS = {svc: [c for c, deps in DEPENDENCIES.items() if svc in deps]
             for svc in SERVICES}
 
 
+def ancestors(root: str | None) -> set[str]:
+    """All services transitively upstream of ``root`` (its callers, their callers,
+    ... up to the entrypoint). On a deep mesh a fault deep down propagates a
+    *secondary* latency symptom to every ancestor on the call path, not just the
+    immediate caller -- so many services look anomalous and only the true origin
+    carries originating error spans. That gap is exactly what trace-based RCA
+    (RQ2) exploits, and what makes Top-k localisation discriminating on a graph
+    larger than three nodes."""
+    if not root:
+        return set()
+    seen: set[str] = set()
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        for caller in _CALLERS.get(node, []):
+            if caller not in seen:
+                seen.add(caller)
+                stack.append(caller)
+    return seen
+
+
 def generate_run(n_episodes: int = 120, windows_per_episode: int = 12,
                  normal_ratio: float = 0.4, seed: int = 42):
     rng = random.Random(seed)
@@ -41,8 +62,9 @@ def generate_run(n_episodes: int = 120, windows_per_episode: int = 12,
             fault = rng.choice(fault_pool)
             root = rng.choice(SERVICES)
 
-        # services that will show a secondary (upstream) symptom this episode
-        secondary = set(_CALLERS.get(root, [])) if root else set()
+        # services that will show a secondary (upstream) symptom this episode:
+        # every ancestor on the call path inherits latency (multi-hop propagation)
+        secondary = ancestors(root)
 
         episode: list[Window] = []
         for _ in range(windows_per_episode):

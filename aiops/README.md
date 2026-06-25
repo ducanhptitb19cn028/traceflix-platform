@@ -46,17 +46,20 @@ bash ./scripts/run_offline.sh 200      # data/results/*.csv + figures
 pytest tests/ -q
 ```
 
-Representative output (synthetic, seed 42, **3-service topology**):
+Representative output (synthetic, seed 42, **9-service mesh** — see
+`docs/MESH_EXPANSION.md`):
 
 ```
 RQ1  C1 F1=0.906  C2 0.933  C3 0.988  C4 0.994     (completeness helps; traces drive the jump)
-RQ2  Top-1 RCA: metrics+logs 0.91  ->  +traces 1.00
+RQ2  Top-1 RCA: metrics+logs 0.77  ->  +traces 1.00   (Top-3: 0.95 -> 1.00)
 RQ4  RF 0.994 / GB 0.991 / XGB 0.991 F1; fusion high-precision; LSTM needs torch
 ```
 
-> **Note on RQ2 scale.** With only three services, Top-2 covers two-thirds of
-> the mesh and saturates at 1.0; **Top-1 is the discriminating metric** and is
-> what the figures emphasise.
+> **Note on RQ2 scale.** On the deep 9-service graph a fault propagates latency up
+> every ancestor, so Top-1 without traces drops to ~0.77 while traces isolate the
+> origin at 1.00 — a wide, discriminating gap. (The earlier 3-service mesh
+> saturated, making only Top-1 informative; the deeper mesh makes both Top-1 and
+> Top-3 meaningful.)
 
 ## RQ3 — why traditional (offline) anomaly detection is not enough
 

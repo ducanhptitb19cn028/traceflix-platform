@@ -1,0 +1,34 @@
+# VM1 (GPU) — AIOps engine + dashboard. Build context is the REPO ROOT so the
+# image picks up aiops/requirements.txt; the live source is bind-mounted read-write
+# so results land in aiops/data and the upstream tree stays untouched on host.
+#
+#   cd deploy/virtfusion/vm1-gpu && docker compose --env-file ../.env up -d --build
+#
+# Requires the NVIDIA Container Toolkit on the host (README §4).
+name: traceflix-aiops
+
+services:
+  aiops:
+    build:
+      context: ../../..            # repo root (so COPY aiops/requirements.txt works)
+      dockerfile: deploy/virtfusion/vm1-gpu/Dockerfile
+    image: traceflix/aiops-gpu:local
+    restart: unless-stopped
+    gpus: all                       # exposes the passed-through GPU to the container
+    environment:
+      PORT: "8000"
+      PYTHON: python3
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      # Optional LIVE path: point the aiops collectors at the telemetry VM (VM3).
+      # The synthetic RQ1–RQ4 experiments + dashboard do NOT need these.
+      PROMETHEUS_URL: "http://${VM3_TEL_IP}:9090"
+      VICTORIAMETRICS_URL: "http://${VM3_TEL_IP}:8428"
+      LOKI_URL: "http://${VM3_TEL_IP}:3100"
+      TEMPO_URL: "http://${VM3_TEL_IP}:3200"
+    volumes:
+      - ../../../aiops:/opt/traceflix/aiops      # live source + data/results on host
+    ports:
+      # bound to VM1's WireGuard IP only — reachable from VM4's nginx over the mesh,
+      # never on the VM's public interface.
+      - "${VM1_GPU_IP}:8000:8000"   # dashboard — proxied publicly by VM4 nginx

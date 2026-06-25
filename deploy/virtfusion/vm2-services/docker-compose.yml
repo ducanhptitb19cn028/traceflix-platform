@@ -1,0 +1,104 @@
+# VM2 (normal) — the TraceFlix system under observation.
+# 3 Spring Boot microservices (OTel java-agent auto-instrumented) + load generator
+# + a co-located OpenTelemetry Collector (so the agent ships to localhost, not over WG).
+#
+#   cd deploy/virtfusion/vm2-services && docker compose --env-file ../.env up -d
+#
+# Faithful to services/deployment.yaml: same images, same OTLP wiring, same review
+# query-param contract fix from aiops/k8s/load-generator-fixed.yaml.
+name: traceflix-services
+
+x-otel-agent: &otel-agent
+  # Downloads the OTel java-agent once into a shared volume, then runs the jar with it.
+  # Mirrors the initContainer + javaagent args in services/deployment.yaml.
+  restart: unless-stopped
+  depends_on: [otel-agent-init, otel-collector]
+  volumes:
+    - otel-agent:/otel:ro
+
+services:
+  otel-agent-init:
+    image: curlimages/curl:8.7.1
+    command: >
+      -L -o /otel/opentelemetry-javaagent.jar
+      https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar
+    volumes:
+      - otel-agent:/otel
+    restart: "no"
+
+  movie-service:
+    <<: *otel-agent
+    image: ${MOVIE_IMAGE}
+    environment:
+      ACTOR_SERVICE_URL: "http://actor-service:8080/api/actors/"
+      REVIEW_SERVICE_URL: "http://review-service:8080/api/reviews"
+    entrypoint: ["java"]
+    command:
+      - "-javaagent:/otel/opentelemetry-javaagent.jar"
+      - "-Dotel.service.name=movie-service"
+      - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+      - "-Dotel.exporter.otlp.protocol=grpc"
+      - "-Dotel.metrics.exporter=otlp"
+      - "-Dotel.logs.exporter=otlp"
+      - "-jar"
+      - "/app/app.jar"
+    ports: ["${VM2_SVC_IP}:8080:8080"]   # WG-only — manual probing from the mesh
+
+  actor-service:
+    <<: *otel-agent
+    image: ${ACTOR_IMAGE}
+    entrypoint: ["java"]
+    command:
+      - "-javaagent:/otel/opentelemetry-javaagent.jar"
+      - "-Dotel.service.name=actor-service"
+      - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+      - "-Dotel.metrics.exporter=otlp"
+      - "-Dotel.logs.exporter=otlp"
+      - "-jar"
+      - "/app/app.jar"
+
+  review-service:
+    <<: *otel-agent
+    image: ${REVIEW_IMAGE}
+    entrypoint: ["java"]
+    command:
+      - "-javaagent:/otel/opentelemetry-javaagent.jar"
+      - "-Dotel.service.name=review-service"
+      - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+      - "-Dotel.metrics.exporter=otlp"
+      - "-Dotel.logs.exporter=otlp"
+      - "-jar"
+      - "/app/app.jar"
+
+  # Continuous traffic so anomaly episodes have signal. Uses the CORRECTED review
+  # contract (GET /api/reviews?movieId=) from aiops/k8s/load-generator-fixed.yaml.
+  load-generator:
+    image: curlimages/curl:8.7.1
+    restart: unless-stopped
+    depends_on: [movie-service, review-service, actor-service]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          for id in 1 2 3 4 5; do
+            curl -s "http://movie-service:8080/api/movies/$$id" >/dev/null
+            curl -s "http://review-service:8080/api/reviews?movieId=$$id" >/dev/null
+          done
+          sleep 1
+        done
+
+  # Co-located collector: receives OTLP from the agents, fans out to the telemetry VM.
+  otel-collector:
+    image: ${OTEL_IMAGE}
+    restart: unless-stopped
+    command: ["--config=/etc/otel/collector-config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel/collector-config.yml:ro
+    environment:
+      VM3_TEL_IP: ${VM3_TEL_IP}
+    ports:
+      # WG-only: Prometheus on VM3 scrapes this across the mesh, not from the internet.
+      - "${VM2_SVC_IP}:8889:8889"   # Prometheus exporter — scraped by Prometheus on VM3
+
+volumes:
+  otel-agent:

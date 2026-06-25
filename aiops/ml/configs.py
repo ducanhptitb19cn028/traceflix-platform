@@ -1,11 +1,19 @@
 """
 Experiment constants, bound to the *real* TraceFlix deployment.
 
-Services and the call graph come directly from the Java code:
-    movie-service  -> actor-service (N sequential RestClient calls)
-                   -> review-service
-    actor-service  : leaf
-    review-service : leaf
+Services and the call graph come directly from the deployed mesh. The original
+movie/actor/review subtree is unchanged; a ring of generic OTel-instrumented
+mesh-services (see services/mesh-service) wraps it to form a deeper, wider graph:
+
+    gateway-service        -> movie-service, user-service, search-service   (entry)
+    movie-service          -> actor-service, review-service                 (original)
+    user-service           -> recommendation-service, auth-service
+    search-service         -> catalog-service
+    recommendation-service -> catalog-service        (catalog = shared fan-in)
+    actor / review / auth / catalog : leaves
+
+Depth 4 (gateway -> user -> recommendation -> catalog) with fan-out and a shared
+fan-in, so root-cause localisation (RQ2) is discriminating rather than saturating.
 
 Telemetry sources are the on-demand-observability stack:
     metrics -> Prometheus (OTel collector Prometheus exporter, :8889 scrape)
@@ -18,15 +26,31 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-# --- service topology (from the Spring Boot source) ------------------------
-SERVICES = ["movie-service", "actor-service", "review-service"]
-ENTRYPOINT = "movie-service"
+# --- service topology (from the deployed mesh) -----------------------------
+SERVICES = [
+    "gateway-service",          # entry / API gateway (generic mesh-service)
+    "movie-service",            # original subtree (unchanged)
+    "actor-service",
+    "review-service",
+    "user-service",             # generic mesh-services below
+    "search-service",
+    "recommendation-service",
+    "auth-service",
+    "catalog-service",
+]
+ENTRYPOINT = "gateway-service"
 
 # directed dependency edges (caller -> callee), used by RCA propagation logic
 DEPENDENCIES = {
-    "movie-service": ["actor-service", "review-service"],
+    "gateway-service": ["movie-service", "user-service", "search-service"],
+    "movie-service": ["actor-service", "review-service"],   # original subtree
+    "user-service": ["recommendation-service", "auth-service"],
+    "search-service": ["catalog-service"],
+    "recommendation-service": ["catalog-service"],
     "actor-service": [],
     "review-service": [],
+    "auth-service": [],
+    "catalog-service": [],
 }
 
 # --- backend endpoints (override via env for in-cluster vs port-forward) ----

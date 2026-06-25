@@ -4,11 +4,13 @@ import OnlineMode from "./pages/OnlineMode.jsx";
 import OfflineMode from "./pages/OfflineMode.jsx";
 import ResultComparison from "./pages/ResultComparison.jsx";
 import PipelineComparison from "./pages/PipelineComparison.jsx";
+import Streaming from "./pages/Streaming.jsx";
 
 const links = [
   { to: "/", label: "Home", end: true },
   { to: "/online", label: "🟢 Online Mode" },
   { to: "/offline", label: "🔵 Offline Mode" },
+  { to: "/streaming", label: "🌊 Streaming" },
   { to: "/pipelines", label: "🔀 Pipelines" },
   { to: "/comparison", label: "📊 Result Comparison" },
 ];
@@ -36,6 +38,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/online" element={<OnlineMode />} />
           <Route path="/offline" element={<OfflineMode />} />
+          <Route path="/streaming" element={<Streaming />} />
           <Route path="/pipelines" element={<PipelineComparison />} />
           <Route path="/comparison" element={<ResultComparison />} />
         </Routes>

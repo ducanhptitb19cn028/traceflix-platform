@@ -1,0 +1,130 @@
+# VM2 — mesh expansion overlay (ADDITIVE on top of docker-compose.yml).
+#
+# Adds six generic OTel-instrumented mesh-services that wrap the unchanged
+# movie/actor/review subtree into a deeper 9-service graph, and a load-generator
+# that enters at the gateway so traffic flows through the whole mesh:
+#
+#   gateway -> movie (-> actor, review), user, search
+#   user    -> recommendation, auth
+#   search  -> catalog ; recommendation -> catalog   (catalog = shared fan-in)
+#
+# One image (${MESH_IMAGE}), six nodes; the call graph is entirely DOWNSTREAM_URLS.
+# Run merged with the base file:
+#   docker compose -f docker-compose.yml -f docker-compose.mesh.yml --env-file ../.env up -d
+#
+# The OTel collector + Prometheus need NO change: metrics arrive via OTLP and are
+# tagged by service_name, so the new services show up in PromQL automatically.
+name: traceflix-services
+
+# common bits for every generic node (the OTel java-agent is shared from the base
+# file's otel-agent-init + otel-agent volume).
+x-mesh: &mesh
+  image: ${MESH_IMAGE}
+  restart: unless-stopped
+  depends_on: [otel-agent-init, otel-collector]
+  volumes:
+    - otel-agent:/otel:ro
+  entrypoint: ["java"]
+
+services:
+  gateway-service:
+    <<: *mesh
+    environment:
+      SERVICE_NAME: gateway-service
+      DOWNSTREAM_URLS: "http://movie-service:8080/api/movies/1,http://user-service:8080/api/call,http://search-service:8080/api/call"
+    command:
+      - "-javaagent:/otel/opentelemetry-javaagent.jar"
+      - "-Dotel.service.name=gateway-service"
+      - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+      - "-Dotel.exporter.otlp.protocol=grpc"
+      - "-Dotel.metrics.exporter=otlp"
+      - "-Dotel.logs.exporter=otlp"
+      - "-jar"
+      - "/app/app.jar"
+    ports: ["${VM2_SVC_IP}:8090:8080"]   # mesh entrypoint (WG-only)
+
+  user-service:
+    <<: *mesh
+    environment:
+      SERVICE_NAME: user-service
+      DOWNSTREAM_URLS: "http://recommendation-service:8080/api/call,http://auth-service:8080/api/call"
+    command:
+      - "-javaagent:/otel/opentelemetry-javaagent.jar"
+      - "-Dotel.service.name=user-service"
+      - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+      - "-Dotel.exporter.otlp.protocol=grpc"
+      - "-Dotel.metrics.exporter=otlp"
+      - "-Dotel.logs.exporter=otlp"
+      - "-jar"
+      - "/app/app.jar"
+
+  search-service:
+    <<: *mesh
+    environment:
+      SERVICE_NAME: search-service
+      DOWNSTREAM_URLS: "http://catalog-service:8080/api/call"
+    command:
+      - "-javaagent:/otel/opentelemetry-javaagent.jar"
+      - "-Dotel.service.name=search-service"
+      - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+      - "-Dotel.exporter.otlp.protocol=grpc"
+      - "-Dotel.metrics.exporter=otlp"
+      - "-Dotel.logs.exporter=otlp"
+      - "-jar"
+      - "/app/app.jar"
+
+  recommendation-service:
+    <<: *mesh
+    environment:
+      SERVICE_NAME: recommendation-service
+      DOWNSTREAM_URLS: "http://catalog-service:8080/api/call"
+    command:
+      - "-javaagent:/otel/opentelemetry-javaagent.jar"
+      - "-Dotel.service.name=recommendation-service"
+      - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+      - "-Dotel.exporter.otlp.protocol=grpc"
+      - "-Dotel.metrics.exporter=otlp"
+      - "-Dotel.logs.exporter=otlp"
+      - "-jar"
+      - "/app/app.jar"
+
+  auth-service:        # leaf — no DOWNSTREAM_URLS
+    <<: *mesh
+    environment:
+      SERVICE_NAME: auth-service
+    command:
+      - "-javaagent:/otel/opentelemetry-javaagent.jar"
+      - "-Dotel.service.name=auth-service"
+      - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+      - "-Dotel.exporter.otlp.protocol=grpc"
+      - "-Dotel.metrics.exporter=otlp"
+      - "-Dotel.logs.exporter=otlp"
+      - "-jar"
+      - "/app/app.jar"
+
+  catalog-service:     # leaf (shared fan-in) — no DOWNSTREAM_URLS
+    <<: *mesh
+    environment:
+      SERVICE_NAME: catalog-service
+    command:
+      - "-javaagent:/otel/opentelemetry-javaagent.jar"
+      - "-Dotel.service.name=catalog-service"
+      - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+      - "-Dotel.exporter.otlp.protocol=grpc"
+      - "-Dotel.metrics.exporter=otlp"
+      - "-Dotel.logs.exporter=otlp"
+      - "-jar"
+      - "/app/app.jar"
+
+  # Traffic enters at the gateway so episodes exercise the whole call graph.
+  mesh-load-generator:
+    image: curlimages/curl:8.7.1
+    restart: unless-stopped
+    depends_on: [gateway-service]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          curl -s "http://gateway-service:8080/api/call" >/dev/null
+          sleep 1
+        done

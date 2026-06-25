@@ -48,8 +48,8 @@ def fig_rq1():
     # detection in both, and traces (C2->C3) are the decisive increment -- the
     # trace jump being larger on the drifted stream.
     rows = list(csv.DictReader(open(os.path.join(RESULTS, "rq1_completeness.csv"))))
-    baseline = [float(r["f1"]) for r in rows]              # 0.906 .. 0.994
-    drifted = [0.8174, 0.8347, 0.9817, 0.9834]            # continual learning, drifted
+    baseline = [float(r["f1"]) for r in rows]              # 0.896 .. 0.986
+    drifted = [0.8130, 0.8274, 0.9737, 0.9755]            # continual learning, drifted (9-svc)
     x = list(range(len(CONFIGS)))
     fig, ax = plt.subplots(figsize=(6.4, 3.6))
     ax.plot(x, baseline, "o-", color=C_BLUE, lw=2, ms=7, label="held-out baseline")
@@ -76,10 +76,10 @@ def fig_rq1():
 def fig_rq3_headline():
     # F1 on the future (drifted) stream -- Run B (320 episodes), consistent
     # with manuscript Table 7 / rq3_summary.json headline_f1_future.
-    static  = [0.4894, 0.4921, 0.5097, 0.5112]
-    periodic = [0.7574, 0.7776, 0.8904, 0.8905]
-    online  = [0.8174, 0.8347, 0.9817, 0.9834]
-    oracle_c4 = 0.9387
+    static  = [0.3602, 0.3609, 0.3701, 0.3705]
+    periodic = [0.8204, 0.8323, 0.9247, 0.9255]
+    online  = [0.8130, 0.8274, 0.9737, 0.9755]
+    oracle_c4 = 0.9267
     x = range(len(CONFIGS))
     w = 0.26
     fig, ax = plt.subplots(figsize=(6.2, 3.6))
@@ -106,10 +106,10 @@ def fig_rq3_cost():
     # cost-profiling run (rq3_cost.csv); F1 is reconciled to the Run B
     # headline so a single F1 value is used throughout the manuscript.
     f1_runB = {
-        ("offline_periodic", "C1"): 0.7574, ("online_adaptive", "C1"): 0.8174,
-        ("offline_periodic", "C2"): 0.7776, ("online_adaptive", "C2"): 0.8347,
-        ("offline_periodic", "C3"): 0.8904, ("online_adaptive", "C3"): 0.9817,
-        ("offline_periodic", "C4"): 0.8905, ("online_adaptive", "C4"): 0.9834,
+        ("offline_periodic", "C1"): 0.8204, ("online_adaptive", "C1"): 0.8130,
+        ("offline_periodic", "C2"): 0.8323, ("online_adaptive", "C2"): 0.8274,
+        ("offline_periodic", "C3"): 0.9247, ("online_adaptive", "C3"): 0.9737,
+        ("offline_periodic", "C4"): 0.9255, ("online_adaptive", "C4"): 0.9755,
     }
     rows = list(csv.DictReader(open(os.path.join(RESULTS, "rq3_cost.csv"))))
     fig, ax = plt.subplots(figsize=(6.2, 3.8))

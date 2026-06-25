@@ -10,3 +10,5 @@ uvicorn[standard]>=0.29  # ASGI server for the webui backend
 xgboost>=2.0          # gradient-boosting baseline
 torch>=2.2            # LSTM temporal model (heuristic fallback if absent)
 kubernetes>=29.0      # K8s events collector for the "E" signal (C4)
+# Optional (Kafka event backbone -- streaming/; in-memory fallback if absent):
+kafka-python>=2.0     # producer/consumer for tf.telemetry.windows/anomalies/incidents

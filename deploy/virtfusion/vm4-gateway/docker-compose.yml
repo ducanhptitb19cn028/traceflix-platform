@@ -1,0 +1,37 @@
+# VM4 (normal) — public gateway. The ONLY VM with a public IP exposed.
+# Grafana (dashboards over the VM3 datasources) + nginx reverse proxy with TLS
+# and basic-auth fronting the AIOps dashboard (VM1) and Grafana.
+#
+#   cd deploy/virtfusion/vm4-gateway && docker compose --env-file ../.env up -d
+name: traceflix-gateway
+
+services:
+  grafana:
+    image: ${GRAFANA_IMAGE}
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    volumes:
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+      - grafana-data:/var/lib/grafana
+    expose: ["3000"]
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on: [grafana]
+    environment:
+      VM1_GPU_IP: ${VM1_GPU_IP}
+      DASHBOARD_BASIC_AUTH: ${DASHBOARD_BASIC_AUTH}
+    volumes:
+      - ./nginx.conf:/etc/nginx/templates/default.conf.template:ro
+      - ./certs:/etc/nginx/certs:ro       # drop fullchain.pem / privkey.pem here (README §8)
+    ports:
+      - "80:80"
+      - "443:443"
+
+volumes:
+  grafana-data:

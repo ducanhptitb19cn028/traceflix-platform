@@ -17,3 +17,7 @@ export const offlineRunUrl = (p) =>
   `&configs=${encodeURIComponent(p.configs)}`;
 
 export const figureUrl = (name) => `/api/results/figures/${name}`;
+
+export const streamingStreamUrl = (p) =>
+  `/api/streaming/stream?episodes=${p.episodes}` +
+  `&max_windows=${p.maxWindows}&delay_ms=${p.delayMs}`;

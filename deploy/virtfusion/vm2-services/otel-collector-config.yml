@@ -1,0 +1,48 @@
+# OTel Collector on VM2. Receives OTLP (metrics+logs+traces) from the java-agents
+# and forwards across the WireGuard mesh to the telemetry VM (VM3):
+#   - traces  -> Tempo  (VM3:4317)
+#   - logs    -> Loki   (VM3:3100, via loki exporter)
+#   - metrics -> exposed on :8889 for Prometheus (VM3) to scrape
+# Mirrors observability/on-demand-observability.yaml (prom exporter :8889, loki push).
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+
+processors:
+  batch: {}
+  resourcedetection:
+    detectors: [env, system]
+
+exporters:
+  # Traces -> Tempo on the telemetry VM
+  otlp/tempo:
+    endpoint: "${env:VM3_TEL_IP}:4317"
+    tls:
+      insecure: true
+  # Logs -> Loki on the telemetry VM
+  loki:
+    endpoint: "http://${env:VM3_TEL_IP}:3100/loki/api/v1/push"
+  # Metrics -> scraped by Prometheus at :8889
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    resource_to_telemetry_conversion:
+      enabled: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [resourcedetection, batch]
+      exporters: [otlp/tempo]
+    metrics:
+      receivers: [otlp]
+      processors: [resourcedetection, batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [resourcedetection, batch]
+      exporters: [loki]

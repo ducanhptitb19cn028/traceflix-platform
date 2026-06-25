@@ -58,7 +58,7 @@
 %% Abstract                          %%
 %%==================================%%
 
-\abstract{Cloud-native systems are observable but non-stationary: the telemetry that machine-learning detectors consume is continuously reshaped by deployments, autoscaling and shifting traffic, so a decision boundary that is accurate at training time silently decays in production. Existing studies of observability-driven anomaly detection almost universally evaluate a model that is trained once on a static snapshot, and therefore measure a \emph{stationary ceiling} that may not survive contact with a drifting stream. This paper asks a different question: when the stream drifts, does the \emph{learning paradigm}---static-batch, periodically-retrained, or continuously-online---matter more than the richness of the telemetry, and how do the two interact? We construct a production-representative testbed, TraceFlix, a Kubernetes microservice application instrumented end-to-end with OpenTelemetry, Prometheus, Loki and Tempo, and drive it through four ordered telemetry configurations (metrics-only through full Metrics--Events--Logs--Traces) and four operating regimes that inject realistic drift (latency regression, scale-out, and combined load). On a held-out baseline set, detection quality rises monotonically with telemetry richness (F1 $0.906 \rightarrow 0.994$), with distributed traces the single most valuable signal and ensemble trees the strongest model family; traces also lift root-cause top-1 localisation from $0.91$ to a perfect $1.0$. But under drift the picture inverts: a frozen batch model collapses to F1 $\approx 0.49$--$0.51$ \emph{regardless} of how much telemetry it is given, scheduled retraining recovers only partially (up to $\sim 0.89$), and a lightweight online-adaptive detector dominates at every configuration---and in the large majority of operating regimes---reaching F1 $\approx 0.98$ under full telemetry and even exceeding an all-regimes batch oracle. The online detector is additionally $17$--$32\times$ better on tail latency, $\sim 200$--$550\times$ smaller, and retains no historical data. We conclude that telemetry completeness and continual learning are complementary rather than substitutable: richer signals raise the attainable ceiling, but only adaptation realises it on a live, drifting system.}
+\abstract{Cloud-native systems are observable but non-stationary: the telemetry that machine-learning detectors consume is continuously reshaped by deployments, autoscaling and shifting traffic, so a decision boundary that is accurate at training time silently decays in production. Existing studies of observability-driven anomaly detection almost universally evaluate a model that is trained once on a static snapshot, and therefore measure a \emph{stationary ceiling} that may not survive contact with a drifting stream. This paper asks a different question: when the stream drifts, does the \emph{learning paradigm}---static-batch, periodically-retrained, or continuously-online---matter more than the richness of the telemetry, and how do the two interact? We construct a production-representative testbed, TraceFlix, a Kubernetes microservice application instrumented end-to-end with OpenTelemetry, Prometheus, Loki and Tempo, and drive it through four ordered telemetry configurations (metrics-only through full Metrics--Events--Logs--Traces) and four operating regimes that inject realistic drift (latency regression, scale-out, and combined load). On a held-out baseline set, detection quality rises monotonically with telemetry richness (F1 $0.896 \rightarrow 0.986$), with distributed traces the single most valuable signal and ensemble trees the strongest model family; traces also lift root-cause top-1 localisation from $0.77$ to a perfect $1.0$ on a deep nine-service mesh. But under drift the picture inverts: a frozen batch model collapses to F1 $\approx 0.36$ \emph{regardless} of how much telemetry it is given, scheduled retraining recovers most of the gap (up to $\sim 0.93$), and a lightweight online-adaptive detector dominates once the telemetry is rich enough---decisively at C3/C4 and in two-thirds of operating regimes---reaching F1 $\approx 0.98$ under full telemetry and even exceeding an all-regimes batch oracle, while under thin telemetry it runs within $0.007$ F1 of periodic retraining. The online detector is additionally $9$--$20\times$ better on tail latency, $\sim 130$--$390\times$ smaller, and retains no historical data. We conclude that telemetry completeness and continual learning are complementary rather than substitutable: richer signals raise the attainable ceiling, but only adaptation realises it on a live, drifting system.}
 
 \keywords{Observability, Anomaly Detection, Concept Drift, Online Learning, Cloud-Native Systems, Machine Learning, Microservices}
 
@@ -114,9 +114,9 @@ To answer these questions we built \emph{TraceFlix}, a Kubernetes microservice a
   \item \textbf{A two-axis experimental methodology} for observability-driven detection that isolates telemetry completeness (four nested configurations) and the learning paradigm (static, periodic, online) under controlled drift on a production-representative testbed (\S\ref{sec:problem}, \S\ref{sec:method}).
   \item \textbf{Empirical findings that answer the research questions}, established over the full configuration $\times$ paradigm $\times$ regime grid:
   \begin{itemize}
-    \item[\emph{To RQ1:}] under non-stationarity, telemetry completeness still improves detection: for a detector that keeps current, drifted-stream F1 rises \emph{monotonically} from $0.82$ to $0.98$ across the configurations (mirroring $0.906 \rightarrow 0.994$ on a held-out reference), with distributed traces the single most valuable pillar---and decisively so under drift, where the trace increment ($+0.147$ F1) dwarfs that of logs or events.
-    \item[\emph{To RQ2:}] adding traces lifts root-cause top-1 localisation from $0.91$ to a perfect $1.0$ on our topology, isolating tracing as the decisive localisation signal.
-    \item[\emph{To RQ3:}] under drift the result \emph{inverts}---a frozen batch model collapses to F1 $\approx 0.49$--$0.51$ \emph{regardless} of telemetry, periodic retraining only partially recovers, and a lightweight online-adaptive detector dominates at every configuration and in $10$ of $12$ regime cells, reaching F1 $\approx 0.98$ and even beating an all-regimes oracle, while being $17$--$32\times$ better on tail latency and $\sim 200$--$550\times$ smaller.
+    \item[\emph{To RQ1:}] under non-stationarity, telemetry completeness still improves detection: for a detector that keeps current, drifted-stream F1 rises \emph{monotonically} from $0.81$ to $0.98$ across the configurations (mirroring $0.896 \rightarrow 0.986$ on a held-out reference), with distributed traces the single most valuable pillar---and decisively so under drift, where the trace increment ($+0.146$ F1) dwarfs that of logs or events.
+    \item[\emph{To RQ2:}] adding traces lifts root-cause top-1 localisation from $0.77$ to a perfect $1.0$ on a deep nine-service mesh (where multi-hop latency leaves top-$k$ unsaturated without traces), isolating tracing as the decisive localisation signal.
+    \item[\emph{To RQ3:}] under drift the result \emph{inverts}---a frozen batch model collapses to F1 $\approx 0.36$ \emph{regardless} of telemetry, periodic retraining recovers much of the gap, and a lightweight online-adaptive detector dominates once telemetry is rich (C3/C4) and in $8$ of $12$ regime cells, reaching F1 $\approx 0.98$ and beating an all-regimes oracle at every configuration, while being $9$--$20\times$ better on tail latency and $\sim 130$--$390\times$ smaller; under thin telemetry it and periodic retraining are within $0.007$ F1.
     \item[\emph{To RQ4:}] ensemble trees are the strongest family on multimodal tabular telemetry, which is also \emph{why a lightweight normalised linear model---not a tree---is the right detector for the online setting} established by RQ3.
   \end{itemize}
   \item \textbf{An operational-cost analysis} that reframes the choice of learning paradigm as a service-level rather than a purely accuracy decision (\S\ref{sec:results}, \S\ref{sec:lessons}).
@@ -125,13 +125,13 @@ To answer these questions we built \emph{TraceFlix}, a Kubernetes microservice a
 
 To support open science, the testbed configuration, pipeline code and result datasets underpinning every table are available for reproducibility.
 
-The remainder of this article is organised as follows. Section~\ref{sec:foundations} fixes the necessary background and develops a taxonomy of cloud-native anomaly detection that locates the study within the design space. Section~\ref{sec:problem} formalises windowed detection, concept drift and the two-axis design. Section~\ref{sec:method} describes the TraceFlix testbed, fault injection, the telemetry configurations and drift regimes, the competing learners, and the evaluation protocol. Section~\ref{sec:results} reports the results, establishing the held-out baseline findings first and returning to the model-family question (RQ4) last, once the online setting is established. Section~\ref{sec:lessons} distils the lessons learned and Section~\ref{sec:threats} examines the threats to validity. Section~\ref{sec:background} situates the work within the related literature, and Section~\ref{sec:conclusion} concludes.
+The remainder of this article is organised as follows. Section~\ref{sec:foundations} fixes the necessary background and develops a taxonomy of cloud-native anomaly detection that locates the study within the field. Section~\ref{sec:problem} formalises windowed detection, concept drift and the two-axis design. Section~\ref{sec:method} describes the TraceFlix testbed, fault injection, the telemetry configurations and drift regimes, the competing learners, and the evaluation protocol. Section~\ref{sec:results} reports the results, establishing the held-out baseline findings first and returning to the model-family question (RQ4) last, once the online setting is established. Section~\ref{sec:lessons} distils the lessons learned and Section~\ref{sec:threats} examines the threats to validity. Section~\ref{sec:background} situates the work within the related literature, and Section~\ref{sec:conclusion} concludes.
 
 %%===========================================================%%
 \section{Background and a Taxonomy of Cloud-Native Anomaly Detection}\label{sec:foundations}
 %%===========================================================%%
 
-Before formalising the study it is worth fixing vocabulary and, more usefully, drawing a map of the design space the study inhabits. Cloud-native anomaly detection is not a single technique but a family of them, and the choices that distinguish one detector from another---what telemetry it consumes, what model it fits, how it learns as the system changes, and what it is asked to decide---are precisely the choices this paper treats as variables rather than as fixed background assumptions. This section establishes the concepts the rest of the article relies on (\S\ref{sec:fnd-concepts}) and organises the field into a taxonomy (\S\ref{sec:fnd-taxonomy}, Figure~\ref{fig:taxonomy}) whose axes make both the structure of the field and the region this study occupies legible. The detailed, study-by-study comparison against the most directly related work is deferred to \S\ref{sec:background}, once our own results are in hand.
+Before formalising the study it is worth fixing vocabulary and, more usefully, drawing a map of the field the study inhabits. Cloud-native anomaly detection is not a single technique but a family of them, and the choices that distinguish one detector from another---what telemetry it consumes, what model it fits, how it learns as the system changes, and what it is asked to decide---are precisely the choices this paper treats as variables rather than as fixed background assumptions. This section establishes the concepts the rest of the article relies on (\S\ref{sec:fnd-concepts}) and organises the field into a taxonomy of detection approaches (\S\ref{sec:fnd-taxonomy}, Figure~\ref{fig:taxonomy}) and locates within it the region this study occupies. The detailed, study-by-study comparison against the most directly related work is deferred to \S\ref{sec:background}, once our own results are in hand.
 
 \subsection{Concepts and vocabulary}\label{sec:fnd-concepts}
 
@@ -141,9 +141,9 @@ Before formalising the study it is worth fixing vocabulary and, more usefully, d
 
 \paragraph{Non-stationarity and concept drift.} A cloud-native telemetry stream is \emph{non-stationary}. \emph{Concept drift} denotes a change over time in the joint distribution $P(\mathbf{x}, y)$ of features $\mathbf{x}$ and labels $y$ \cite{arora2024drift,lukats2025drift}. In operational terms, a deployment alters the telemetry that healthy behaviour produces, an autoscaling event shifts resource-utilisation baselines, and a traffic surge moves latency and throughput distributions at once; a decision boundary fitted to last week's normal then misclassifies this week's. Whether, and how, a detector copes with drift is therefore not a peripheral implementation detail but a defining property---and it is one of the two axes this study manipulates.
 
-\subsection{A taxonomy of the design space}\label{sec:fnd-taxonomy}
+\subsection{A taxonomy of cloud-native anomaly detection}\label{sec:fnd-taxonomy}
 
-Figure~\ref{fig:taxonomy} organises cloud-native anomaly detection along six dimensions. The first four classify a detector's \emph{design}; the last two classify the \emph{conditions} under which it is evaluated.
+Figure~\ref{fig:taxonomy} organises cloud-native anomaly detection as a taxonomy of detection \emph{approaches}, from simple statistical rules to multimodal deep models. Two further choices cut \emph{across} this taxonomy---how a detector \emph{learns} as the system changes, and whether it is \emph{evaluated} under drift---and it is those two, rather than any single technique branch, that this paper treats as its variables.
 
 \begin{figure}[t]
 \centering
@@ -151,40 +151,40 @@ Figure~\ref{fig:taxonomy} organises cloud-native anomaly detection along six dim
   for tree={
     grow'=0, parent anchor=east, child anchor=west, anchor=west,
     font=\sffamily\footnotesize, draw, rounded corners, align=left,
-    inner sep=2.6pt, l sep=13pt, s sep=2.4pt,
+    inner sep=2.6pt, l sep=12pt, s sep=2.2pt,
   },
   forked edges,
   where level=0{fill=black!12, font=\sffamily\bfseries\footnotesize}{},
   where level=1{fill=blue!8, font=\sffamily\bfseries\footnotesize}{},
   hl/.style={fill=green!18},
   [Cloud-native\\anomaly\\detection
-    [D1: Telemetry input
-      [metrics,hl][+logs,hl][+traces,hl][full MELT,hl]]
-    [D2: Detection model
-      [statistical / threshold][classical ML][deep learning][graph / topology]]
-    [D3: Learning paradigm
-      [static-batch,hl][periodic retrain,hl][online / continual,hl]]
-    [D4: Task
-      [detection,hl][localisation / RCA,hl][prediction]]
-    [D5: Drift posture
-      [stationary][drift-aware,hl]]
-    [D6: Evaluation setting
-      [benchmark / synthetic][controlled-drift testbed,hl][production]]]
+    [Statistical /\\threshold
+      [{forecasting / dynamic baselines \cite{mart2020};\\static thresholds \cite{islam2021}}]]
+    [Classical ML
+      [{tree ensembles, isolation forest,\\one-class methods \cite{lomio2022}}]]
+    [Deep learning
+      [{reconstruction: AE / VAE \cite{dkmak2025}}]
+      [{sequential: RNN / LSTM /\\Transformer \cite{wang2025mtssurvey}}]
+      [{graph / topology: GNN / GAT\\\cite{chen2023tracegra,akmeemana2025galmad}}]]
+    [LLM-based
+      [{log and multimodal LLM\\analysers \cite{guan2024logllm,zhuang2024multimodal}}]]
+    [Multimodal\\MELT fusion,hl
+      [{late / contrastive MELT fusion\\\cite{han2024,wang2025multimodal}},hl]]]
 \end{forest}
-\caption{A taxonomy of cloud-native anomaly detection along six dimensions---four of \emph{design} (D1--D4) and two of \emph{evaluation} (D5--D6). Shaded leaves mark the region the present study occupies: it holds the detection model fixed (D2) as a control while sweeping telemetry completeness (D1) and the learning paradigm (D3) \emph{together}, evaluating detection and localisation under controlled drift (D5--D6). The bulk of prior work fixes D3 to static-batch and D5 to stationary.}\label{fig:taxonomy}
+\caption{A taxonomy of cloud-native anomaly-detection approaches---from statistical and threshold rules and classical machine learning, through the deep-learning families (reconstruction, sequential and graph models), to LLM-based and multimodal MELT-fusion detectors---with representative works. The strongest recent results cluster at the multimodal end (shaded). Cutting \emph{across} this technique taxonomy are two choices the field rarely varies---how a detector \emph{learns} as the system changes (static, periodic or online) and whether it is \emph{evaluated} under drift---which \S\ref{sec:problem} makes the explicit axes of this study.}\label{fig:taxonomy}
 \end{figure}
 
-\emph{Telemetry input} (D1) is the signal a detector consumes, ranging from a single modality---most often metrics \cite{lomio2022,mart2020}---through progressively richer combinations to full MELT, the multimodal end at which the strongest recent results cluster \cite{han2024,wang2025multimodal}. \emph{Detection model} (D2) is the function it fits: statistical and threshold rules; classical machine learning such as tree ensembles, isolation forests and one-class methods \cite{lomio2022}; deep learning such as autoencoders, recurrent and transformer architectures \cite{dkmak2025,wang2025mtssurvey}; and graph models that encode the service topology and its span timings \cite{chen2023tracegra,han2024}. \emph{Learning paradigm} (D3) is how, and how often, the model is updated: a \emph{static} model is trained once and frozen; a \emph{periodically-retrained} model is refitted on a sliding buffer at fixed intervals; and an \emph{online} model updates incrementally on every window \cite{wette2024omlad,li2023autoencoder}. This dimension is orthogonal to the choice of model---any model family can in principle be deployed in any paradigm---and it is the second axis the study manipulates. \emph{Task} (D4) is detection, localisation or prediction, as above.
+The approaches differ chiefly in the function they fit. \emph{Statistical and threshold} detectors raise an alarm when a signal leaves a hand-set or forecast band; they are cheap and interpretable but brittle as baselines move \cite{mart2020,islam2021}. \emph{Classical machine learning}---tree ensembles, isolation forests and one-class methods---remains a strong baseline on tabular telemetry \cite{lomio2022}. \emph{Deep learning} dominates the recent literature in three sub-families: \emph{reconstruction} models (autoencoders, variational autoencoders) that flag poorly-reconstructed windows \cite{dkmak2025}; \emph{sequential} models (recurrent and transformer architectures) that capture temporal structure \cite{wang2025mtssurvey}; and \emph{graph} models that encode the service topology and its span timings \cite{chen2023tracegra,akmeemana2025galmad,han2024}. \emph{LLM-based} detectors read raw logs and heterogeneous telemetry directly \cite{guan2024logllm,zhuang2024multimodal}, and \emph{multimodal MELT-fusion} detectors combine all four pillars into a joint representation---the end at which the strongest recent results cluster \cite{han2024,wang2025multimodal}. Cross-cutting every branch is the \emph{task}: detection (is anything wrong?), localisation or root-cause analysis (which service?), and prediction (is a violation imminent?).
 
-The two evaluation dimensions are easy to overlook yet decisive. \emph{Drift posture} (D5) records whether a detector is tested on a held-fixed distribution (stationary, single-snapshot) or on a moving one (drift-aware) \cite{lukats2025drift}. \emph{Evaluation setting} (D6) records the provenance of the telemetry: a public benchmark or synthetic generator \cite{bakhtin2025lo2,pham2025rcaeval}; an operational production system \cite{islam2021,hrusto2026}; or---the middle path this study takes---a production-representative testbed under controlled fault injection and controlled drift.
+Two choices cut across every branch of this taxonomy and are easy to overlook yet decisive. The first is the \emph{learning paradigm}: whether the chosen model is trained once and frozen (static), refitted on a sliding buffer at fixed intervals (periodic), or updated incrementally on every window (online) \cite{wette2024omlad,li2023autoencoder}. It is orthogonal to the technique---any family above can in principle be deployed in any paradigm. The second is the \emph{evaluation setting}: whether a detector is tested on a held-fixed (stationary, single-snapshot) slice of one distribution or on a moving (drift-aware) one \cite{lukats2025drift}, and whether its telemetry comes from a public benchmark or synthetic generator \cite{bakhtin2025lo2,pham2025rcaeval}, an operational production system \cite{islam2021,hrusto2026}, or---the middle path this study takes---a production-representative testbed under controlled fault injection and controlled drift.
 
-Read against this map, the field is unevenly populated. Dimensions D1, D2 and D4 are densely and actively worked: the literature has produced an abundance of modalities, models and tasks, and continues to advance each. Dimensions D3 and D5, by contrast, are nearly collapsed. The overwhelming majority of cloud-native detectors are static-batch models evaluated on a stationary slice of a single distribution \cite{lomio2022,dkmak2025,han2024}, even though adaptability to a moving distribution is a named---and, by recent accounting, systematically unmet---requirement \cite{raeiszadeh2026}. The shaded leaves in Figure~\ref{fig:taxonomy} mark the region this paper occupies. Rather than advance any single cell, it holds the detection model fixed (D2, a deliberate control) and sweeps the telemetry-input axis (D1) and the learning-paradigm axis (D3) \emph{together}, evaluating both detection and localisation (D4) under drift (D5) on a controlled-drift testbed (D6). It is the crossing of D1 with D3---not progress within either alone---that the study contributes, and the formal apparatus for that crossing is the subject of the next section.
+Read against this map, the field is unevenly worked. The technique branches are crowded and fast-moving: new modalities, architectures and tasks appear constantly, and the literature continues to advance each. The two cross-cutting choices, by contrast, are nearly collapsed. The overwhelming majority of cloud-native detectors are trained once and evaluated on a stationary slice of a single distribution \cite{lomio2022,dkmak2025,han2024}, even though adaptability to a moving distribution is a named---and, by recent accounting, systematically unmet---requirement \cite{raeiszadeh2026}. This paper therefore holds the detection technique fixed across its main comparisons (a deliberate control) and instead varies the two under-explored choices together---sweeping telemetry completeness and the learning paradigm under controlled drift, while also asking, last, which technique family best exploits the richest telemetry. It is that crossing---telemetry completeness with the learning paradigm---not progress within any single technique branch, that the study contributes, and the formal apparatus for it is the subject of the next section.
 
 %%===========================================================%%
 \section{Problem Formulation}\label{sec:problem}
 %%===========================================================%%
 
-We now make the task and the two design axes precise: the \emph{telemetry-completeness} axis (dimension~D1) and the \emph{learning-paradigm} axis (dimension~D3) of the taxonomy in Figure~\ref{fig:taxonomy}, whose crossing was identified there as the under-explored region this study occupies.
+We now make the task and the two design axes precise: the \emph{telemetry-completeness} axis and the \emph{learning-paradigm} axis identified in the taxonomy of Figure~\ref{fig:taxonomy}, whose crossing was singled out there as the under-explored region this study occupies.
 
 \subsection{Windowed detection}\label{sec:prob-detect}
 
@@ -285,7 +285,7 @@ The study adopts a positivist, deductive stance realised as a controlled, repeat
 
 \subsection{The TraceFlix testbed}\label{sec:method-testbed}
 
-The platform is \emph{TraceFlix}, a Kubernetes microservice application representing a realistic cloud-native system. The mesh comprises three instrumented services with a genuine multi-hop dependency structure: \texttt{movie-service} issues $N$ sequential calls to \texttt{actor-service} and a call to \texttt{review-service}, so that a request traverses a caller/callee chain with realistic propagation. A three-service topology is chosen deliberately to keep fault attribution unambiguous and the controlled drift experiments tractable; the dependency chain is sufficient to exercise cross-service signal propagation for the localisation task, while remaining small enough that ground truth is never in doubt.
+The platform is \emph{TraceFlix}, a Kubernetes microservice application representing a realistic cloud-native system. The mesh comprises nine instrumented services with a genuine multi-hop dependency structure: a \texttt{gateway-service} entrypoint fans out to a \texttt{movie-service} subtree (\texttt{movie} issues $N$ sequential calls to \texttt{actor-service} and a call to \texttt{review-service}) and to \texttt{user}, \texttt{search} and \texttt{recommendation} services that converge on a shared \texttt{catalog-service} leaf---a call graph of depth four with fan-out and a fan-in. A request therefore traverses a multi-hop caller/callee chain, and a fault deep in the graph induces secondary latency in \emph{every} ancestor on its path. This exercises cross-service signal propagation for the localisation task on a graph large enough that top-$k$ attribution is non-trivial (\S\ref{sec:res-rq2}), yet controlled enough that the ground-truth origin is never in doubt.
 
 Instrumentation is end-to-end and vendor-neutral, matching what a production OpenTelemetry deployment emits, which maximises the external validity of the telemetry schema \cite{boten2022,hrusto2026}:
 \begin{itemize}
@@ -354,8 +354,8 @@ four telemetry configurations of \S\ref{sec:method-configs}.
 \foreach \d in {d1,d2,d3} {\draw[->] (\d.south) -- (eval.north);}
 \end{tikzpicture}}
 \caption{The TraceFlix testbed and detection pipeline. A load generator drives the
-instrumented microservice mesh (\texttt{movie}$\rightarrow$\texttt{actor}$\times N$,
-\texttt{movie}$\rightarrow$\texttt{review}); Chaos Mesh injects timestamped faults.
+instrumented nine-service mesh (\texttt{gateway}$\rightarrow$\texttt{movie}$\rightarrow$\{\texttt{actor}$\times N$,
+\texttt{review}\}, plus \texttt{user}/\texttt{search}/\texttt{recommendation}$\rightarrow$\texttt{catalog}); Chaos Mesh injects timestamped faults.
 OpenTelemetry collects MELT telemetry into per-pillar backends, whose signals are
 streamed to a configuration-aware feature extractor (C1--C4) feeding the three
 learning policies and the evaluation harness.}\label{fig:arch}
@@ -410,7 +410,7 @@ Non-stationarity is induced as a controlled sequence of operating regimes, each 
   \item[$R_2$ --- Scale-out.] An autoscaling event that changes replica counts and therefore per-pod resource-utilisation baselines.
   \item[$R_3$ --- Combined load.] A traffic surge superimposed on the previous shifts---the hardest, most-drifted regime, moving multiple distributions at once.
 \end{description}
-The stream is processed prequentially over $320$ episodes and $11{,}520$ windows, of which $2{,}880$ constitute the $R_0$ warm-up and $8{,}640$ the drifted future ($R_1$--$R_3$) on which RQ3 is scored.
+The stream is processed prequentially over $320$ episodes and $34{,}560$ windows (nine services per episode-window), of which $8{,}640$ constitute the $R_0$ warm-up and $25{,}920$ the drifted future ($R_1$--$R_3$) on which RQ3 is scored.
 
 \subsection{Learners and the online model}\label{sec:method-learners}
 
@@ -466,7 +466,7 @@ For RQ4 the model-family comparison additionally evaluates, on the richest confi
 
 \subsection{Evaluation and cost metrics}\label{sec:method-metrics}
 
-Detection is evaluated with precision, recall, F1 and AUC-ROC. F1 is the headline metric because anomaly data are class-imbalanced (normal windows dominate), under which raw accuracy is misleading---a trivial always-normal predictor scores high on accuracy but has zero recall. For the streaming experiments, F1 is computed \emph{prequentially} over the future ($R_1$--$R_3$) windows. Root-cause localisation is measured by top-$k$ accuracy; on a three-service topology top-2 saturates near unity, so \textbf{top-1 is the discriminating metric}.
+Detection is evaluated with precision, recall, F1 and AUC-ROC. F1 is the headline metric because anomaly data are class-imbalanced (normal windows dominate), under which raw accuracy is misleading---a trivial always-normal predictor scores high on accuracy but has zero recall. For the streaming experiments, F1 is computed \emph{prequentially} over the future ($R_1$--$R_3$) windows. Root-cause localisation is measured by top-$k$ accuracy; on the nine-service mesh top-$k$ does \emph{not} saturate without traces (multi-hop latency implicates several ancestors), so the trace-driven lift is visible across $k$ and \textbf{top-1 is the strictest measure}.
 
 Because RQ3 reframes the choice of paradigm as an operational decision, we additionally report operational-cost metrics that a static accuracy comparison omits: \emph{maximum per-window latency} (the tail cost, which exposes retraining spikes), \emph{model footprint} in kilobytes, the number of \emph{retained historical windows} (a data-governance and memory cost), and \emph{total CPU time}. These let us characterise the accuracy/cost trade-off rather than accuracy alone.
 
@@ -478,7 +478,7 @@ All models are trained and evaluated under a fixed random seed, an identical tra
 
 \paragraph{Internal validity.} Held-constant controls (model, seed, scenarios, load) and the nested within-subjects design mean cross-cell differences are attributable to the manipulated factors. Fault-injection timing jitter could blur labels; this is mitigated by recording exact start/stop timestamps.
 
-\paragraph{External validity.} A testbed cannot reproduce the full heterogeneity of production \cite{hrusto2026}. This is mitigated by real OpenTelemetry instrumentation and unmodified backends (so the telemetry schema is production-representative) and by a fault taxonomy drawn from documented real-world failure modes. The three-service topology limits topological generalisation, an acknowledged boundary condition; and the RQ3 stream, while drift-controlled, is synthetic-prequential, so absolute F1 values are testbed-specific even though the \emph{ordering} of paradigms is the result of interest.
+\paragraph{External validity.} A testbed cannot reproduce the full heterogeneity of production \cite{hrusto2026}. This is mitigated by real OpenTelemetry instrumentation and unmodified backends (so the telemetry schema is production-representative) and by a fault taxonomy drawn from documented real-world failure modes. The nine-service topology, though deeper than many controlled testbeds (depth four, with fan-out and a shared fan-in), is still a single synthetic mesh, which bounds topological generalisation---an acknowledged boundary condition; and the RQ3 stream, while drift-controlled, is synthetic-prequential, so absolute F1 values are testbed-specific even though the \emph{ordering} of paradigms is the result of interest.
 
 \paragraph{Construct validity.} ``Detection effectiveness'' is multidimensional; using F1, AUC-ROC, latency and cost together avoids over-reliance on a single construct.
 
@@ -500,15 +500,15 @@ RQ1 asks whether telemetry completeness improves detection once the system is no
 \toprule
 Config & Name & Feat. & F1 (held-out ref.) & F1 (drifted stream) & $\Delta$F1 drifted \\
 \midrule
-C1 & Metrics-Only            & 10 & 0.9064 & 0.8174 & --- \\
-C2 & Metrics${+}$Logs        & 14 & 0.9332 & 0.8347 & $+0.017$ \\
-C3 & ${+}$Traces             & 18 & 0.9882 & \textbf{0.9817} & $+0.147$ \\
-C4 & Full MELT               & 23 & 0.9937 & \textbf{0.9834} & $+0.002$ \\
+C1 & Metrics-Only            & 10 & 0.8964 & 0.8130 & --- \\
+C2 & Metrics${+}$Logs        & 14 & 0.9153 & 0.8274 & $+0.014$ \\
+C3 & ${+}$Traces             & 18 & 0.9846 & \textbf{0.9737} & $+0.146$ \\
+C4 & Full MELT               & 23 & 0.9855 & \textbf{0.9755} & $+0.002$ \\
 \botrule
 \end{tabular}
 \end{table}
 
-Detection quality rises \emph{monotonically} with telemetry richness in both settings. On the held-out reference, F1 climbs from $0.906$ (metrics-only) to $0.994$ (full MELT); on the operative drifted stream, the continual-learning detector improves from $0.817$ to $0.983$. In both, the decisive increment is the addition of distributed traces (C2$\rightarrow$C3), and that increment is markedly larger under drift---$+0.147$ F1 on the drifted stream against $+0.055$ on the reference---because traces resolve precisely the cross-service signal whose statistics shift most under the load and scale changes that drive the drift. Adding logs (C1$\rightarrow$C2) yields a smaller gain in both settings, and adding events and history (C3$\rightarrow$C4) leaves detection essentially unchanged.
+Detection quality rises \emph{monotonically} with telemetry richness in both settings. On the held-out reference, F1 climbs from $0.896$ (metrics-only) to $0.986$ (full MELT); on the operative drifted stream, the continual-learning detector improves from $0.813$ to $0.976$. In both, the decisive increment is the addition of distributed traces (C2$\rightarrow$C3), and that increment is markedly larger under drift---$+0.146$ F1 on the drifted stream against $+0.069$ on the reference---because traces resolve precisely the cross-service signal whose statistics shift most under the load and scale changes that drive the drift. Adding logs (C1$\rightarrow$C2) yields a smaller gain in both settings, and adding events and history (C3$\rightarrow$C4) leaves detection essentially unchanged.
 
 \begin{figure}[t]
 \centering
@@ -520,29 +520,29 @@ Two conclusions follow. First, completeness matters under non-stationarity, not 
 
 \subsection{RQ2: What does distributed tracing add to localisation?}\label{sec:res-rq2}
 
-Table~\ref{tab:rq2} reports root-cause localisation with traces excluded (C2) versus included (C3). The introduction of traces raises top-1 accuracy from $0.9068$ to a perfect $1.0000$, eliminating the localisation errors the metric-and-log approach commits.
+Table~\ref{tab:rq2} reports root-cause localisation with traces excluded (C2) versus included (C3). The introduction of traces raises top-1 accuracy from $0.7692$ to a perfect $1.0000$, eliminating the localisation errors the metric-and-log approach commits.
 
 \begin{table}[t]
-\caption{RQ2 --- root-cause localisation, traces excluded vs.\ included. Top-1 is the discriminating metric on a three-service topology.}\label{tab:rq2}
-\begin{tabular}{@{}lcc@{}}
+\caption{RQ2 --- root-cause localisation on the nine-service mesh, traces excluded (C2) vs.\ included (C3). On a deep graph top-$k$ does not saturate without traces; tracing attains perfect localisation at every $k$.}\label{tab:rq2}
+\begin{tabular}{@{}lccc@{}}
 \toprule
-Approach & top-1 accuracy & top-2 accuracy \\
+Approach & top-1 & top-2 & top-3 \\
 \midrule
-Metrics${+}$Logs (C2)            & 0.9068 & 1.0000 \\
-Metrics${+}$Logs${+}$Traces (C3) & \textbf{1.0000} & 1.0000 \\
+Metrics${+}$Logs (C2)            & 0.7692 & 0.8974 & 0.9487 \\
+Metrics${+}$Logs${+}$Traces (C3) & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} \\
 \botrule
 \end{tabular}
 \end{table}
 
-The mechanism, as anticipated in the design, lies in the originating-error-span feature. Under the metric-and-log approach a downstream fault raises the latency of the services that depend on it, so the anomaly score implicates dependents almost as strongly as the true culprit; where the secondary symptom is pronounced, a dependent service is ranked first and localisation fails. The trace feature resolves the ambiguity: only the originating service accumulates originating error spans, pulling the true root cause unambiguously to the top. Top-2 saturates at unity even without traces---on three services it covers two-thirds of the mesh and is therefore uninformative---which is why top-1 is the discriminating measure. This is precisely the controlled, ablation-style evidence the literature was shown to lack: where Han et al.\ \cite{han2024} demonstrate that a fused multimodal architecture beats single-modal baselines, we isolate the trace modality and quantify its marginal contribution while holding all else constant.
+The mechanism, as anticipated in the design, lies in the originating-error-span feature. Under the metric-and-log approach a downstream fault raises the latency of \emph{every} service on its call path---in the nine-service mesh a fault at a leaf such as \texttt{catalog-service} induces a secondary latency symptom in all of its transitive callers---so the anomaly score implicates as many as four or five ancestors almost as strongly as the true culprit, and a dependent is frequently ranked first. The depth of the graph is what makes this hard: top-$k$ no longer saturates without traces (top-2 $=0.897$, top-3 $=0.949$), because several plausible culprits must be disambiguated rather than just one of three. The trace feature resolves the ambiguity completely: only the originating service accumulates originating error spans, pulling the true root cause unambiguously to the top and attaining perfect localisation at top-1, and hence at every $k$. This is precisely the controlled, ablation-style evidence the literature was shown to lack: where Han et al.\ \cite{han2024} demonstrate that a fused multimodal architecture beats single-modal baselines, we isolate the trace modality and quantify its marginal contribution while holding all else constant.
 
 \subsection{RQ3: Does the learning paradigm matter under drift?}\label{sec:res-rq3}
 
-RQ1 and RQ2 measured a controlled, \emph{held-out baseline}---detection accuracy and root-cause localisation for a model trained once on a single distribution. We now re-use the identical pipeline and feature sets on the drifted future stream ($8{,}640$ post-warm-up windows across $R_1$--$R_3$) and compare the three realisable learning policies, with the all-regimes oracle as a ceiling.
+RQ1 and RQ2 measured a controlled, \emph{held-out baseline}---detection accuracy and root-cause localisation for a model trained once on a single distribution. We now re-use the identical pipeline and feature sets on the drifted future stream ($25{,}920$ post-warm-up windows across $R_1$--$R_3$) and compare the three realisable learning policies, with the all-regimes oracle as a ceiling.
 
 \subsubsection{Headline: F1 on the drifted stream}\label{sec:res-rq3-head}
 
-Table~\ref{tab:rq3-head} and Fig.~\ref{fig:rq3head} report F1 over the future stream. The result inverts the baseline picture. The frozen batch model collapses to F1 $\approx 0.49$--$0.51$ \emph{regardless} of how much telemetry it is given: going from metrics-only to full MELT moves its F1 by barely two points ($0.4894 \rightarrow 0.5112$). Scheduled retraining recovers substantially (up to $\sim 0.89$) but always trails. The online-adaptive model \emph{wins at every configuration}, reaching $0.9817$ under C3 and $0.9834$ under C4---and, notably, exceeding the all-regimes oracle ($0.9387$ at C4; Table~\ref{tab:rq3-regime} note), because the oracle still fits a single static boundary across all regimes whereas the online model tracks each regime as it arrives.
+Table~\ref{tab:rq3-head} and Fig.~\ref{fig:rq3head} report F1 over the future stream. The result inverts the baseline picture. The frozen batch model collapses to F1 $\approx 0.36$ \emph{regardless} of how much telemetry it is given: going from metrics-only to full MELT moves its F1 by barely a point ($0.3602 \rightarrow 0.3705$), with its precision pinned near $0.22$ throughout. The two adaptive policies recover almost the entire gap, but \emph{which} of them leads depends on telemetry richness. Under thin telemetry (C1, C2) the online and periodic learners are within $0.007$ F1 of each other---periodic marginally ahead ($0.8204$ vs.\ $0.8130$ at C1)---because with few signals the online normaliser has little to re-centre on and much of the drift there is virtual (\S\ref{sec:res-rq3-regime}). Once distributed traces are present (C3, C4) the online-adaptive model pulls clearly ahead, reaching $0.9737$ under C3 and $0.9755$ under C4 and beating periodic by $\sim 0.05$. In every configuration the online model also exceeds the all-regimes oracle ($0.8124$/$0.8166$/$0.9294$/$0.9267$ for C1--C4; Table~\ref{tab:rq3-regime} note), because the oracle still fits a single static boundary across all regimes whereas the online model tracks each regime as it arrives.
 
 \begin{table}[t]
 \caption{RQ3 headline --- F1 on the future (drifted) stream. Best realisable learner in bold.}\label{tab:rq3-head}
@@ -550,10 +550,10 @@ Table~\ref{tab:rq3-head} and Fig.~\ref{fig:rq3head} report F1 over the future st
 \toprule
 Config & static & periodic & online & gain vs.\ static & gain vs.\ periodic \\
 \midrule
-C1 Metrics-Only        & 0.4894 & 0.7574 & \textbf{0.8174} & $+0.3280$ & $+0.0600$ \\
-C2 Metrics${+}$Logs    & 0.4921 & 0.7776 & \textbf{0.8347} & $+0.3426$ & $+0.0571$ \\
-C3 ${+}$Traces         & 0.5097 & 0.8904 & \textbf{0.9817} & $+0.4720$ & $+0.0913$ \\
-C4 Full MELT           & 0.5112 & 0.8905 & \textbf{0.9834} & $+0.4722$ & $+0.0929$ \\
+C1 Metrics-Only        & 0.3602 & \textbf{0.8204} & 0.8130 & $+0.4528$ & $-0.0074$ \\
+C2 Metrics${+}$Logs    & 0.3609 & \textbf{0.8323} & 0.8274 & $+0.4665$ & $-0.0049$ \\
+C3 ${+}$Traces         & 0.3701 & 0.9247 & \textbf{0.9737} & $+0.6036$ & $+0.0490$ \\
+C4 Full MELT           & 0.3705 & 0.9255 & \textbf{0.9755} & $+0.6050$ & $+0.0500$ \\
 \botrule
 \end{tabular}
 \end{table}
@@ -564,11 +564,11 @@ C4 Full MELT           & 0.5112 & 0.8905 & \textbf{0.9834} & $+0.4722$ & $+0.092
 \caption{RQ3 headline --- F1 on the drifted future stream by learning policy and configuration. The frozen static model (grey) is flat and low regardless of telemetry; periodic retraining (orange) recovers partially; the online-adaptive model (green) dominates everywhere and, under C3/C4, exceeds the all-regimes oracle (dashed). Contrast with the monotonic baseline ceiling of Fig.~\ref{fig:rq1}.}\label{fig:rq3head}
 \end{figure}
 
-Two features deserve emphasis. First, telemetry richness barely helps the \emph{static} model (the $+0.02$ from C1 to C4 is within noise) but strongly helps the \emph{online} model (the $+0.17$ from C1 to C4 closes almost the entire gap to the ceiling). Completeness and adaptation are thus \emph{complementary}: richer signal raises the attainable ceiling, but only adaptation realises it. Second, the online model's gain over periodic retraining \emph{widens} with richness ($+0.060$ at C1 to $+0.093$ at C4): the more informative the features, the more a continuous learner can extract from each window relative to a lagging batch refit.
+Two features deserve emphasis. First, telemetry richness barely helps the \emph{static} model (the $+0.01$ from C1 to C4 is within noise) but strongly helps the \emph{online} model (the $+0.16$ from C1 to C4 closes almost the entire gap to the ceiling). Completeness and adaptation are thus \emph{complementary}: richer signal raises the attainable ceiling, but only adaptation realises it. Second, the online model's advantage over periodic retraining \emph{grows with richness, crossing from parity to dominance}: from $-0.007$ at C1, where periodic narrowly leads, to $+0.049$ at C3 and $+0.050$ at C4. The more informative the features, the more a continuous learner extracts from each window relative to a lagging batch refit---so distributed traces are precisely what tip the paradigm choice decisively toward online, and under thin telemetry the cheaper periodic schedule remains competitive.
 
 \subsubsection{Precision, recall and the stale-normal signature}\label{sec:res-rq3-prf}
 
-The F1 headline conceals \emph{how} each policy fails, which Table~\ref{tab:rq3-prf} makes explicit by decomposing the future-stream score into precision, recall and AUC-ROC. The static model exhibits the stale-normal signature in its purest form: its recall is near-perfect ($0.97$--$1.00$) while its precision collapses to $0.33$--$0.34$ at every configuration. That combination is diagnostic---the frozen boundary still fires on the genuine anomalies (high recall) but, because the post-drift normal has moved into the region it labels anomalous, it also fires on healthy traffic, so the overwhelming majority of its alerts are false. No amount of additional telemetry corrects this: the precision is flat across C1--C4 because the failure is in the boundary's \emph{location}, not in the features' \emph{informativeness}. The online model shows the opposite profile, trading a little recall for a large precision gain ($0.87$--$0.99$), which is the operationally desirable direction given the cost of alert fatigue.
+The F1 headline conceals \emph{how} each policy fails, which Table~\ref{tab:rq3-prf} makes explicit by decomposing the future-stream score into precision, recall and AUC-ROC. The static model exhibits the stale-normal signature in its purest form: its recall is near-perfect ($0.98$--$1.00$) while its precision collapses to $\approx 0.22$ at every configuration. That combination is diagnostic---the frozen boundary still fires on the genuine anomalies (high recall) but, because the post-drift normal has moved into the region it labels anomalous, it also fires on healthy traffic, so the overwhelming majority of its alerts are false. No amount of additional telemetry corrects this: the precision is flat across C1--C4 because the failure is in the boundary's \emph{location}, not in the features' \emph{informativeness}. The online model shows the opposite profile, trading a little recall for a large precision gain ($0.87$--$0.99$), which is the operationally desirable direction given the cost of alert fatigue.
 
 \begin{table}[t]
 \caption{RQ3 --- future-stream precision (P), recall (R) and AUC-ROC by policy and configuration. The static model's flat, collapsed precision with near-perfect recall is the stale-normal signature.}\label{tab:rq3-prf}
@@ -577,66 +577,66 @@ The F1 headline conceals \emph{how} each policy fails, which Table~\ref{tab:rq3-
 Config & Policy & P & R & AUC \\
 \midrule
 \multirow{3}{*}{C1}
- & static   & 0.327 & 0.974 & 0.699 \\
- & periodic & 0.706 & 0.817 & 0.906 \\
- & online   & 0.868 & 0.773 & 0.934 \\
+ & static   & 0.221 & 0.980 & 0.767 \\
+ & periodic & 0.806 & 0.836 & 0.952 \\
+ & online   & 0.873 & 0.761 & 0.950 \\
 \midrule
 \multirow{3}{*}{C2}
- & static   & 0.329 & 0.980 & 0.700 \\
- & periodic & 0.716 & 0.851 & 0.919 \\
- & online   & 0.874 & 0.799 & 0.950 \\
+ & static   & 0.221 & 0.983 & 0.754 \\
+ & periodic & 0.813 & 0.852 & 0.960 \\
+ & online   & 0.878 & 0.782 & 0.955 \\
 \midrule
 \multirow{3}{*}{C3}
- & static   & 0.342 & 0.999 & 0.874 \\
- & periodic & 0.821 & 0.973 & 0.979 \\
- & online   & 0.988 & 0.976 & 0.998 \\
+ & static   & 0.227 & 0.999 & 0.858 \\
+ & periodic & 0.879 & 0.976 & 0.991 \\
+ & online   & 0.985 & 0.962 & 0.998 \\
 \midrule
 \multirow{3}{*}{C4}
- & static   & 0.343 & 1.000 & 0.886 \\
- & periodic & 0.822 & 0.972 & 0.980 \\
- & online   & 0.989 & 0.978 & 0.998 \\
+ & static   & 0.227 & 1.000 & 0.858 \\
+ & periodic & 0.880 & 0.976 & 0.991 \\
+ & online   & 0.987 & 0.964 & 0.998 \\
 \botrule
 \end{tabular}
 \end{table}
 
-A subtler point hides in the AUC column. The static model's \emph{thresholded} F1 is flat across configurations, yet its AUC-ROC rises markedly with telemetry, from $0.70$ at C1 to $0.89$ at C4. This means richer telemetry does improve the static model's \emph{ranking} of windows by anomaly score---traces in particular make anomalous windows more separable---but that improvement is invisible at the fixed operating threshold, because the threshold itself is calibrated to a distribution that no longer holds. In other words, more telemetry sharpens the score but not the stale \emph{cut-point}; only re-learning moves the cut-point. This is a precise, quantitative statement of why completeness and adaptation are complementary rather than substitutable, and it is a distinction that an F1-only analysis would miss entirely.
+A subtler point hides in the AUC column. The static model's \emph{thresholded} F1 is flat across configurations, yet its AUC-ROC rises with telemetry, from $0.77$ at C1 to $0.86$ at C4---the gain concentrated at the trace increment ($0.75$ at C2 to $0.86$ at C3). This means richer telemetry does improve the static model's \emph{ranking} of windows by anomaly score---traces in particular make anomalous windows more separable---but that improvement is invisible at the fixed operating threshold, because the threshold itself is calibrated to a distribution that no longer holds. In other words, more telemetry sharpens the score but not the stale \emph{cut-point}; only re-learning moves the cut-point. This is a precise, quantitative statement of why completeness and adaptation are complementary rather than substitutable, and it is a distinction that an F1-only analysis would miss entirely.
 
 \subsubsection{Per-regime breakdown}\label{sec:res-rq3-regime}
 
-Table~\ref{tab:rq3-regime} decomposes F1 by regime, and the decomposition is more revealing than the headline. The online model is best in $10$ of the $12$ regime$\times$configuration cells; the two exceptions are both in the \emph{scale-out} regime ($R_2$) under the thinnest telemetry (C1 and C2), where periodic retraining narrowly leads. This exception is theoretically coherent rather than anomalous: scale-out is predominantly \emph{virtual} drift (\S\ref{sec:prob-drift})---the feature baselines shift but the meaning of ``anomalous'' does not---so a batch refit on recent data recovers the boundary as well as continuous updating, and with thin telemetry the online normaliser has fewer signals to re-centre. By contrast, $R_1$ \emph{latency regression} is \emph{real} concept drift, and it is there that the static model is hurt most (F1 $\approx 0.44$, its lowest), while the online model holds $0.83$--$0.99$. The static model's deficit is thus widest exactly where the drift is conceptual, not merely distributional---the classic stale-normal signature, visible as preserved recall ($\sim 0.97$--$1.00$) with collapsed precision ($\sim 0.33$--$0.34$).
+Table~\ref{tab:rq3-regime} decomposes F1 by regime, and the decomposition is more revealing than the headline. The online model is best in $8$ of the $12$ regime$\times$configuration cells; the four exceptions all fall under the thinnest telemetry (C1 and C2), in the \emph{scale-out} ($R_2$) and \emph{combined-load} ($R_3$) regimes, where periodic retraining narrowly leads. This is theoretically coherent rather than anomalous: scale-out, and the volume component of combined load, are predominantly \emph{virtual} drift (\S\ref{sec:prob-drift})---the feature baselines shift but the meaning of ``anomalous'' does not---so a batch refit on recent data recovers the boundary as well as continuous updating, and with thin telemetry the online normaliser has fewer signals to re-centre. By contrast, $R_1$ \emph{latency regression} is \emph{real} concept drift, and the online model wins it at \emph{every} configuration, the thinnest included; it is also there that the static model is hurt most (F1 $\approx 0.30$, its lowest) while the online model holds $0.79$--$0.98$. Once traces are present (C3, C4) the online model sweeps \emph{all} regimes. The static model's deficit is thus widest exactly where the drift is conceptual, not merely distributional---the classic stale-normal signature, visible as preserved recall ($\sim 0.98$--$1.00$) with collapsed precision ($\sim 0.22$).
 
 \begin{table}[t]
-\caption{RQ3 per-regime F1 by configuration. Best learner per cell in bold. (s = static, p = periodic, o = online.) The all-regimes oracle attains 0.812 (C1), 0.834 (C2), 0.940 (C3), 0.939 (C4); the online model exceeds it at C3--C4.}\label{tab:rq3-regime}
+\caption{RQ3 per-regime F1 by configuration. Best learner per cell in bold. (s = static, p = periodic, o = online.) The all-regimes oracle attains 0.812 (C1), 0.817 (C2), 0.929 (C3), 0.927 (C4); the online model exceeds it at every configuration, decisively so at C3--C4.}\label{tab:rq3-regime}
 \begin{tabular}{@{}llccc@{}}
 \toprule
 Config & Regime & s & p & o \\
 \midrule
 \multirow{3}{*}{C1}
- & $R_1$ latency regression & 0.4446 & 0.6950 & \textbf{0.8294} \\
- & $R_2$ scale-out          & 0.5743 & \textbf{0.8003} & 0.7912 \\
- & $R_3$ combined load      & 0.4751 & 0.7942 & \textbf{0.8286} \\
+ & $R_1$ latency regression & 0.3166 & 0.7627 & \textbf{0.7925} \\
+ & $R_2$ scale-out          & 0.4916 & \textbf{0.8534} & 0.8251 \\
+ & $R_3$ combined load      & 0.3291 & \textbf{0.8487} & 0.8202 \\
 \midrule
 \multirow{3}{*}{C2}
- & $R_1$ latency regression & 0.4484 & 0.7131 & \textbf{0.8548} \\
- & $R_2$ scale-out          & 0.5797 & \textbf{0.8153} & 0.7997 \\
- & $R_3$ combined load      & 0.4750 & 0.8201 & \textbf{0.8458} \\
+ & $R_1$ latency regression & 0.3177 & 0.7801 & \textbf{0.8060} \\
+ & $R_2$ scale-out          & 0.4908 & \textbf{0.8582} & 0.8456 \\
+ & $R_3$ combined load      & 0.3295 & \textbf{0.8606} & 0.8301 \\
 \midrule
 \multirow{3}{*}{C3}
- & $R_1$ latency regression & 0.4351 & 0.7961 & \textbf{0.9858} \\
- & $R_2$ scale-out          & 0.6842 & 0.9610 & \textbf{0.9772} \\
- & $R_3$ combined load      & 0.4782 & 0.9310 & \textbf{0.9819} \\
+ & $R_1$ latency regression & 0.3018 & 0.8578 & \textbf{0.9724} \\
+ & $R_2$ scale-out          & 0.5965 & 0.9676 & \textbf{0.9774} \\
+ & $R_3$ combined load      & 0.3299 & 0.9533 & \textbf{0.9718} \\
 \midrule
 \multirow{3}{*}{C4}
- & $R_1$ latency regression & 0.4350 & 0.7942 & \textbf{0.9885} \\
- & $R_2$ scale-out          & 0.6939 & 0.9610 & \textbf{0.9793} \\
- & $R_3$ combined load      & 0.4778 & 0.9335 & \textbf{0.9825} \\
+ & $R_1$ latency regression & 0.3017 & 0.8587 & \textbf{0.9753} \\
+ & $R_2$ scale-out          & 0.5990 & 0.9702 & \textbf{0.9789} \\
+ & $R_3$ combined load      & 0.3302 & 0.9527 & \textbf{0.9731} \\
 \botrule
 \end{tabular}
 \end{table}
 
 \subsubsection{Operational cost}\label{sec:res-rq3-cost}
 
-Detection quality is only half the decision. Table~\ref{tab:rq3-cost} compares the periodic and online learners on operational cost. The operational measurements (latency, footprint, retained windows, CPU) come from a dedicated cost-profiling run; because they reflect the \emph{mechanism} rather than the dataset size, they are reported alongside the Run-B headline F1 for a single consistent quality figure. The two paradigms have opposite cost profiles (Fig.~\ref{fig:rq3cost}). Periodic retraining produces large per-window \emph{tail} spikes---up to $\sim 650$ ms when a refit lands---$17$--$32\times$ worse than the online model's bounded per-window cost ($\leq 37$ ms). The online model is also $\sim 200$--$550\times$ smaller ($\approx 15$ KB versus $3$--$8$ MB) and retains \emph{zero} historical windows, against the $2{,}880$-window labelled buffer the periodic model must hold to refit. Its only disadvantage is aggregate CPU: because it updates on every future window rather than performing a handful of batch refits, it spends $\sim 4$--$6\times$ the periodic total---but spends it \emph{smoothly}, never stalling the pipeline with a multi-hundred-millisecond spike.
+Detection quality is only half the decision. Table~\ref{tab:rq3-cost} compares the periodic and online learners on operational cost. The two paradigms have opposite cost profiles (Fig.~\ref{fig:rq3cost}). Periodic retraining produces large per-window \emph{tail} spikes---up to $\sim 1{,}200$ ms when a refit lands---$9$--$20\times$ worse than the online model's bounded per-window cost ($\leq 59$ ms). The online model is also $\sim 130$--$390\times$ smaller ($\approx 15$ KB versus $2$--$6$ MB) and retains \emph{zero} historical windows, against the $2{,}880$-window labelled buffer the periodic model must hold to refit. Its only disadvantage is aggregate CPU: because it updates on every future window rather than performing a handful of batch refits, it spends $\sim 3.6$--$5\times$ the periodic total---but spends it \emph{smoothly}, never stalling the pipeline with a multi-hundred-millisecond spike.
 
 \begin{table}[t]
 \caption{RQ3 cost --- periodic vs.\ online. Latency is the per-window maximum (tail); operational columns are from the cost-profiling run, F1 is the Run-B future-stream F1 of Table~\ref{tab:rq3-head}.}\label{tab:rq3-cost}
@@ -644,17 +644,17 @@ Detection quality is only half the decision. Table~\ref{tab:rq3-cost} compares t
 \toprule
 Config & Learner & F1 & Max ms/win & Size (KB) & Retained win. & Total s \\
 \midrule
-\multirow{2}{*}{C1} & periodic & 0.7574 & 621.0 & 8290.4 & 2880 & 6.48 \\
-                    & online   & 0.8174 & 31.3  & 14.9   & 0    & 36.72 \\
+\multirow{2}{*}{C1} & periodic & 0.8204 & 531.0  & 5833.3 & 2880 & 27.00 \\
+                    & online   & 0.8130 & 58.5   & 14.9   & 0    & 136.38 \\
 \midrule
-\multirow{2}{*}{C2} & periodic & 0.7776 & 621.4 & 7979.2 & 2880 & 6.50 \\
-                    & online   & 0.8347 & 36.9  & 15.2   & 0    & 37.86 \\
+\multirow{2}{*}{C2} & periodic & 0.8323 & 1196.2 & 5777.5 & 2880 & 36.35 \\
+                    & online   & 0.8274 & 59.1   & 15.2   & 0    & 129.10 \\
 \midrule
-\multirow{2}{*}{C3} & periodic & 0.8904 & 646.5 & 3047.0 & 2880 & 6.52 \\
-                    & online   & 0.9817 & 28.7  & 15.4   & 0    & 36.87 \\
+\multirow{2}{*}{C3} & periodic & 0.9247 & 505.4  & 1990.5 & 2880 & 25.26 \\
+                    & online   & 0.9737 & 32.1   & 15.4   & 0    & 123.26 \\
 \midrule
-\multirow{2}{*}{C4} & periodic & 0.8905 & 594.0 & 3588.8 & 2880 & 6.28 \\
-                    & online   & 0.9834 & 18.9  & 15.7   & 0    & 27.60 \\
+\multirow{2}{*}{C4} & periodic & 0.9255 & 508.3  & 2287.7 & 2880 & 24.84 \\
+                    & online   & 0.9755 & 34.5   & 15.7   & 0    & 114.25 \\
 \botrule
 \end{tabular}
 \end{table}
@@ -665,7 +665,7 @@ Config & Learner & F1 & Max ms/win & Size (KB) & Retained win. & Total s \\
 \caption{RQ3 cost/quality trade-off (periodic vs.\ online). The online learner (green) sits top-left---higher F1 at an order-of-magnitude lower tail latency---with a tiny footprint (marker area $\propto$ model size), while periodic retraining (orange) pays $\sim$600\,ms refit spikes and a multi-megabyte footprint for lower F1.}\label{fig:rq3cost}
 \end{figure}
 
-Table~\ref{tab:rq3-ratios} summarises the trade-off as ratios. The online model buys higher accuracy, far lower tail latency, a far smaller footprint and zero data-retention requirement, at the cost of modestly higher steady-state CPU. For any deployment with a per-window latency budget---which is to say any real-time detector behind an SLA---the bounded online profile is the safer engineering choice, independent of the accuracy advantage.
+Table~\ref{tab:rq3-ratios} summarises the trade-off as ratios. The online model buys far lower tail latency, a far smaller footprint and zero data-retention requirement---and, once telemetry is rich enough (C3/C4), higher accuracy as well---at the cost of modestly higher steady-state CPU; under thin telemetry it trades a negligible $\leq 0.007$ F1 for those same engineering wins. For any deployment with a per-window latency budget---which is to say any real-time detector behind an SLA---the bounded online profile is the safer engineering choice, independent of the accuracy advantage.
 
 \begin{table}[t]
 \caption{RQ3 cost ratios (periodic relative to online unless noted).}\label{tab:rq3-ratios}
@@ -673,17 +673,17 @@ Table~\ref{tab:rq3-ratios} summarises the trade-off as ratios. The online model 
 \toprule
 Config & F1 gain (o$-$p) & Tail-lat.\ ratio & Size ratio & Retained (p vs.\ o) & CPU ratio (o/p) \\
 \midrule
-C1 & $+0.0600$ & 19.8$\times$ & 556.4$\times$ & 2880 vs.\ 0 & 5.7$\times$ \\
-C2 & $+0.0571$ & 16.8$\times$ & 524.9$\times$ & 2880 vs.\ 0 & 5.8$\times$ \\
-C3 & $+0.0913$ & 22.6$\times$ & 197.9$\times$ & 2880 vs.\ 0 & 5.7$\times$ \\
-C4 & $+0.0929$ & 31.5$\times$ & 228.6$\times$ & 2880 vs.\ 0 & 4.4$\times$ \\
+C1 & $-0.0074$ & 9.1$\times$  & 391.5$\times$ & 2880 vs.\ 0 & 5.1$\times$ \\
+C2 & $-0.0049$ & 20.3$\times$ & 380.1$\times$ & 2880 vs.\ 0 & 3.6$\times$ \\
+C3 & $+0.0490$ & 15.8$\times$ & 129.3$\times$ & 2880 vs.\ 0 & 4.9$\times$ \\
+C4 & $+0.0500$ & 14.7$\times$ & 145.7$\times$ & 2880 vs.\ 0 & 4.6$\times$ \\
 \botrule
 \end{tabular}
 \end{table}
 
 \subsubsection{Adaptation behaviour}\label{sec:res-rq3-adapt}
 
-Table~\ref{tab:rq3-adapt} reports how often the online model re-selects its champion configuration as drift appears. Richer telemetry requires \emph{fewer} corrective adapt events: with thin telemetry (C1) the model switches champions four times to keep up with drift, twice at C2, but once traces are added (C3/C4) the signal is rich enough that \emph{no} re-selection is needed at all. This is a second face of the completeness$\times$adaptation interaction: richer signal not only raises accuracy but stabilises the adaptation process, because more of the drift is explained by the EW normaliser and less must be chased by re-selecting the learner.
+Table~\ref{tab:rq3-adapt} reports how often the online model re-selects its champion configuration as drift appears. Richer telemetry requires \emph{fewer} corrective adapt events: with thin telemetry (C1) the model switches champions seven times to keep up with drift, three times at C2, but once traces are added (C3/C4) the signal is rich enough that \emph{no} re-selection is needed at all. This is a second face of the completeness$\times$adaptation interaction: richer signal not only raises accuracy but stabilises the adaptation process, because more of the drift is explained by the EW normaliser and less must be chased by re-selecting the learner.
 
 \begin{table}[t]
 \caption{RQ3 online adaptation behaviour by configuration.}\label{tab:rq3-adapt}
@@ -691,10 +691,10 @@ Table~\ref{tab:rq3-adapt} reports how often the online model re-selects its cham
 \toprule
 Config & Features & Periodic refits & Online adapt events & Final champion \\
 \midrule
-C1 & 10 & 17 & 4 & $\eta_0{=}0.10,\ \alpha{=}10^{-4}$ \\
-C2 & 14 & 17 & 2 & $\eta_0{=}0.01,\ \alpha{=}10^{-4}$ \\
-C3 & 18 & 17 & 0 & $\eta_0{=}0.05,\ \alpha{=}10^{-4}$ \\
-C4 & 23 & 17 & 0 & $\eta_0{=}0.05,\ \alpha{=}10^{-4}$ \\
+C1 & 10 & 51 & 7 & $\eta_0{=}0.10,\ \alpha{=}10^{-3}$ \\
+C2 & 14 & 51 & 3 & $\eta_0{=}0.01,\ \alpha{=}10^{-4}$ \\
+C3 & 18 & 51 & 0 & $\eta_0{=}0.05,\ \alpha{=}10^{-4}$ \\
+C4 & 23 & 51 & 0 & $\eta_0{=}0.01,\ \alpha{=}10^{-4}$ \\
 \botrule
 \end{tabular}
 \end{table}
@@ -703,26 +703,26 @@ C4 & 23 & 17 & 0 & $\eta_0{=}0.05,\ \alpha{=}10^{-4}$ \\
 
 We return, last, to a question deferred from the held-out baseline analysis: which model family this pipeline should use, and---now that RQ3 has shown a continuously-adapting detector to be mandatory under drift---what that choice implies for the online learner. The implication only becomes legible once the online setting is in view, which is why this question is answered after, rather than before, the drift comparison.
 
-Table~\ref{tab:rq4} compares five model families on the richest configuration (C4) with identical inputs. Ensemble trees are the most effective family: Random Forest attains the highest F1 ($0.9937$), closely followed by the two gradient-boosting implementations, all three exceeding $0.99$ precision---few false alarms, an operationally desirable property given the cost of alert fatigue. The temporal (LSTM) and late-fusion models underperform, instructively rather than disappointingly: the windowed feature representation already captures much per-window signal, leaving less for a temporal model to exploit, and the late-fusion architecture's requirement of cross-pillar agreement suppresses false positives at the cost of recall.
+Table~\ref{tab:rq4} compares five model families on the richest configuration (C4) with identical inputs. Ensemble trees are the most effective family: the three tree models cluster within $0.004$ F1 of one another---gradient boosting highest at $0.988$, Random Forest at $0.986$, and the second boosting implementation at $0.984$---each exceeding $0.98$ precision, few false alarms, an operationally desirable property given the cost of alert fatigue. The temporal (LSTM) and late-fusion models underperform, instructively rather than disappointingly: the windowed feature representation already captures much per-window signal---and, being assembled from interleaved per-service windows, offers a sequential model little coherent temporal structure---so the LSTM trails badly ($0.259$ F1); the late-fusion architecture's requirement of cross-pillar agreement suppresses false positives at the cost of recall ($0.999$ precision against $0.804$ recall).
 
 \begin{table}[t]
-\caption{RQ4 --- detection by model family on full MELT (C4). Ensemble trees lead.}\label{tab:rq4}
+\caption{RQ4 --- detection by model family on full MELT (C4). The three ensemble-tree models lead and are statistically indistinguishable.}\label{tab:rq4}
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 Model family & Precision & Recall & F1 & Note \\
 \midrule
-Random Forest        & 0.994 & 0.993 & \textbf{0.994} & best overall \\
-Gradient Boosting A  & 0.993 & 0.989 & 0.991 & close second \\
-Gradient Boosting B  & 0.992 & 0.987 & 0.989 & close third \\
-Late fusion          & 0.991 & 0.872 & 0.928 & high prec., low recall \\
-LSTM (temporal)      & 0.910 & 0.781 & 0.841 & fallback path \\
+Gradient Boosting A  & 0.995 & 0.980 & \textbf{0.988} & best overall \\
+Random Forest        & 0.989 & 0.982 & 0.986 & representative ensemble \\
+Gradient Boosting B  & 0.989 & 0.979 & 0.984 & close third \\
+Late fusion          & 0.999 & 0.804 & 0.891 & high prec., low recall \\
+LSTM (temporal)      & 0.165 & 0.596 & 0.259 & windowed repr.\ (weak) \\
 \botrule
 \end{tabular}
 \end{table}
 
 The lesson, on which the drift comparison of RQ3 has already drawn, is that the benefit of rich multimodal data is conditioned on the model's capacity to exploit it: a powerful, data-hungry architecture does not automatically beat a simpler ensemble when the feature representation is already informative. This is why the offline learners in RQ3 used a Random Forest, and why the online learner is a lightweight linear model---on tabular telemetry, simplicity buys both accuracy and the cheap, bounded per-window update that streaming requires.
 
-This is the apparent tension the article's ordering was designed to resolve: if ensemble trees are the strongest \emph{batch} family, why is the \emph{online} learner---now shown to be the one that matters under drift---not also a tree? The answer is that the two settings reward different properties. A Random Forest is an excellent \emph{static} estimator but a poor \emph{incremental} one: it cannot be updated by a single example without either refitting (the expensive, bursty periodic path) or resorting to incremental-tree variants whose drift behaviour in the upper splits is fragile. The online setting prizes a bounded, smooth per-window update and graceful adaptation over raw stationary accuracy, and a normalised linear model delivers exactly that---its per-update cost is $O(d_c)$, its footprint is kilobytes, and, crucially, the configuration-aware features (\S\ref{sec:method-configs}) have already done the non-linear work of summarising raw telemetry into informative aggregates, leaving a decision surface that is close to linearly separable. The RQ3 results already reported vindicate the choice: the linear online model not only beats both batch paradigms on the drifted stream but, under full telemetry, exceeds the Random-Forest oracle itself (Table~\ref{tab:rq3-head}). The strongest \emph{static} model and the strongest \emph{streaming} model are simply not the same model, and conflating the two is one way the single-snapshot literature is misled.
+This is the apparent tension the article's ordering was designed to resolve: if ensemble trees are the strongest \emph{batch} family, why is the \emph{online} learner---now shown to be the one that matters under drift---not also a tree? The answer is that the two settings reward different properties. A Random Forest is an excellent \emph{static} estimator but a poor \emph{incremental} one: it cannot be updated by a single example without either refitting (the expensive, bursty periodic path) or resorting to incremental-tree variants whose drift behaviour in the upper splits is fragile. The online setting prizes a bounded, smooth per-window update and graceful adaptation over raw stationary accuracy, and a normalised linear model delivers exactly that---its per-update cost is $O(d_c)$, its footprint is kilobytes, and, crucially, the configuration-aware features (\S\ref{sec:method-configs}) have already done the non-linear work of summarising raw telemetry into informative aggregates, leaving a decision surface that is close to linearly separable. The RQ3 results already reported vindicate the choice: once the telemetry is rich, the linear online model beats both batch paradigms on the drifted stream and, under full telemetry, exceeds the Random-Forest oracle itself (Table~\ref{tab:rq3-head}). The strongest \emph{static} model and the strongest \emph{streaming} model are simply not the same model, and conflating the two is one way the single-snapshot literature is misled.
 
 %%===========================================================%%
 \section{Discussion}\label{sec:lessons}\label{sec:discussion}
@@ -730,11 +730,11 @@ This is the apparent tension the article's ordering was designed to resolve: if 
 
 \subsection{Drift, not completeness, is the deciding factor}\label{sec:disc-drift}
 
-The juxtaposition of RQ1 and RQ3 is the paper's central message. On the held-out baseline, completeness is decisive and the model is excellent regardless of paradigm: F1 climbs smoothly to $0.994$ (Table~\ref{tab:rq1}). On a drifted stream the same completeness barely moves the static model (Table~\ref{tab:rq3-head}); what determines whether the detector works is the learning policy. The static model's collapse is not a tuning failure that more telemetry or a better threshold could fix---it is structural. Once operations move the baseline, a boundary fitted to the old normal necessarily mislabels the new normal, and no amount of additional signal about the old normal helps. This reframes the field's guiding question. ``Does observability matter?'' has the answer ``yes, for the ceiling''; but ``what makes a detector work in production?'' has the answer ``keeping it current''. The two are complementary, and a study that varies only one axis can reach a misleading conclusion about the other.
+The juxtaposition of RQ1 and RQ3 is the paper's central message. On the held-out baseline, completeness is decisive and the model is excellent regardless of paradigm: F1 climbs smoothly to $0.986$ (Table~\ref{tab:rq1}). On a drifted stream the same completeness barely moves the static model (Table~\ref{tab:rq3-head}); what determines whether the detector works is the learning policy. The static model's collapse is not a tuning failure that more telemetry or a better threshold could fix---it is structural. Once operations move the baseline, a boundary fitted to the old normal necessarily mislabels the new normal, and no amount of additional signal about the old normal helps. This reframes the field's guiding question. ``Does observability matter?'' has the answer ``yes, for the ceiling''; but ``what makes a detector work in production?'' has the answer ``keeping it current''. The two are complementary, and a study that varies only one axis can reach a misleading conclusion about the other.
 
 \subsection{The completeness$\times$adaptation interaction}\label{sec:disc-interaction}
 
-The two axes are not independent. Three results show their interaction. First, richness helps the online model far more than the static one ($+0.17$ vs.\ $+0.02$ from C1 to C4), so the benefit of instrumentation is itself \emph{contingent on adaptation}: a practitioner who invests in tracing but freezes the model captures almost none of the value (compare static C4 $=0.51$ with online C4 $=0.98$). Second, the online advantage over periodic widens with richness, because a continuous learner extracts more per window when each window carries more signal. Third, richer telemetry stabilises adaptation, reducing champion re-selections to zero once traces are present (Table~\ref{tab:rq3-adapt}). The practical reading is that observability investment and continual-learning investment should be made \emph{together}; either alone is sub-optimal, and the joint return exceeds the sum of the parts.
+The two axes are not independent. Three results show their interaction. First, richness helps the online model far more than the static one ($+0.16$ vs.\ $+0.01$ from C1 to C4), so the benefit of instrumentation is itself \emph{contingent on adaptation}: a practitioner who invests in tracing but freezes the model captures almost none of the value (compare static C4 $=0.37$ with online C4 $=0.98$). Second, the online advantage over periodic \emph{grows with richness, crossing from parity to dominance}: the two are within $0.007$ F1 under thin telemetry (periodic marginally ahead), but the online model leads by $\sim 0.05$ once traces are present, because a continuous learner extracts more per window when each window carries more signal. Third, richer telemetry stabilises adaptation, reducing champion re-selections to zero once traces are present (Table~\ref{tab:rq3-adapt}). The practical reading is that observability investment and continual-learning investment should be made \emph{together}; either alone is sub-optimal, and the joint return exceeds the sum of the parts.
 
 \subsection{Operational implications and an SLA framing}\label{sec:disc-ops}
 
@@ -744,7 +744,7 @@ The cost asymmetry, moreover, \emph{compounds} with scale rather than washing ou
 
 \subsection{When is periodic retraining acceptable?}\label{sec:disc-periodic}
 
-The two cells in which periodic retraining edges the online model (scale-out under C1 and C2; Table~\ref{tab:rq3-regime}) are not a defect of the experiment but a boundary condition worth stating precisely, because it tells a practitioner when the cheaper, more familiar periodic approach suffices. Periodic retraining is competitive exactly when three conditions coincide: the drift is predominantly \emph{virtual} (the feature distribution moves but the concept does not), so that a refit on recent data restores the boundary without needing to relearn the decision; the telemetry is \emph{thin}, so that the online normaliser has few signals from which to re-centre continuously and its advantage is muted; and the operating environment can \emph{tolerate the tail-latency spikes and the labelled-buffer footprint} that periodic refitting imposes. The scale-out regime under metrics-only telemetry satisfies all three, and there periodic wins by a slim margin ($\sim 0.01$ F1). The moment any of the three fails---real concept drift (latency regression, $R_1$), richer telemetry (C3/C4), or a strict per-window latency budget---the online model regains a decisive and widening lead. The practical implication is not ``online always'', but ``online unless your drift is purely cosmetic, your telemetry is minimal, and your latency budget is loose''---a narrow and identifiable corner of the design space. For the common case of a richly-instrumented service subject to deployments (real drift) behind an SLA, online adaptation is the dominant choice on every axis we measured.
+The four cells in which periodic retraining edges the online model (scale-out and combined-load under C1 and C2; Table~\ref{tab:rq3-regime})---enough to give periodic the aggregate lead at thin telemetry---are not a defect of the experiment but a boundary condition worth stating precisely, because it tells a practitioner when the cheaper, more familiar periodic approach suffices. Periodic retraining is competitive exactly when three conditions coincide: the drift is predominantly \emph{virtual} (the feature distribution moves but the concept does not), so that a refit on recent data restores the boundary without needing to relearn the decision; the telemetry is \emph{thin}, so that the online normaliser has few signals from which to re-centre continuously and its advantage is muted; and the operating environment can \emph{tolerate the tail-latency spikes and the labelled-buffer footprint} that periodic refitting imposes. The scale-out and volume-driven regimes under metrics-only telemetry satisfy all three, and there periodic wins by a slim margin (a few thousandths to $\sim 0.03$ F1). The moment any of the three fails---real concept drift (latency regression, $R_1$), richer telemetry (C3/C4), or a strict per-window latency budget---the online model regains a decisive and widening lead. The practical implication is not ``online always'', but ``online unless your drift is purely cosmetic, your telemetry is minimal, and your latency budget is loose''---a narrow and identifiable corner of the design space. For the common case of a richly-instrumented service subject to deployments (real drift) behind an SLA, online adaptation is the dominant choice on every axis we measured.
 
 \subsection{Practical guidance}\label{sec:disc-guidance}
 
@@ -762,17 +762,17 @@ These points compose into a short deployment checklist. \emph{(i)} Instrument to
 
 The aggregate metrics conceal an instructive variation across the fault taxonomy that explains \emph{why} each pillar contributes what it does. Resource-exhaustion faults---memory leaks and CPU saturation---are largely metric-visible: they move CPU and memory utilisation directly, and even the metrics-only configuration detects them well, which is why C1 already attains F1 $\approx 0.91$ on the held-out baseline set. Their localisation is the harder part, because resource pressure at one pod induces latency at its callers, smearing the metric signal across the dependency chain---precisely the ambiguity that the trace originating-error-span feature resolves (RQ2). Performance-degradation faults---latency spikes and error bursts---are where logs and traces earn their keep: an error burst raises the error-log count (a C2 feature) before it is unambiguous in the latency percentiles, and a latency spike that propagates is disentangled by span-level timing (a C3 feature). Availability faults---OOMKilled and CrashLoopBackOff---are the ones that motivate the events pillar: they manifest as discrete Kubernetes lifecycle events that no metric or log aggregate captures as cleanly, which is why C4 retains a localisation and robustness edge even though its detection F1 is statistically tied with C3 on the held-out baseline set. The picture that emerges is that the pillars are not redundant but \emph{specialised}: each is the decisive signal for a different region of the fault taxonomy, and full MELT wins not by being uniformly better but by covering the union.
 
-Under drift this specialisation interacts with the learning policy, and the per-regime breakdown (Table~\ref{tab:rq3-regime}) separates the two kinds of drift cleanly. The \emph{latency-regression} regime $R_1$ is real concept drift---a latency level that was anomalous becomes the new normal---and it is there that the static model collapses hardest (F1 $\approx 0.44$, its lowest at every configuration); richer telemetry does not rescue it, because the boundary, not merely the scaling, is now wrong. The \emph{scale-out} regime $R_2$ is predominantly virtual drift---the resource-utilisation baselines move but ``anomalous'' still means the same thing---and here the static model fares best of the three regimes (F1 up to $0.69$) and periodic refit even edges the online model under thin telemetry, because re-fitting on recent data restores the shifted scaling that a batch model needs. The \emph{combined-load} regime $R_3$ superimposes both. Only the online normaliser, which re-centres every feature continuously, neutralises the virtual component while incremental fitting tracks the conceptual one, which is why the online model holds F1 $\approx 0.79$--$0.99$ across $R_1$--$R_3$ where the static model never exceeds $0.69$ and bottoms at $0.44$.
+Under drift this specialisation interacts with the learning policy, and the per-regime breakdown (Table~\ref{tab:rq3-regime}) separates the two kinds of drift cleanly. The \emph{latency-regression} regime $R_1$ is real concept drift---a latency level that was anomalous becomes the new normal---and it is there that the static model collapses hardest (F1 $\approx 0.30$, its lowest at every configuration); richer telemetry does not rescue it, because the boundary, not merely the scaling, is now wrong. The \emph{scale-out} regime $R_2$ is predominantly virtual drift---the resource-utilisation baselines move but ``anomalous'' still means the same thing---and here the static model fares best of the three regimes (F1 up to $0.60$) and periodic refit even edges the online model under thin telemetry, because re-fitting on recent data restores the shifted scaling that a batch model needs. The \emph{combined-load} regime $R_3$ superimposes both, and under thin telemetry periodic edges the online model here too. Only the online normaliser, which re-centres every feature continuously, neutralises the virtual component while incremental fitting tracks the conceptual one, which is why the online model holds F1 $\approx 0.79$--$0.98$ across $R_1$--$R_3$ where the static model never exceeds $0.60$ and bottoms at $0.30$.
 
 \subsection{Relation to prior work}\label{sec:disc-prior}
 
 Our held-out baseline findings are consistent with, and sharpen, the literature. The monotonic completeness benefit echoes the general multimodal advantage reported by Han et al.\ \cite{han2024} and the multi-source gains of Chen et al.\ \cite{chen2025} and Wang et al.\ \cite{wang2018}, but---by holding the model fixed and varying only the signal set---attributes the largest single increment specifically to traces, which a fused-architecture comparison cannot do. The strength of ensemble trees on multimodal tabular telemetry (RQ4) corroborates the classical-ML results of Lomio et al.\ \cite{lomio2022} and extends them to the multimodal setting, while clarifying why a deep temporal model need not win when the windowed representation is already informative---consistent with the accuracy--cost concerns around VAE/temporal approaches such as Night's Watch \cite{dkmak2025}.
 
-The drift findings (RQ3) speak to gaps the surveys identify but do not close. Raeiszadeh et al.\ \cite{raeiszadeh2026} name adaptability as a systematically unmet requirement; we quantify exactly what its absence costs (a collapse from $0.98$ to $0.51$) and what meeting it buys. Hrusto et al.\ \cite{hrusto2026} warn that single-snapshot, synthetic-distribution evaluation may not transfer; our two-axis design shows precisely \emph{how} it fails to transfer---the held-out baseline ranking does not predict the drifted ranking---and offers a controlled-drift testbed as a middle path between synthetic-benchmark and uncontrolled-production evaluation. The industrial inadequacy of static thresholds reported by Islam et al.\ \cite{islam2021} is reproduced here as the stale-normal collapse and given a remedy. Finally, the proactive, observability-integrated framing of Mart et al.\ \cite{mart2020} is extended from \emph{forecasting} ahead of failure to \emph{continually re-learning} what failure looks like as the system changes.
+The drift findings (RQ3) speak to gaps the surveys identify but do not close. Raeiszadeh et al.\ \cite{raeiszadeh2026} name adaptability as a systematically unmet requirement; we quantify exactly what its absence costs (a collapse from $0.98$ to $0.36$) and what meeting it buys. Hrusto et al.\ \cite{hrusto2026} warn that single-snapshot, synthetic-distribution evaluation may not transfer; our two-axis design shows precisely \emph{how} it fails to transfer---the held-out baseline ranking does not predict the drifted ranking---and offers a controlled-drift testbed as a middle path between synthetic-benchmark and uncontrolled-production evaluation. The industrial inadequacy of static thresholds reported by Islam et al.\ \cite{islam2021} is reproduced here as the stale-normal collapse and given a remedy. Finally, the proactive, observability-integrated framing of Mart et al.\ \cite{mart2020} is extended from \emph{forecasting} ahead of failure to \emph{continually re-learning} what failure looks like as the system changes.
 
 \section{Threats to Validity}\label{sec:threats}\label{sec:disc-threats}
 
-The principal external-validity caveat is that the RQ3 stream, though drift-controlled and built on production-representative telemetry, is synthetic-prequential; absolute F1 values are testbed-specific. We stress that the contribution is the \emph{ordering and its reversal}, not the absolute numbers: that the baseline-best ranking does not survive drift, and that online dominates static at every cell and periodic in $10$ of $12$ regime$\times$configuration cells (the two exceptions being virtual-drift scale-out under thin telemetry), is robust to the absolute scale. The three-service topology limits topological generalisation and makes top-2 localisation uninformative (hence the top-1 focus). The online model depends on a usable label signal; where labels are scarce or heavily delayed, semi-supervised or unsupervised drift-adaptation would be required---a direction for future work. Finally, a single seed underlies the reported run; the effect sizes are large relative to plausible seed variance, but a multi-seed study would tighten the conclusion-validity argument.
+The principal external-validity caveat is that the RQ3 stream, though drift-controlled and built on production-representative telemetry, is synthetic-prequential; absolute F1 values are testbed-specific. We stress that the contribution is the \emph{ordering and its reversal}, not the absolute numbers: that the baseline-best ranking does not survive drift, and that online dominates static at every cell and leads periodic in $8$ of $12$ regime$\times$configuration cells (the four exceptions being virtual-drift scale-out and combined-load under thin telemetry, where the cheaper periodic schedule is competitive), is robust to the absolute scale. The nine-service topology, though deeper than many controlled testbeds, is still a single synthetic mesh, which bounds topological generalisation; on it top-$k$ remains informative even without traces (Table~\ref{tab:rq2}). The online model depends on a usable label signal; where labels are scarce or heavily delayed, semi-supervised or unsupervised drift-adaptation would be required---a direction for future work. Finally, a single seed underlies the reported run; the effect sizes are large relative to plausible seed variance, but a multi-seed study would tighten the conclusion-validity argument.
 
 It is worth being explicit about what a full real-deployment validation would add, and why we regard the present controlled study as the necessary first step rather than a substitute. On a live production stream, drift is neither scheduled nor labelled: regime changes arrive unannounced and entangled, ground truth is partial and delayed (often reconstructed after the fact from incident timelines), and the fault distribution is long-tailed in ways no injection taxonomy fully reproduces. A field study would therefore measure something our testbed cannot---robustness to \emph{unknown} drift and to \emph{imperfect} labels---but at the price of the very thing that makes our central claim interpretable: the ability to attribute the reversal between the held-out baseline and drifted rankings to drift alone, with the model, features, faults and seed held fixed. The two evidence types are complementary, and in the order presented: the controlled result establishes \emph{that} the learning paradigm dominates completeness under drift and \emph{why}; a subsequent field deployment would establish \emph{how much} of that advantage survives the additional noise of production. We read the present findings as a strong prior for that field study, not as a replacement for it, consistent with the synthetic-versus-operational tension that motivated the design \cite{hrusto2026,islam2021}.
 
@@ -873,11 +873,11 @@ This paper addresses Gap 2 as its primary target (RQ3) and Gaps 1, 3 and 4 as th
 \section{Conclusion and Future Work}\label{sec:conclusion}
 %%===========================================================%%
 
-This paper asked whether, for a non-stationary observability stream, the learning paradigm matters more than telemetry richness, and how the two interact. By crossing four nested telemetry configurations with three learning policies on a single production-representative, fault-injected, drift-controlled testbed, we reached a two-part answer. On the held-out baseline, completeness is decisive: detection F1 rises monotonically from $0.906$ to $0.994$, traces are the single most valuable increment, ensemble trees are the strongest family, and traces lift root-cause top-1 localisation to a perfect $1.0$. But under drift this ceiling does not survive a frozen model: the static detector collapses to F1 $\approx 0.49$--$0.51$ regardless of telemetry, periodic retraining only partially and expensively recovers, and a lightweight online-adaptive detector dominates every configuration and the large majority of regimes---reaching $\approx 0.98$ under full MELT, beating an all-regimes oracle---while being $17$--$32\times$ better on tail latency, $\sim 200$--$550\times$ smaller, and free of any data-retention requirement.
+This paper asked whether, for a non-stationary observability stream, the learning paradigm matters more than telemetry richness, and how the two interact. By crossing four nested telemetry configurations with three learning policies on a single production-representative, fault-injected, drift-controlled testbed, we reached a two-part answer. On the held-out baseline, completeness is decisive: detection F1 rises monotonically from $0.896$ to $0.986$, traces are the single most valuable increment, ensemble trees are the strongest family, and traces lift root-cause top-1 localisation from $0.77$ to a perfect $1.0$ on a deep nine-service mesh. But under drift this ceiling does not survive a frozen model: the static detector collapses to F1 $\approx 0.36$ regardless of telemetry, periodic retraining recovers much of the gap but expensively, and a lightweight online-adaptive detector dominates once telemetry is rich---decisively at C3/C4 and across two-thirds of regimes, reaching $\approx 0.98$ under full MELT and beating an all-regimes oracle at every configuration---while being $9$--$20\times$ better on tail latency, $\sim 130$--$390\times$ smaller, and free of any data-retention requirement.
 
 The synthesis is that telemetry completeness and continual learning are complementary, not substitutable. Richer signals raise the attainable ceiling and stabilise adaptation; only adaptation realises that ceiling on a live, drifting system. The field's guiding question, ``does observability matter?'', is therefore incomplete: observability matters for what is \emph{achievable}, but keeping the model current is what makes the achievable \emph{actual} in production. Practitioners should invest in observability (at least to the metrics${+}$logs${+}$traces level) and in continual learning \emph{together}, and should prefer bounded-latency online adaptation to bursty periodic retraining wherever a label signal and a latency budget coexist.
 
-Future work follows four directions. First, \emph{label efficiency}: extend the online comparison to semi- and self-supervised drift adaptation for settings where ground-truth labels are scarce or delayed, removing the present dependence on a prompt label signal. Second, \emph{topological generalisation}: scale the testbed beyond three services and to richer call graphs, restoring top-$k$ localisation as a meaningful axis and testing whether trace-driven localisation remains complete as the mesh grows. Third, \emph{drift diversity}: broaden the regime set beyond latency/scale/load to include schema changes, dependency re-wiring and seasonal patterns, and pair the empirical study with explicit drift-detection signals. Fourth, \emph{operational integration}: close the loop from online detection through trace-driven localisation to automated remediation, drawing on the LLM- and Bayesian-network RCA directions of Pedroso et al.\ \cite{pedroso2025} and the holistic fusion of Han et al.\ \cite{han2024}, so that a continually-current detector feeds a continually-current responder. A fifth direction concerns \emph{explicit drift signalling}: the present online model adapts implicitly through its normaliser and champion bandit, but pairing it with a dedicated drift detector would let the system distinguish virtual from real drift at runtime---precisely the distinction that \S\ref{sec:disc-periodic} shows determines whether refitting or re-normalising is the right response---and could trigger heavier adaptation only when a genuine concept change is detected, conserving the steady-state CPU that is the online model's sole cost disadvantage. Finally, the comparison should be extended to \emph{multi-seed and multi-trace-load} runs to convert the large but single-seed effect sizes reported here into formal significance intervals, and to confirm that the paradigm ordering is invariant to the specific synthetic stream.
+Future work follows four directions. First, \emph{label efficiency}: extend the online comparison to semi- and self-supervised drift adaptation for settings where ground-truth labels are scarce or delayed, removing the present dependence on a prompt label signal. Second, \emph{topological generalisation}: extend the testbed beyond the present nine-service mesh to larger and production-scale call graphs, testing whether trace-driven localisation remains complete---as it is here---as the mesh deepens further and dependency structures grow more irregular. Third, \emph{drift diversity}: broaden the regime set beyond latency/scale/load to include schema changes, dependency re-wiring and seasonal patterns, and pair the empirical study with explicit drift-detection signals. Fourth, \emph{operational integration}: close the loop from online detection through trace-driven localisation to automated remediation, drawing on the LLM- and Bayesian-network RCA directions of Pedroso et al.\ \cite{pedroso2025} and the holistic fusion of Han et al.\ \cite{han2024}, so that a continually-current detector feeds a continually-current responder. A fifth direction concerns \emph{explicit drift signalling}: the present online model adapts implicitly through its normaliser and champion bandit, but pairing it with a dedicated drift detector would let the system distinguish virtual from real drift at runtime---precisely the distinction that \S\ref{sec:disc-periodic} shows determines whether refitting or re-normalising is the right response---and could trigger heavier adaptation only when a genuine concept change is detected, conserving the steady-state CPU that is the online model's sole cost disadvantage. Finally, the comparison should be extended to \emph{multi-seed and multi-trace-load} runs to convert the large but single-seed effect sizes reported here into formal significance intervals, and to confirm that the paradigm ordering is invariant to the specific synthetic stream.
 
 Taken together, these directions share a single thesis, which is the contribution we most wish to carry forward: in a non-stationary world, a detector is never finished being trained. The observability community has invested heavily in \emph{seeing} more of the system; the evidence here is that comparable investment in \emph{relearning} what is seen is what converts that visibility into reliable detection.
 

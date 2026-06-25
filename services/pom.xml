@@ -18,6 +18,7 @@
 		<module>movie-service</module>
 		<module>actor-service</module>
 		<module>review-service</module>
+		<module>mesh-service</module>
 	</modules>
 	<properties>
 		<maven.compiler.source>21</maven.compiler.source>
