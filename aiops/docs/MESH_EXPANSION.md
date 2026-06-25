@@ -45,18 +45,34 @@ localisation on a realistic graph.
 
 ## Real instrumented services
 
-`services/mesh-service/` is one generic Spring Boot service (Java 21, same OTel
-java-agent wiring as the originals). It is deployed **once per topology node**; the
-call graph is wired entirely by the `DOWNSTREAM_URLS` env var — adding a node is a
-compose entry, not new code.
+Each of the six new nodes is its **own** Spring Boot module under `services/` (Java 21,
+same OTel java-agent wiring as the originals), each with **real business logic** in the
+movie/actor/review style — not a generic shell. Data owners persist with Spring Data
+JPA + H2 + `data.sql`; orchestrators are stateless and call downstreams with `RestClient`:
+
+| Service | Role | Domain / endpoints |
+|---------|------|--------------------|
+| `catalog-service` | leaf, data hub | `Title(name,genre,year,rating)`; `GET /api/catalog`, `/{id}`, `/search?q=` |
+| `auth-service` | leaf, data owner | `Account(username,role,token)`; `GET /api/auth/validate?token=`, `/{userId}` |
+| `user-service` | data owner + caller | `Profile(name,email,tier)`; `GET /api/users/{id}` → enriches with **auth** role + **recommendation** list |
+| `recommendation-service` | orchestrator | `GET /api/recommendations?userId=` → pulls **catalog**, ranks top-5 |
+| `search-service` | orchestrator | `GET /api/search?q=` → queries **catalog**, ranks hits |
+| `gateway-service` | entry, aggregator | `GET /api/browse?userId=` → fans out to **movie + user + search**, composes a home page |
+
+The call graph is therefore real domain traffic, exactly the edges the topology needs.
+Downstream URLs default to the compose DNS names in each `application.properties`
+(overridable via `*_SERVICE_URL` env). The load-generator drives `GET /api/browse?userId=`
+on the gateway, exercising the whole graph.
 
 ```bash
-# build all services incl. the new module
+# build everything (3 originals + 6 new modules), then images
 cd services && mvn clean package -DskipTests
-docker build -t traceflix/mesh-service:1.0.0 services/mesh-service
+for s in catalog auth user search recommendation gateway; do
+  docker build -t "traceflix/$s-service:1.0.0" "$s-service"
+done
 
 # deploy the mesh overlay on VM2 (additive on the base compose)
-cd deploy/virtfusion/vm2-services
+cd ../deploy/virtfusion/vm2-services
 docker compose -f docker-compose.yml -f docker-compose.mesh.yml --env-file ../.env up -d
 ```
 
@@ -82,8 +98,9 @@ Offline, the synthetic generator already injects at all 9 services (random root 
 | `ml/configs.py` | 9-service DAG (gateway entry; original subtree intact) |
 | `ml/dataset.py` | `ancestors()` — transitive multi-hop upstream propagation |
 | `ml/drift.py` | uses the shared `ancestors()` helper |
-| `services/mesh-service/` | new generic OTel-instrumented service (one image, N nodes) |
-| `services/pom.xml` | registers the `mesh-service` module |
+| `services/{catalog,auth,user}-service/` | data owners — JPA + H2 + `data.sql`, real domain entities/endpoints |
+| `services/{recommendation,search,gateway}-service/` | orchestrators — stateless, call downstreams via `RestClient` |
+| `services/pom.xml` | registers the six new service modules |
 | `deploy/virtfusion/vm2-services/docker-compose.mesh.yml` | wires the 6 new nodes + gateway load-gen |
 | `deploy/virtfusion/vm2-services/inject-fault.sh` | Pumba fault injection for any of the 9 |
 | `tests/test_pipeline.py` | topology + multi-hop propagation invariants |

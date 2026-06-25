@@ -120,6 +120,7 @@ To answer these questions we built \emph{TraceFlix}, a Kubernetes microservice a
     \item[\emph{To RQ4:}] ensemble trees are the strongest family on multimodal tabular telemetry, which is also \emph{why a lightweight normalised linear model---not a tree---is the right detector for the online setting} established by RQ3.
   \end{itemize}
   \item \textbf{An operational-cost analysis} that reframes the choice of learning paradigm as a service-level rather than a purely accuracy decision (\S\ref{sec:results}, \S\ref{sec:lessons}).
+  \item \textbf{A streaming system realisation and a local-LLM detector.} The online paradigm is deployed as an Apache Kafka event backbone \cite{kreps2011kafka} over a nine-microservice mesh with real per-service business logic, and the detector family is extended with a local LLM (Qwen2.5-3B \cite{qwen2025} via Ollama \cite{ollama2024}, optionally LoRA-tuned \cite{hu2022lora}) that reasons over \emph{raw} signals on the same stream. We contribute its architecture and three accompanying flowcharts (\S\ref{sec:method-streaming}); its served-model evaluation is reported as ongoing, and we do not claim an accuracy figure for it.
   \item \textbf{Practical guidance} on minimum-viable observability and on when continual learning is mandatory rather than optional (\S\ref{sec:lessons}).
 \end{itemize}
 
@@ -293,7 +294,7 @@ Instrumentation is end-to-end and vendor-neutral, matching what a production Ope
   \item \textbf{Loki} --- structured application logs, container logs and Kubernetes event logs.
   \item \textbf{Tempo} --- OpenTelemetry-instrumented distributed traces of service-to-service calls.
   \item \textbf{Kubernetes events} --- OOMKilled and CrashLoopBackOff signals, the ``E'' of MELT.
-  \item \textbf{Streaming transport} --- a message queue carries telemetry from TraceFlix to the detection pipeline for the online experiments.
+  \item \textbf{Apache Kafka} \cite{kreps2011kafka} --- an event backbone that carries per-window telemetry from TraceFlix to the detectors as a stream; it is the deployment realisation of the online pipeline, and the substrate the local-LLM detector also consumes (\S\ref{sec:method-streaming}).
 \end{itemize}
 
 Figure~\ref{fig:arch} shows the end-to-end testbed, organised as the canonical
@@ -313,24 +314,17 @@ four telemetry configurations of \S\ref{sec:method-configs}.
   bk/.style={draw, rounded corners, fill=green!8, align=center, minimum height=10mm, inner sep=3pt},
   wide/.style={draw, rounded corners, align=center, minimum height=8mm, inner sep=3pt},
   fault/.style={draw, rounded corners, fill=red!8, align=center, minimum height=9mm, inner sep=3pt},
-  det/.style={draw, rounded corners, fill=orange!12, align=center, minimum height=9mm, minimum width=27mm, inner sep=3pt},
+  det/.style={draw, rounded corners, fill=orange!12, align=center, minimum height=9mm, minimum width=20mm, inner sep=3pt},
 ]
-% Application row
+% Application row -- the nine-service mesh (full call graph in Fig.~\ref{fig:mesh})
 \node[svc] (load) {Load\\generator};
-\node[svc, right=of load] (movie) {movie-\\service};
-\node[svc, right=of movie] (actor) {actor-\\service};
-\node[svc, right=of actor] (review) {review-\\service};
-\node[fault, right=8mm of review] (chaos) {Chaos Mesh\\fault injection};
-\draw[->] (load) -- (movie);
-\draw[->] (movie) -- node[above,font=\scriptsize]{$N\times$} (actor);
-\draw[->] (movie.south) to[bend right=18] (review.south);
-\draw[->, red!70, dashed] (chaos) -- (review);
-\draw[->, red!70, dashed] (chaos.north) to[bend left=12] (actor.north);
+\node[wide, fill=blue!6, right=of load, minimum width=72mm] (mesh) {\textbf{TraceFlix nine-service mesh}\\[1pt]\scriptsize gateway$\to$movie$\to$\{actor, review\};\ \ gateway$\to$\{user, search\}\\[-1pt]\scriptsize user$\to$\{recommendation, auth\};\ \ search/recommendation$\to$catalog};
+\node[fault, right=7mm of mesh] (chaos) {Chaos Mesh /\\Pumba faults};
+\draw[->] (load) -- (mesh);
+\draw[->, red!70, dashed] (chaos) -- (mesh);
 % Instrumentation
-\node[wide, fill=blue!4, below=10mm of actor, minimum width=74mm] (otel) {OpenTelemetry --- auto-instrumented Metrics, Logs, Traces};
-\draw[->] (movie.south) -- (otel.north);
-\draw[->] (actor.south) -- (otel.north);
-\draw[->] (review.south) -- (otel.north);
+\node[wide, fill=blue!4, below=9mm of mesh, minimum width=80mm] (otel) {OpenTelemetry --- auto-instrumented Metrics, Logs, Traces};
+\draw[->] (mesh.south) -- (otel.north);
 % Backends
 \node[bk, below=9mm of otel.south west, anchor=north west] (prom) {Prometheus\\Metrics (M)};
 \node[bk, right=of prom] (loki) {Loki\\Logs (L)};
@@ -339,26 +333,119 @@ four telemetry configurations of \S\ref{sec:method-configs}.
 \node[bk, right=of events] (vm) {Victoria-\\Metrics (hist.)};
 \foreach \b in {prom,loki,tempo,events,vm} {\draw[->] (otel.south) -- (\b.north);}
 % Transport
-\node[wide, fill=blue!4, below=9mm of tempo, minimum width=74mm] (stream) {Streaming transport (Redis Streams)};
+\node[wide, fill=blue!4, below=9mm of tempo, minimum width=80mm] (stream) {Apache Kafka event backbone\ \ (\texttt{tf.telemetry.windows} $\rightarrow$ \texttt{tf.anomalies}; Fig.~\ref{fig:dataflow})};
 \foreach \b in {prom,loki,tempo,events,vm} {\draw[->] (\b.south) -- (stream.north);}
 % Feature extraction
-\node[wide, fill=yellow!15, below=8mm of stream, minimum width=86mm] (feat) {Config-aware feature extraction: $C1 \subset C2 \subset C3 \subset C4$\quad(M $\mid$ {+}L $\mid$ {+}T $\mid$ {+}E/history)};
+\node[wide, fill=yellow!15, below=8mm of stream, minimum width=98mm] (feat) {Config-aware feature extraction: $C1 \subset C2 \subset C3 \subset C4$\quad(M $\mid$ {+}L $\mid$ {+}T $\mid$ {+}E/history)};
 \draw[->] (stream) -- (feat);
-% Detectors
+% Detectors (incl. the local-LLM detector, Fig.~\ref{fig:llm})
 \node[det, below=9mm of feat.south west, anchor=north west] (d1) {offline\_static};
 \node[det, right=of d1] (d2) {offline\_periodic};
 \node[det, right=of d2] (d3) {online\_adaptive};
-\foreach \d in {d1,d2,d3} {\draw[->] (feat.south) -- (\d.north);}
+\node[det, right=of d3, fill=purple!12] (d4) {LLM detector\\[-1pt]\scriptsize Qwen2.5-3B};
+\foreach \d in {d1,d2,d3,d4} {\draw[->] (feat.south) -- (\d.north);}
 % Evaluation
-\node[wide, fill=gray!10, below=9mm of d2, minimum width=86mm] (eval) {Evaluation: F1, AUC-ROC, RCA top-$k$, latency \& cost};
-\foreach \d in {d1,d2,d3} {\draw[->] (\d.south) -- (eval.north);}
+\node[wide, fill=gray!10, below=9mm of d2, minimum width=98mm] (eval) {Evaluation: F1, AUC-ROC, RCA top-$k$, latency \& cost};
+\foreach \d in {d1,d2,d3,d4} {\draw[->] (\d.south) -- (eval.north);}
 \end{tikzpicture}}
 \caption{The TraceFlix testbed and detection pipeline. A load generator drives the
-instrumented nine-service mesh (\texttt{gateway}$\rightarrow$\texttt{movie}$\rightarrow$\{\texttt{actor}$\times N$,
-\texttt{review}\}, plus \texttt{user}/\texttt{search}/\texttt{recommendation}$\rightarrow$\texttt{catalog}); Chaos Mesh injects timestamped faults.
-OpenTelemetry collects MELT telemetry into per-pillar backends, whose signals are
-streamed to a configuration-aware feature extractor (C1--C4) feeding the three
-learning policies and the evaluation harness.}\label{fig:arch}
+instrumented nine-service mesh (full call graph in Fig.~\ref{fig:mesh}); Chaos Mesh
+(or Pumba, on the Compose deployment) injects timestamped faults. OpenTelemetry
+collects MELT telemetry into per-pillar backends, whose signals flow over an
+\emph{Apache Kafka} event backbone (Fig.~\ref{fig:dataflow}) to a configuration-aware
+feature extractor (C1--C4) feeding the three learning policies, a local-LLM detector
+(Qwen2.5-3B; Fig.~\ref{fig:llm}), and the evaluation harness.}\label{fig:arch}
+\end{figure}
+
+\subsection{Streaming realisation and the local-LLM detector}\label{sec:method-streaming}
+
+The online paradigm of \S\ref{sec:method-learners} is not only an algorithm but a deployment: a detector that learns per window must be \emph{fed} per window. We therefore realise the testbed as a streaming system and, on the same stream, add a qualitatively different detector---a local large language model that reasons over the \emph{raw} telemetry rather than engineered features. Three flowcharts make the realisation concrete: the service call graph that generates the telemetry (Fig.~\ref{fig:mesh}), the event backbone that transports it (Fig.~\ref{fig:dataflow}), and the LLM detector that consumes it (Fig.~\ref{fig:llm}).
+
+\begin{figure}[t]
+\centering
+\resizebox{0.92\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\sffamily\small, >={Stealth[round]},
+  n/.style={draw, rounded corners, fill=blue!7, align=center, minimum height=8mm, minimum width=18mm, inner sep=2pt},
+  leaf/.style={draw, rounded corners, fill=green!9, align=center, minimum height=8mm, minimum width=18mm, inner sep=2pt},
+]
+\node[n]   (gw)      at (0,0)      {gateway};
+\node[n]   (movie)   at (3.2,2.2)  {movie};
+\node[n]   (user)    at (3.2,0)    {user};
+\node[n]   (search)  at (3.2,-2.2) {search};
+\node[leaf](actor)   at (6.6,3.1)  {actor};
+\node[leaf](review)  at (6.6,1.5)  {review};
+\node[n]   (recom)   at (6.6,-0.2) {recommendation};
+\node[leaf](auth)    at (6.6,-1.8) {auth};
+\node[leaf](catalog) at (10,-1.0)  {catalog};
+\foreach \t in {movie,user,search} {\draw[->] (gw) -- (\t);}
+\draw[->] (movie) -- (actor);  \draw[->] (movie) -- (review);
+\draw[->] (user)  -- (recom);  \draw[->] (user)  -- (auth);
+\draw[->] (search) -- (catalog);  \draw[->] (recom) -- (catalog);
+\end{tikzpicture}}
+\caption{The nine-service call graph (depth four). \texttt{gateway} is the entry; blue
+nodes are internal callers, green nodes are leaves. \texttt{catalog} is a shared
+\emph{fan-in} reached by both \texttt{search} and \texttt{recommendation}. Data owners
+(\texttt{catalog}, \texttt{auth}, \texttt{user}) persist with Spring Data JPA; the rest
+orchestrate downstream calls. A fault at a leaf induces secondary latency in every
+ancestor on its path---the propagation RQ2 exploits.}\label{fig:mesh}
+\end{figure}
+
+\paragraph{The service mesh (Fig.~\ref{fig:mesh}).} The application is a nine-service mesh with a genuine, depth-four call graph and real per-service business logic, not a uniform stub. A \texttt{gateway} entrypoint aggregates a home page by fanning out to \texttt{movie} (which calls \texttt{actor} and \texttt{review}), \texttt{user} (which enriches a profile with \texttt{auth} and \texttt{recommendation}) and \texttt{search}; \texttt{recommendation} and \texttt{search} both read the shared \texttt{catalog} leaf. This depth is what makes localisation non-trivial: because a fault at a leaf propagates a secondary latency symptom up \emph{every} ancestor on its path, several services are implicated at once, and only the originating-error-span feature disambiguates them (\S\ref{sec:res-rq2})---a structure a flat three-service chain cannot exhibit.
+
+\paragraph{The Kafka event backbone (Fig.~\ref{fig:dataflow}).} Telemetry is transported as an event stream on Apache Kafka \cite{kreps2011kafka}. A producer publishes one record per window to the \texttt{tf.telemetry.windows} topic; the online ML detector and the LLM detector consume it \emph{independently}, each in its own consumer group, and publish a binary verdict to \texttt{tf.anomalies} tagged by detector, so the two are directly comparable on the same windows. Decoupling collection from detection from reasoning lets each stage scale and fail independently, and makes the per-window prequential protocol (test-then-train) a property of the transport rather than of a single process. For reproducibility the RQ3 results of \S\ref{sec:res-rq3} are computed on the \emph{deterministic in-process} prequential harness; the Kafka backbone is the deployment realisation of the identical per-window protocol, and any broker-induced latency or loss it introduces is a deployment concern (\S\ref{sec:disc-threats}), not a property of the reported numbers.
+
+\begin{figure}[t]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\sffamily\small, >={Stealth[round]}, node distance=7mm and 13mm,
+  box/.style={draw, rounded corners, fill=blue!6, align=center, minimum height=9mm, minimum width=20mm, inner sep=3pt},
+  topic/.style={draw, rounded corners, fill=orange!12, align=center, minimum height=9mm, minimum width=22mm, inner sep=3pt},
+  det/.style={draw, rounded corners, fill=yellow!18, align=center, minimum height=9mm, minimum width=24mm, inner sep=3pt},
+]
+\node[box] (col) {collectors\\\scriptsize(producer)};
+\node[topic, right=of col] (tw) {\texttt{tf.telemetry}\\\texttt{.windows}};
+\node[det, above right=5mm and 14mm of tw] (ml) {online ML\\detector};
+\node[det, below right=5mm and 14mm of tw] (llm) {LLM detector\\\scriptsize Qwen2.5-3B};
+\node[topic, right=34mm of tw] (ta) {\texttt{tf.anomalies}\\\scriptsize(tagged by detector)};
+\node[box, right=of ta] (sink) {evaluation /\\dashboard};
+\draw[->] (col) -- (tw);
+\draw[->] (tw) -- (ml);   \draw[->] (tw) -- (llm);
+\draw[->] (ml) -- (ta);   \draw[->] (llm) -- (ta);
+\draw[->] (ta) -- (sink);
+\end{tikzpicture}}
+\caption{The Kafka streaming dataflow. Per-window telemetry is produced to
+\texttt{tf.telemetry.windows}; the online ML detector and the local-LLM detector
+consume it in independent consumer groups and emit binary verdicts to
+\texttt{tf.anomalies}, tagged by detector for head-to-head comparison.}\label{fig:dataflow}
+\end{figure}
+
+\paragraph{The local-LLM detector (Fig.~\ref{fig:llm}).} The second consumer is a local large language model, Qwen2.5-3B \cite{qwen2025}, served on-host by Ollama \cite{ollama2024}. Rather than the engineered feature vector, it receives each window's \emph{raw} MELT signals, formatted into a compact prompt comprising a rule sheet of the six fault signatures and a few in-context exemplars sampled from the training split; it returns a strict JSON binary verdict $\{\textsf{anomaly},\textsf{confidence}\}$ that is parsed into the same $0/1$ output as every other detector. An optional LoRA adapter \cite{hu2022lora} specialises the base model to this mesh's signatures; the lift of tuning over the base prompt is the quantity of interest. When no model is served, the detector emits a \emph{clearly-marked} z-score heuristic so that a fallback is never mistaken for a model run. This design connects the LLM-based detection thread of the literature \cite{guan2024logllm,zhuang2024multimodal} to the streaming, drift-aware setting of this paper. \textbf{Evaluation status.} The detector is implemented and integrated into the prequential protocol, but a full quantitative evaluation with the \emph{served} model requires the GPU deployment and is reported as ongoing work; we therefore present its architecture rather than a headline accuracy claim, and we are explicit that the heuristic fallback is not a proxy for the model (\S\ref{sec:disc-threats}). Its intended role is complementary rather than competitive: \S\ref{sec:res-rq3} shows the per-window streaming detector must be \emph{cheap and bounded}---properties a 3B-parameter model does not have---so the LLM is best positioned as an on-demand reasoning and triage layer over already-flagged windows, not as the primary per-window detector.
+
+\begin{figure}[t]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\sffamily\small, >={Stealth[round]}, node distance=5mm and 9mm,
+  b/.style={draw, rounded corners, fill=blue!6, align=center, minimum height=11mm, minimum width=20mm, inner sep=3pt},
+  m/.style={draw, rounded corners, fill=purple!12, align=center, minimum height=11mm, minimum width=22mm, inner sep=3pt},
+  fb/.style={draw, rounded corners, dashed, fill=gray!8, align=center, minimum height=9mm, minimum width=22mm, inner sep=3pt},
+]
+\node[b] (w) {window\\raw MELT\\signals};
+\node[b, right=of w] (p) {prompt build\\\scriptsize rules {+} few-shot};
+\node[m, right=of p] (mod) {Qwen2.5-3B\\\scriptsize Ollama ({+}LoRA)};
+\node[b, right=of mod] (j) {parse JSON\\\scriptsize\{anomaly,conf.\}};
+\node[b, right=of j] (v) {binary verdict\\$\rightarrow$ \texttt{tf.anomalies}};
+\node[fb, below=7mm of mod] (fbn) {fallback: z-score\\heuristic (no model)};
+\draw[->] (w) -- (p); \draw[->] (p) -- (mod); \draw[->] (mod) -- (j); \draw[->] (j) -- (v);
+\draw[->, dashed] (fbn) -| (j);
+\end{tikzpicture}}
+\caption{The local-LLM detector pipeline. A window's raw signals are formatted into a
+prompt (fault-signature rules {+} few-shot exemplars); Qwen2.5-3B, served by Ollama and
+optionally LoRA-tuned, returns a strict JSON binary verdict that is parsed to the same
+$0/1$ output as the other detectors. When no model is served the pipeline falls back to
+a clearly-marked z-score heuristic (dashed), never silently substituted for the model.}\label{fig:llm}
 \end{figure}
 
 \subsection{Fault injection and ground-truth labelling}\label{sec:method-faults}
@@ -774,6 +861,8 @@ The drift findings (RQ3) speak to gaps the surveys identify but do not close. Ra
 
 The principal external-validity caveat is that the RQ3 stream, though drift-controlled and built on production-representative telemetry, is synthetic-prequential; absolute F1 values are testbed-specific. We stress that the contribution is the \emph{ordering and its reversal}, not the absolute numbers: that the baseline-best ranking does not survive drift, and that online dominates static at every cell and leads periodic in $8$ of $12$ regime$\times$configuration cells (the four exceptions being virtual-drift scale-out and combined-load under thin telemetry, where the cheaper periodic schedule is competitive), is robust to the absolute scale. The nine-service topology, though deeper than many controlled testbeds, is still a single synthetic mesh, which bounds topological generalisation; on it top-$k$ remains informative even without traces (Table~\ref{tab:rq2}). The online model depends on a usable label signal; where labels are scarce or heavily delayed, semi-supervised or unsupervised drift-adaptation would be required---a direction for future work. Finally, a single seed underlies the reported run; the effect sizes are large relative to plausible seed variance, but a multi-seed study would tighten the conclusion-validity argument.
 
+The streaming and LLM additions (\S\ref{sec:method-streaming}) are reported conservatively for the same reason. The RQ3 numbers come from the deterministic in-process prequential harness, not a loaded Kafka broker, so broker-induced tail latency, consumer lag and loss-on-rebalance are out of scope; they would, if anything, only tighten the per-window latency budget the online model already meets, and a broker is additionally a shared dependency a deployment must size for. The served Qwen2.5-3B detector is implemented but not yet evaluated at scale---we therefore make no accuracy claim for it, and the clearly-marked heuristic fallback is a sanity scaffold, not a proxy for the model. Because that detector consumes \emph{raw}, attacker-influenceable log and trace text, it also carries an indirect prompt-injection exposure \cite{greshake2023} that the engineered-feature classifiers, which read only numeric aggregates, do not; treating telemetry text as untrusted before it reaches the prompt is future work.
+
 It is worth being explicit about what a full real-deployment validation would add, and why we regard the present controlled study as the necessary first step rather than a substitute. On a live production stream, drift is neither scheduled nor labelled: regime changes arrive unannounced and entangled, ground truth is partial and delayed (often reconstructed after the fact from incident timelines), and the fault distribution is long-tailed in ways no injection taxonomy fully reproduces. A field study would therefore measure something our testbed cannot---robustness to \emph{unknown} drift and to \emph{imperfect} labels---but at the price of the very thing that makes our central claim interpretable: the ability to attribute the reversal between the held-out baseline and drifted rankings to drift alone, with the model, features, faults and seed held fixed. The two evidence types are complementary, and in the order presented: the controlled result establishes \emph{that} the learning paradigm dominates completeness under drift and \emph{why}; a subsequent field deployment would establish \emph{how much} of that advantage survives the additional noise of production. We read the present findings as a strong prior for that field study, not as a replacement for it, consistent with the synthetic-versus-operational tension that motivated the design \cite{hrusto2026,islam2021}.
 
 %%===========================================================%%
@@ -877,7 +966,7 @@ This paper asked whether, for a non-stationary observability stream, the learnin
 
 The synthesis is that telemetry completeness and continual learning are complementary, not substitutable. Richer signals raise the attainable ceiling and stabilise adaptation; only adaptation realises that ceiling on a live, drifting system. The field's guiding question, ``does observability matter?'', is therefore incomplete: observability matters for what is \emph{achievable}, but keeping the model current is what makes the achievable \emph{actual} in production. Practitioners should invest in observability (at least to the metrics${+}$logs${+}$traces level) and in continual learning \emph{together}, and should prefer bounded-latency online adaptation to bursty periodic retraining wherever a label signal and a latency budget coexist.
 
-Future work follows four directions. First, \emph{label efficiency}: extend the online comparison to semi- and self-supervised drift adaptation for settings where ground-truth labels are scarce or delayed, removing the present dependence on a prompt label signal. Second, \emph{topological generalisation}: extend the testbed beyond the present nine-service mesh to larger and production-scale call graphs, testing whether trace-driven localisation remains complete---as it is here---as the mesh deepens further and dependency structures grow more irregular. Third, \emph{drift diversity}: broaden the regime set beyond latency/scale/load to include schema changes, dependency re-wiring and seasonal patterns, and pair the empirical study with explicit drift-detection signals. Fourth, \emph{operational integration}: close the loop from online detection through trace-driven localisation to automated remediation, drawing on the LLM- and Bayesian-network RCA directions of Pedroso et al.\ \cite{pedroso2025} and the holistic fusion of Han et al.\ \cite{han2024}, so that a continually-current detector feeds a continually-current responder. A fifth direction concerns \emph{explicit drift signalling}: the present online model adapts implicitly through its normaliser and champion bandit, but pairing it with a dedicated drift detector would let the system distinguish virtual from real drift at runtime---precisely the distinction that \S\ref{sec:disc-periodic} shows determines whether refitting or re-normalising is the right response---and could trigger heavier adaptation only when a genuine concept change is detected, conserving the steady-state CPU that is the online model's sole cost disadvantage. Finally, the comparison should be extended to \emph{multi-seed and multi-trace-load} runs to convert the large but single-seed effect sizes reported here into formal significance intervals, and to confirm that the paradigm ordering is invariant to the specific synthetic stream.
+Future work follows four directions. First, \emph{label efficiency}: extend the online comparison to semi- and self-supervised drift adaptation for settings where ground-truth labels are scarce or delayed, removing the present dependence on a prompt label signal. Second, \emph{topological generalisation}: extend the testbed beyond the present nine-service mesh to larger and production-scale call graphs, testing whether trace-driven localisation remains complete---as it is here---as the mesh deepens further and dependency structures grow more irregular. Third, \emph{drift diversity}: broaden the regime set beyond latency/scale/load to include schema changes, dependency re-wiring and seasonal patterns, and pair the empirical study with explicit drift-detection signals. Fourth, \emph{operational integration}: close the loop from online detection through trace-driven localisation to automated remediation, drawing on the LLM- and Bayesian-network RCA directions of Pedroso et al.\ \cite{pedroso2025} and the holistic fusion of Han et al.\ \cite{han2024}, so that a continually-current detector feeds a continually-current responder. A fifth direction concerns \emph{explicit drift signalling}: the present online model adapts implicitly through its normaliser and champion bandit, but pairing it with a dedicated drift detector would let the system distinguish virtual from real drift at runtime---precisely the distinction that \S\ref{sec:disc-periodic} shows determines whether refitting or re-normalising is the right response---and could trigger heavier adaptation only when a genuine concept change is detected, conserving the steady-state CPU that is the online model's sole cost disadvantage. A sixth direction is to \emph{evaluate the streaming and LLM additions} introduced here (\S\ref{sec:method-streaming}): quantify the served Qwen2.5-3B detector, base versus LoRA-tuned \cite{hu2022lora}, against the linear online model on the same prequential stream; measure the Kafka backbone's tail latency, consumer lag and loss-on-rebalance under load relative to the deterministic in-process harness; and harden the LLM detector against the telemetry-borne prompt-injection exposure noted in \S\ref{sec:disc-threats} \cite{greshake2023}. Finally, the comparison should be extended to \emph{multi-seed and multi-trace-load} runs to convert the large but single-seed effect sizes reported here into formal significance intervals, and to confirm that the paradigm ordering is invariant to the specific synthetic stream.
 
 Taken together, these directions share a single thesis, which is the contribution we most wish to carry forward: in a non-stationary world, a detector is never finished being trained. The observability community has invested heavily in \emph{seeing} more of the system; the evidence here is that comparable investment in \emph{relearning} what is seen is what converts that visibility into reliable detection.
 

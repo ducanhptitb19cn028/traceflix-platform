@@ -18,7 +18,13 @@
 		<module>movie-service</module>
 		<module>actor-service</module>
 		<module>review-service</module>
-		<module>mesh-service</module>
+		<!-- mesh expansion: one module per node, each with its own business logic -->
+		<module>catalog-service</module>
+		<module>auth-service</module>
+		<module>user-service</module>
+		<module>search-service</module>
+		<module>recommendation-service</module>
+		<module>gateway-service</module>
 	</modules>
 	<properties>
 		<maven.compiler.source>21</maven.compiler.source>
