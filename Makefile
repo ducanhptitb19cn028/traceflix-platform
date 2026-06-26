@@ -1,0 +1,254 @@
+# ============================================================================
+# TraceFlix Platform - whole-project automation
+# ============================================================================
+# Layers:
+#   services/        9 Spring Boot microservices (Java 21, OTel-instrumented)
+#   observability/   Tempo/Loki/Prometheus/Grafana stack (k8s manifest)
+#   aiops/           experiments, ML, streaming backbone, LLM, webui, tests
+#   deploy/          Docker Compose overlay (vm1 gpu/kafka, vm2 services, vm3 tel)
+#   paper/           LaTeX paper (Docker TeX Live)
+#   dissertation/    md -> docx
+#
+# Run `make help` for a grouped target list. Recipes use POSIX sh + a few CLI
+# tools (python, mvn, docker, kubectl); on Windows run from Git Bash / WSL.
+# Override knobs inline, e.g.  make experiments EPISODES=120 DRIFT_EPISODES=240
+# ============================================================================
+
+# ---- configuration ---------------------------------------------------------
+# (no inline comments after values - they would leak trailing whitespace)
+PY              ?= python
+EPISODES        ?= 200          # offline RQ1/RQ2/RQ4 (run_experiment)
+DRIFT_EPISODES  ?= 320          # RQ3 drift stream (online_vs_offline, cost)
+STREAM_EPISODES ?= 20           # streaming backbone demo
+LIVE_EPISODES   ?= 30           # live fault-injection episodes
+CONFIGS         ?= C1,C2,C3,C4
+SEED            ?= 42
+OUT             ?= data/results # relative to aiops/
+NS              ?= on-demand-observability # k8s namespace
+SVC             ?= catalog-service         # inject: target service
+FAULT           ?= cpu_saturation          # inject: fault type
+DUR             ?= 120                      # inject: duration (s)
+# strip the trailing whitespace the aligned comments above introduce
+EPISODES        := $(strip $(EPISODES))
+DRIFT_EPISODES  := $(strip $(DRIFT_EPISODES))
+STREAM_EPISODES := $(strip $(STREAM_EPISODES))
+LIVE_EPISODES   := $(strip $(LIVE_EPISODES))
+OUT             := $(strip $(OUT))
+NS              := $(strip $(NS))
+SVC             := $(strip $(SVC))
+FAULT           := $(strip $(FAULT))
+DUR             := $(strip $(DUR))
+
+AIOPS    := aiops
+SERVICES := services
+RESULTS  := $(AIOPS)/$(OUT)
+NEW_SVCS := catalog auth user search recommendation gateway
+ALL_SVCS := movie actor review $(NEW_SVCS)
+
+# paper compile (Docker TeX Live). Override PAPER_DIR on Windows if the mount
+# path needs a Windows-style absolute path.
+PAPER_DIR ?= $(CURDIR)/paper
+TEXIMG    := texlive/texlive:latest
+
+DC_VM1 := deploy/virtfusion/vm1-gpu
+DC_VM2 := deploy/virtfusion/vm2-services
+DC_VM3 := deploy/virtfusion/vm3-telemetry
+DC_VM4 := deploy/virtfusion/vm4-gateway
+
+.DEFAULT_GOAL := help
+.PHONY: help all setup setup-llm \
+        experiments repro quick rq124 rq3 cost plots figures \
+        streaming llm lora \
+        webui webui-build \
+        build-services compile-services images \
+        test test-aiops test-services \
+        deploy-up deploy-down mesh-up mesh-down telemetry-up telemetry-down \
+        kafka-llm-up kafka-llm-down gateway-up gateway-down \
+        bootstrap k8s-deploy k8s-delete chaos-install \
+        live live-episodes inject \
+        paper paper-pages paper-clean dissertation \
+        clean clean-results clean-all
+
+# ---- help ------------------------------------------------------------------
+help:
+	@echo "TraceFlix - whole-project automation. Targets by area:"
+	@echo ""
+	@echo "  SETUP        setup  setup-llm"
+	@echo "  EXPERIMENTS  experiments  repro  quick  rq124  rq3  cost  plots  figures"
+	@echo "  STREAM/LLM   streaming  llm  lora"
+	@echo "  WEBUI        webui  webui-build"
+	@echo "  JAVA         build-services  compile-services  images  test-services"
+	@echo "  TESTS        test  test-aiops  test-services"
+	@echo "  COMPOSE      deploy-up/down  mesh-up/down  telemetry-up/down"
+	@echo "               kafka-llm-up/down  gateway-up/down"
+	@echo "  KUBERNETES   bootstrap  k8s-deploy  k8s-delete  chaos-install"
+	@echo "  FAULTS/LIVE  live  live-episodes  inject  (SVC= FAULT= DUR=)"
+	@echo "  PAPER/DOCS   paper  paper-pages  paper-clean  dissertation"
+	@echo "  CLEAN        clean  clean-results  clean-all"
+	@echo ""
+	@echo "  Knobs: EPISODES=$(EPISODES) DRIFT_EPISODES=$(DRIFT_EPISODES) SEED=$(SEED) CONFIGS=$(CONFIGS)"
+
+# build the core deliverables: Java services, offline results, paper
+all: build-services experiments paper
+
+# ---- setup -----------------------------------------------------------------
+setup:
+	$(PY) -m pip install -r $(AIOPS)/requirements.txt
+
+setup-llm:
+	$(PY) -m pip install -r $(AIOPS)/llm/requirements-llm.txt
+
+# ---- experiments (aiops, offline) -----------------------------------------
+experiments: rq124 rq3 cost plots
+	@echo ""
+	@echo "[make] experiments complete -> $(RESULTS)/"
+
+repro: setup experiments test
+
+quick:
+	$(MAKE) experiments EPISODES=60 DRIFT_EPISODES=120
+
+rq124:
+	cd $(AIOPS) && $(PY) -m ml.experiments.run_experiment --episodes $(EPISODES) --seed $(SEED) --out $(OUT)
+
+rq3:
+	cd $(AIOPS) && $(PY) -m ml.experiments.online_vs_offline --episodes $(DRIFT_EPISODES) --configs $(CONFIGS) --out $(OUT)
+
+cost:
+	cd $(AIOPS) && $(PY) -m ml.experiments.cost_compare --episodes $(DRIFT_EPISODES) --configs $(CONFIGS) --out $(OUT)
+
+plots:
+	cd $(AIOPS) && $(PY) -m ml.eval.plots $(OUT)
+
+figures:
+	$(PY) paper/make_figures.py
+
+# ---- streaming / LLM -------------------------------------------------------
+streaming:
+	cd $(AIOPS) && $(PY) -m streaming.run_pipeline --episodes $(STREAM_EPISODES)
+
+# Requires Ollama serving qwen2.5:3b; without it the LLM row reports a heuristic.
+llm:
+	cd $(AIOPS) && ENABLE_LLM=1 $(PY) -m ml.experiments.run_experiment --episodes $(EPISODES) --out $(OUT)
+
+lora:
+	cd $(AIOPS) && $(PY) -m llm.build_dataset --episodes 400 --out llm/data
+	cd $(AIOPS) && $(PY) -m llm.train_lora --data llm/data --out llm/adapters/qwen2.5-3b-traceflix
+
+# ---- webui -----------------------------------------------------------------
+webui:
+	cd $(AIOPS) && $(PY) -m uvicorn webui.backend.app:app --port 8000
+
+webui-build:
+	cd $(AIOPS)/webui/frontend && npm install && npm run build
+
+# ---- Java services ---------------------------------------------------------
+build-services:
+	cd $(SERVICES) && mvn -q clean package -DskipTests
+
+compile-services:
+	cd $(SERVICES) && mvn -q compile
+
+images: build-services
+	cd $(SERVICES) && for s in $(ALL_SVCS); do docker build -t traceflix/$$s-service:1.0.0 $$s-service; done
+
+# ---- tests -----------------------------------------------------------------
+test: test-aiops test-services
+
+test-aiops:
+	cd $(AIOPS) && $(PY) -m pytest tests/ -q
+
+test-services:
+	cd $(SERVICES) && mvn -q test
+
+# ---- deploy: Docker Compose (deploy/virtfusion) ---------------------------
+# Single-host stack = telemetry backends + the nine-service mesh.
+deploy-up: telemetry-up mesh-up
+deploy-down: mesh-down telemetry-down
+
+mesh-up:
+	cd $(DC_VM2) && docker compose -f docker-compose.yml -f docker-compose.mesh.yml --env-file ../.env up -d
+
+mesh-down:
+	cd $(DC_VM2) && docker compose -f docker-compose.yml -f docker-compose.mesh.yml down
+
+telemetry-up:
+	cd $(DC_VM3) && docker compose --env-file ../.env up -d
+
+telemetry-down:
+	cd $(DC_VM3) && docker compose down
+
+kafka-llm-up:
+	cd $(DC_VM1) && docker compose -f docker-compose.kafka-llm.yml up -d
+
+kafka-llm-down:
+	cd $(DC_VM1) && docker compose -f docker-compose.kafka-llm.yml down
+
+gateway-up:
+	cd $(DC_VM4) && docker compose --env-file ../.env up -d
+
+gateway-down:
+	cd $(DC_VM4) && docker compose down
+
+# ---- deploy: Kubernetes ----------------------------------------------------
+bootstrap:
+	bash scripts/bootstrap.sh
+
+k8s-deploy:
+	kubectl apply -f $(SERVICES)/deployment.yaml
+	kubectl apply -f observability/on-demand-observability.yaml
+	kubectl apply -f $(AIOPS)/k8s/victoriametrics.yaml
+	kubectl apply -f $(AIOPS)/k8s/load-generator-fixed.yaml
+
+k8s-delete:
+	-kubectl delete namespace $(NS)
+
+chaos-install:
+	cd $(AIOPS) && bash scripts/install_chaos_mesh.sh
+
+# ---- fault injection / live ------------------------------------------------
+# Run the analysis against live PromQL/LogQL/TraceQL (point the URLs at your stack).
+live:
+	cd $(AIOPS) && TF_LIVE=1 \
+	  PROM_URL=$${PROM_URL:-http://localhost:9090} \
+	  LOKI_URL=$${LOKI_URL:-http://localhost:3100} \
+	  TEMPO_URL=$${TEMPO_URL:-http://localhost:3200} \
+	  VM_URL=$${VM_URL:-http://localhost:8428} \
+	  $(PY) -m ml.experiments.run_experiment --labels data/labels.csv
+
+# Drive Chaos Mesh fault episodes on the k8s deployment, recording ground truth.
+live-episodes:
+	cd $(AIOPS) && $(PY) faults/run_episodes.py --episodes $(LIVE_EPISODES) --labels data/labels.csv
+
+# Inject a single fault into a Compose-deployed service via Pumba.
+inject:
+	cd $(DC_VM2) && ./inject-fault.sh $(SVC) $(FAULT) $(DUR)
+
+# ---- paper / dissertation --------------------------------------------------
+paper:
+	$(PY) paper/make_figures.py
+	docker run --rm -v "$(PAPER_DIR):/data" -w /data $(TEXIMG) sh -c "\
+	  pdflatex -interaction=nonstopmode sn-article.tex && \
+	  bibtex sn-article && \
+	  pdflatex -interaction=nonstopmode sn-article.tex && \
+	  pdflatex -interaction=nonstopmode sn-article.tex"
+
+paper-pages:
+	@grep -o '([0-9]* pages' paper/sn-article.log | tail -1 | tr -d '('
+
+paper-clean:
+	-rm -f paper/sn-article.aux paper/sn-article.bbl paper/sn-article.blg \
+	       paper/sn-article.log paper/sn-article.out
+
+dissertation:
+	cd dissertation && $(PY) md2docx.py
+
+# ---- clean -----------------------------------------------------------------
+clean:
+	-cd $(SERVICES) && mvn -q clean
+	-find $(AIOPS) -type d -name __pycache__ -prune -exec rm -rf {} +
+
+clean-results:
+	-rm -f $(RESULTS)/*.csv $(RESULTS)/*.json $(RESULTS)/figures/*.png
+
+clean-all: clean clean-results paper-clean
