@@ -1,0 +1,83 @@
+{{- if .Values.ollama.enabled }}
+# Ollama serving the local LLM (Qwen2.5-3B) on the GPU.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-models
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.storage.className }}
+  storageClassName: {{ .Values.storage.className }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.ollama }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  labels: { app: ollama }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: ollama } }
+  template:
+    metadata: { labels: { app: ollama } }
+    spec:
+      {{- if .Values.ollama.gpu }}
+      {{- include "traceflix.gpuScheduling" . | nindent 6 }}
+      {{- end }}
+      containers:
+        - name: ollama
+          image: {{ .Values.ollama.image }}
+          env:
+            - { name: OLLAMA_KEEP_ALIVE, value: "30m" }
+          ports: [{ name: http, containerPort: 11434 }]
+          volumeMounts:
+            - { name: models, mountPath: /root/.ollama }
+          {{- if .Values.ollama.gpu }}
+          resources:
+            limits:
+              nvidia.com/gpu: {{ .Values.gpu.count }}
+          {{- end }}
+      volumes:
+        - { name: models, persistentVolumeClaim: { claimName: ollama-models } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: ollama, labels: { app: ollama } }
+spec:
+  selector: { app: ollama }
+  ports: [{ name: http, port: 11434, targetPort: 11434 }]
+{{- if .Values.ollama.pullModel }}
+---
+# One-shot: pull the model once Ollama is reachable (retries until it is up).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ollama-pull
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: pull
+          image: {{ .Values.ollama.image }}
+          env:
+            - { name: OLLAMA_HOST, value: "http://ollama:11434" }
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              for i in $(seq 1 60); do
+                if ollama pull {{ .Values.ollama.model }}; then exit 0; fi
+                echo "ollama not ready yet ($i) - retrying in 5s"; sleep 5
+              done
+              echo "giving up waiting for ollama"; exit 1
+{{- end }}
+{{- end }}

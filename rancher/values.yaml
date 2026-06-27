@@ -1,0 +1,109 @@
+# ============================================================================
+# TraceFlix - Rancher GPU Kubernetes values
+# ============================================================================
+# Set `image.registry` to a registry your cluster can pull from, build & push the
+# images (see README), then `helm install traceflix ./rancher -n traceflix --create-namespace`.
+
+# ---- container images for the 9 services + the aiops engine ----------------
+image:
+  # all service images are pulled as <registry>/<name>:<tag>, e.g.
+  #   registry.example.com/traceflix/gateway-service:1.0.0
+  registry: registry.example.com/traceflix
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+  pullSecrets: []          # e.g. [{ name: regcred }]
+
+# ---- the nine microservices ------------------------------------------------
+# k8s Service names MUST equal these names: the services' baked downstream URLs
+# (and OTel service.name) use bare names that resolve via in-namespace DNS.
+services:
+  - { name: gateway-service, image: gateway-service }
+  - name: movie-service       # original service: downstreams come from env (no baked default)
+    image: movie-service
+    env:
+      ACTOR_SERVICE_URL: "http://actor-service:8080/api/actors/"
+      REVIEW_SERVICE_URL: "http://review-service:8080/api/reviews"
+  - { name: actor-service,          image: actor-service }
+  - { name: review-service,         image: review-service }
+  - { name: user-service,           image: user-service }
+  - { name: search-service,         image: search-service }
+  - { name: recommendation-service, image: recommendation-service }
+  - { name: auth-service,           image: auth-service }
+  - { name: catalog-service,        image: catalog-service }
+
+loadGenerator:
+  enabled: true
+  target: "http://gateway-service:8080/api/browse?userId=1"
+
+# ---- OpenTelemetry java-agent (injected via initContainer) -----------------
+otelAgent:
+  downloaderImage: curlimages/curl:8.7.1
+  url: https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar
+
+# ---- observability stack image versions ------------------------------------
+telemetry:
+  otelCollector:   otel/opentelemetry-collector-contrib:0.110.0
+  prometheus:      prom/prometheus:v2.54.1
+  victoriametrics: victoriametrics/victoria-metrics:v1.103.0
+  loki:            grafana/loki:2.9.8
+  tempo:           grafana/tempo:2.5.0
+  grafana:         grafana/grafana:11.1.4
+
+grafana:
+  adminUser: admin
+  adminPassword: change-me-please
+
+# ---- Apache Kafka event backbone (single-node KRaft) -----------------------
+kafka:
+  enabled: true
+  image: bitnami/kafka:3.7
+
+# ---- local LLM (Ollama, GPU) -----------------------------------------------
+ollama:
+  enabled: true
+  image: ollama/ollama:latest
+  model: "qwen2.5:3b"       # set to qwen2.5-3b-traceflix after a LoRA export
+  pullModel: true           # one-shot Job pulls the model on install
+  gpu: true
+
+# ---- AIOps engine + dashboard (GPU) ----------------------------------------
+aiops:
+  image: traceflix-aiops    # pulled as <registry>/traceflix-aiops:<tag>
+  tag: gpu
+  gpu: true
+  enableLLM: true
+  live: false               # dashboard runs synthetic by default; set true to read live telemetry
+
+# ---- GPU scheduling (applies to ollama + aiops) ----------------------------
+# With the NVIDIA GPU Operator installed, GPU nodes are usually labelled
+# nvidia.com/gpu.present=true and tainted nvidia.com/gpu=present:NoSchedule.
+gpu:
+  count: 1
+  nodeSelector: {}          # e.g. { nvidia.com/gpu.present: "true" }
+  tolerations: []           # e.g. [{ key: nvidia.com/gpu, operator: Exists, effect: NoSchedule }]
+  runtimeClassName: ""      # e.g. nvidia  (only if your cluster requires it)
+
+# ---- persistent storage ----------------------------------------------------
+storage:
+  className: ""             # "" = cluster default (Longhorn / local-path); else e.g. "longhorn"
+  prometheus: 10Gi
+  victoriametrics: 10Gi
+  loki: 10Gi
+  tempo: 10Gi
+  kafka: 8Gi
+  ollama: 20Gi
+
+# ---- ingress (Grafana + the AIOps dashboard) -------------------------------
+ingress:
+  enabled: true
+  className: nginx
+  grafanaHost: grafana.traceflix.example.com
+  dashboardHost: traceflix.example.com
+  tls: false
+  tlsSecret: traceflix-tls
+
+# ---- default resource requests (per pod; tune for your nodes) ---------------
+resources:
+  service:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 500m, memory: 512Mi }

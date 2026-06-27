@@ -1,0 +1,82 @@
+# AIOps engine + dashboard (GPU). Serves the React dashboard on :8000; the live
+# collectors (TF_LIVE=1) read the in-cluster telemetry, and the k8s-events
+# collector lists events in this namespace (RBAC below).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aiops
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: aiops-events-reader
+rules:
+  - apiGroups: [""]
+    resources: ["events", "pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aiops-events-reader
+subjects:
+  - kind: ServiceAccount
+    name: aiops
+roleRef:
+  kind: Role
+  name: aiops-events-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aiops
+  labels: { app: aiops }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: aiops } }
+  template:
+    metadata: { labels: { app: aiops } }
+    spec:
+      serviceAccountName: aiops
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.aiops.gpu }}
+      {{- include "traceflix.gpuScheduling" . | nindent 6 }}
+      {{- end }}
+      containers:
+        - name: aiops
+          image: "{{ .Values.image.registry }}/{{ .Values.aiops.image }}:{{ .Values.aiops.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports: [{ name: http, containerPort: 8000 }]
+          env:
+            - { name: PROM_URL, value: "http://prometheus:9090" }
+            - { name: VM_URL, value: "http://victoriametrics:8428" }
+            - { name: LOKI_URL, value: "http://loki:3100" }
+            - { name: TEMPO_URL, value: "http://tempo:3200" }
+            - { name: TF_NAMESPACE, value: {{ .Release.Namespace | quote }} }
+            - { name: TF_LIVE, value: {{ ternary "1" "0" .Values.aiops.live | quote }} }
+            {{- if .Values.kafka.enabled }}
+            - { name: TF_KAFKA_BOOTSTRAP, value: "kafka:9092" }
+            {{- end }}
+            {{- if .Values.ollama.enabled }}
+            - { name: OLLAMA_URL, value: "http://ollama:11434" }
+            - { name: OLLAMA_MODEL, value: {{ .Values.ollama.model | quote }} }
+            {{- end }}
+            {{- if .Values.aiops.enableLLM }}
+            - { name: ENABLE_LLM, value: "1" }
+            {{- end }}
+          {{- if .Values.aiops.gpu }}
+          resources:
+            limits:
+              nvidia.com/gpu: {{ .Values.gpu.count }}
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata: { name: aiops, labels: { app: aiops } }
+spec:
+  selector: { app: aiops }
+  ports: [{ name: http, port: 8000, targetPort: 8000 }]

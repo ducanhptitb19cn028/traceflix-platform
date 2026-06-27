@@ -1,0 +1,124 @@
+# ---- OpenTelemetry Collector ----------------------------------------------
+# Mirrors deploy/virtfusion/vm2-services/otel-collector-config.yml, with endpoints
+# pointed at the in-cluster Services. Receives OTLP from the java-agents; exports
+# traces->Tempo, logs->Loki, metrics->:8889 (scraped by Prometheus).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+data:
+  collector-config.yml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:4317"
+          http:
+            endpoint: "0.0.0.0:4318"
+    processors:
+      batch: {}
+      resourcedetection:
+        detectors: [env, system]
+    exporters:
+      otlp/tempo:
+        endpoint: "tempo:4317"
+        tls:
+          insecure: true
+      loki:
+        endpoint: "http://loki:3100/loki/api/v1/push"
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+        resource_to_telemetry_conversion:
+          enabled: true
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [resourcedetection, batch]
+          exporters: [otlp/tempo]
+        metrics:
+          receivers: [otlp]
+          processors: [resourcedetection, batch]
+          exporters: [prometheus]
+        logs:
+          receivers: [otlp]
+          processors: [resourcedetection, batch]
+          exporters: [loki]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  labels: { app: otel-collector }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: otel-collector } }
+  template:
+    metadata: { labels: { app: otel-collector } }
+    spec:
+      containers:
+        - name: otel-collector
+          image: {{ .Values.telemetry.otelCollector }}
+          args: ["--config=/etc/otel/collector-config.yml"]
+          ports:
+            - { name: otlp-grpc, containerPort: 4317 }
+            - { name: otlp-http, containerPort: 4318 }
+            - { name: prom-exp, containerPort: 8889 }
+          volumeMounts:
+            - { name: config, mountPath: /etc/otel }
+      volumes:
+        - { name: config, configMap: { name: otel-collector-config } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: otel-collector, labels: { app: otel-collector } }
+spec:
+  selector: { app: otel-collector }
+  ports:
+    - { name: otlp-grpc, port: 4317, targetPort: 4317 }
+    - { name: otlp-http, port: 4318, targetPort: 4318 }
+    - { name: prom-exp, port: 8889, targetPort: 8889 }
+# ---- Grafana ---------------------------------------------------------------
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - { name: Prometheus, uid: prometheus_ds, type: prometheus, access: proxy, url: http://prometheus:9090, isDefault: true }
+      - { name: VictoriaMetrics, uid: victoriametrics_ds, type: prometheus, access: proxy, url: http://victoriametrics:8428 }
+      - { name: Loki, uid: loki_ds, type: loki, access: proxy, url: http://loki:3100 }
+      - { name: Tempo, uid: tempo_ds, type: tempo, access: proxy, url: http://tempo:3200 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  labels: { app: grafana }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: grafana } }
+  template:
+    metadata: { labels: { app: grafana } }
+    spec:
+      containers:
+        - name: grafana
+          image: {{ .Values.telemetry.grafana }}
+          env:
+            - { name: GF_SECURITY_ADMIN_USER, value: {{ .Values.grafana.adminUser | quote }} }
+            - { name: GF_SECURITY_ADMIN_PASSWORD, value: {{ .Values.grafana.adminPassword | quote }} }
+          ports: [{ name: http, containerPort: 3000 }]
+          volumeMounts:
+            - { name: datasources, mountPath: /etc/grafana/provisioning/datasources }
+      volumes:
+        - { name: datasources, configMap: { name: grafana-datasources } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: grafana, labels: { app: grafana } }
+spec:
+  selector: { app: grafana }
+  ports: [{ name: http, port: 3000, targetPort: 3000 }]

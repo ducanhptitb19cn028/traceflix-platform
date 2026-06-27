@@ -1,0 +1,4 @@
+.git
+*.md
+extras/
+aiops.Dockerfile

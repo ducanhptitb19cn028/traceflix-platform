@@ -1,0 +1,16 @@
+apiVersion: v2
+name: traceflix
+description: >-
+  TraceFlix on a Rancher-managed GPU Kubernetes cluster - the nine-service mesh,
+  the MELT observability stack (OTel Collector, Prometheus, VictoriaMetrics, Loki,
+  Tempo, Grafana), an Apache Kafka event backbone, a local LLM (Qwen2.5-3B via
+  Ollama, GPU), and the AIOps engine + dashboard (GPU). The Kubernetes equivalent
+  of the deploy/virtfusion Compose overlay. Additive: the upstream project is not
+  modified.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords: [observability, aiops, anomaly-detection, opentelemetry, gpu, llm, kafka]
+maintainers:
+  - name: TraceFlix
+home: https://github.com/your-org/traceflix-platform

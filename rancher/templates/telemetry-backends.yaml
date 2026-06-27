@@ -1,0 +1,269 @@
+# ---- Prometheus ------------------------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 10s
+      evaluation_interval: 10s
+    remote_write:
+      - url: http://victoriametrics:8428/api/v1/write
+    scrape_configs:
+      - job_name: otel-collector
+        static_configs:
+          - targets: ["otel-collector:8889"]
+      - job_name: prometheus
+        static_configs:
+          - targets: ["localhost:9090"]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.storage.className }}
+  storageClassName: {{ .Values.storage.className }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.prometheus }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  labels: { app: prometheus }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: prometheus } }
+  template:
+    metadata: { labels: { app: prometheus } }
+    spec:
+      securityContext: { fsGroup: 65534 }
+      containers:
+        - name: prometheus
+          image: {{ .Values.telemetry.prometheus }}
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--web.enable-lifecycle"
+          ports: [{ name: http, containerPort: 9090 }]
+          volumeMounts:
+            - { name: config, mountPath: /etc/prometheus }
+            - { name: data, mountPath: /prometheus }
+      volumes:
+        - { name: config, configMap: { name: prometheus-config } }
+        - { name: data, persistentVolumeClaim: { claimName: prometheus-data } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: prometheus, labels: { app: prometheus } }
+spec:
+  selector: { app: prometheus }
+  ports: [{ name: http, port: 9090, targetPort: 9090 }]
+# ---- VictoriaMetrics (C4 long-range baseline) ------------------------------
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: victoriametrics-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.storage.className }}
+  storageClassName: {{ .Values.storage.className }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.victoriametrics }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: victoriametrics
+  labels: { app: victoriametrics }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: victoriametrics } }
+  template:
+    metadata: { labels: { app: victoriametrics } }
+    spec:
+      containers:
+        - name: victoriametrics
+          image: {{ .Values.telemetry.victoriametrics }}
+          args:
+            - "-storageDataPath=/storage"
+            - "-retentionPeriod=1"
+            - "-httpListenAddr=:8428"
+          ports: [{ name: http, containerPort: 8428 }]
+          volumeMounts:
+            - { name: data, mountPath: /storage }
+      volumes:
+        - { name: data, persistentVolumeClaim: { claimName: victoriametrics-data } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: victoriametrics, labels: { app: victoriametrics } }
+spec:
+  selector: { app: victoriametrics }
+  ports: [{ name: http, port: 8428, targetPort: 8428 }]
+# ---- Loki ------------------------------------------------------------------
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-config
+data:
+  loki-config.yaml: |
+    auth_enabled: false
+    server:
+      http_listen_address: 0.0.0.0
+      http_listen_port: 3100
+    common:
+      instance_addr: 127.0.0.1
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        kvstore:
+          store: inmemory
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+    limits_config:
+      retention_period: 24h
+      reject_old_samples: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loki-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.storage.className }}
+  storageClassName: {{ .Values.storage.className }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.loki }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+  labels: { app: loki }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: loki } }
+  template:
+    metadata: { labels: { app: loki } }
+    spec:
+      containers:
+        - name: loki
+          image: {{ .Values.telemetry.loki }}
+          args: ["-config.file=/etc/loki/loki-config.yaml"]
+          ports: [{ name: http, containerPort: 3100 }]
+          volumeMounts:
+            - { name: config, mountPath: /etc/loki }
+            - { name: data, mountPath: /loki }
+      volumes:
+        - { name: config, configMap: { name: loki-config } }
+        - { name: data, persistentVolumeClaim: { claimName: loki-data } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: loki, labels: { app: loki } }
+spec:
+  selector: { app: loki }
+  ports: [{ name: http, port: 3100, targetPort: 3100 }]
+# ---- Tempo -----------------------------------------------------------------
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tempo-config
+data:
+  tempo.yaml: |
+    server:
+      http_listen_address: 0.0.0.0
+      http_listen_port: 3200
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: "0.0.0.0:4317"
+            http:
+              endpoint: "0.0.0.0:4318"
+    ingester:
+      trace_idle_period: 10s
+      max_block_bytes: 1048576
+      max_block_duration: 5m
+    compactor:
+      compaction:
+        block_retention: 1h
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /var/tempo/traces
+        wal:
+          path: /var/tempo/wal
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tempo-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.storage.className }}
+  storageClassName: {{ .Values.storage.className }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.tempo }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+  labels: { app: tempo }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: tempo } }
+  template:
+    metadata: { labels: { app: tempo } }
+    spec:
+      containers:
+        - name: tempo
+          image: {{ .Values.telemetry.tempo }}
+          args: ["-config.file=/etc/tempo/tempo.yaml"]
+          ports:
+            - { name: http, containerPort: 3200 }
+            - { name: otlp-grpc, containerPort: 4317 }
+          volumeMounts:
+            - { name: config, mountPath: /etc/tempo }
+            - { name: data, mountPath: /var/tempo }
+      volumes:
+        - { name: config, configMap: { name: tempo-config } }
+        - { name: data, persistentVolumeClaim: { claimName: tempo-data } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: tempo, labels: { app: tempo } }
+spec:
+  selector: { app: tempo }
+  ports:
+    - { name: http, port: 3200, targetPort: 3200 }
+    - { name: otlp-grpc, port: 4317, targetPort: 4317 }

@@ -1,0 +1,116 @@
+# The nine Spring Boot microservices. Each is OTel-instrumented by injecting the
+# java-agent via an initContainer into a shared emptyDir, exactly as the Compose
+# deploy does. k8s Service names equal the service names so the baked downstream
+# URLs (and otel.service.name) resolve via in-namespace DNS.
+{{- range $svc := .Values.services }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svc.name }}
+  labels:
+    app: {{ $svc.name }}
+    {{- include "traceflix.labels" $ | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $svc.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $svc.name }}
+    spec:
+      {{- with $.Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: otel-agent
+          image: {{ $.Values.otelAgent.downloaderImage }}
+          command: ["sh", "-c"]
+          args: ["curl -fsSL -o /otel/opentelemetry-javaagent.jar {{ $.Values.otelAgent.url }}"]
+          volumeMounts:
+            - { name: otel, mountPath: /otel }
+      containers:
+        - name: app
+          image: "{{ $.Values.image.registry }}/{{ $svc.image }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          command: ["java"]
+          args:
+            - "-javaagent:/otel/opentelemetry-javaagent.jar"
+            - "-Dotel.service.name={{ $svc.name }}"
+            - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+            - "-Dotel.exporter.otlp.protocol=grpc"
+            - "-Dotel.metrics.exporter=otlp"
+            - "-Dotel.logs.exporter=otlp"
+            - "-jar"
+            - "/app/app.jar"
+          {{- with $svc.env }}
+          env:
+            {{- range $k, $v := . }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - { name: otel, mountPath: /otel, readOnly: true }
+          readinessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            {{- toYaml $.Values.resources.service | nindent 12 }}
+      volumes:
+        - { name: otel, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svc.name }}
+  labels:
+    app: {{ $svc.name }}
+spec:
+  selector:
+    app: {{ $svc.name }}
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }
+{{- end }}
+{{- if .Values.loadGenerator.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-generator
+  labels:
+    app: load-generator
+    {{- include "traceflix.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: load-generator
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      containers:
+        - name: loadgen
+          image: {{ .Values.otelAgent.downloaderImage }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                for u in 1 2 3 4 5; do
+                  curl -s "http://gateway-service:8080/api/browse?userId=$u" >/dev/null
+                done
+                sleep 1
+              done
+{{- end }}

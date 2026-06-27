@@ -1,0 +1,61 @@
+# Sample Chaos Mesh faults for the deployed mesh. Apply AFTER installing Chaos Mesh
+# (see rancher/README.md). Replace `traceflix` with your release namespace, then:
+#   kubectl apply -f rancher/extras/chaos-examples.yaml
+# Pods carry the label app=<service-name>, which the selectors target. Record the
+# apply/delete timestamps as ground truth (or use aiops/faults/run_episodes.py).
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: tf-cpu-saturation
+  namespace: traceflix
+spec:
+  mode: all
+  selector:
+    namespaces: [traceflix]
+    labelSelectors: { app: catalog-service }
+  stressors:
+    cpu: { workers: 2, load: 90 }
+  duration: "3m"
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: tf-pod-kill
+  namespace: traceflix
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    namespaces: [traceflix]
+    labelSelectors: { app: recommendation-service }
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: tf-latency-spike
+  namespace: traceflix
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces: [traceflix]
+    labelSelectors: { app: review-service }
+  delay:
+    latency: "300ms"
+    jitter: "50ms"
+  duration: "2m"
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: tf-network-partition
+  namespace: traceflix
+spec:
+  action: partition
+  mode: all
+  selector:
+    namespaces: [traceflix]
+    labelSelectors: { app: catalog-service }
+  direction: to
+  duration: "2m"
