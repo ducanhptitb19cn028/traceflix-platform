@@ -1,5 +1,6 @@
 {{- if .Values.ollama.enabled }}
 # Ollama serving the local LLM (Qwen2.5-3B) on the GPU.
+{{- if not .Values.storage.ephemeral }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -13,6 +14,7 @@ spec:
     requests:
       storage: {{ .Values.storage.ollama }}
 ---
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,7 +44,7 @@ spec:
               nvidia.com/gpu: {{ .Values.gpu.count }}
           {{- end }}
       volumes:
-        - { name: models, persistentVolumeClaim: { claimName: ollama-models } }
+        - {{ include "traceflix.pvVolume" (dict "name" "models" "claim" "ollama-models" "root" $) }}
 ---
 apiVersion: v1
 kind: Service

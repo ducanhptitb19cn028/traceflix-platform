@@ -1,0 +1,46 @@
+# ============================================================================
+# TraceFlix overlay for a Rancher *tenant* on a VirtFusion VM (no GPU, no admin).
+# ============================================================================
+# Use when you have a scoped Rancher dashboard login (not root) and a single
+# namespace to deploy into. CPU-only, no ingress (demo via port-forward).
+#
+#   helm install traceflix ./rancher -n <your-namespace> -f rancher/values-virtfusion.yaml \
+#     --set image.registry=ghcr.io/ducanhptitb19cn028
+#
+# (omit --create-namespace if the namespace already exists / you can't create one)
+
+image:
+  registry: ghcr.io/ducanhptitb19cn028   # public GHCR packages = no pull secret needed
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+# ---- no GPU on a plain VPS: run aiops CPU-only, skip the local LLM ----------
+aiops:
+  gpu: false          # no nvidia.com/gpu request -> pod schedules on a CPU node
+  enableLLM: false    # dashboard LLM badge shows "heuristic" instead of "llm"
+  live: false         # synthetic experiments work without live telemetry
+
+ollama:
+  enabled: false      # qwen2.5:3b on CPU is too slow for a demo; turn on later if wanted
+
+gpu:
+  count: 0
+  nodeSelector: {}
+  tolerations: []
+
+# ---- no admin ingress/DNS: disable ingress, reach the UIs via port-forward --
+ingress:
+  enabled: false
+
+# ---- storage: "" = whatever default StorageClass the cluster has ------------
+# If `kubectl get storageclass` shows a non-default class, set its name here.
+storage:
+  className: ""
+
+# ---- you still set a real Grafana password ---------------------------------
+grafana:
+  adminPassword: change-me-please
+
+# Kafka backbone is fine on 16 GB; set enabled:false to save ~1 GB if needed.
+kafka:
+  enabled: true

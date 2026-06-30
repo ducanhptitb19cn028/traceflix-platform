@@ -127,6 +127,9 @@ gpu:
 
 # ---- persistent storage ----------------------------------------------------
 storage:
+  ephemeral: false         # true = use emptyDir instead of PVCs (no StorageClass needed;
+                           #        data is lost on pod restart). Fallback for clusters
+                           #        with no default StorageClass. See values-virtfusion-emptydir.yaml.
   className: ""             # "" = cluster default (Longhorn / local-path); else e.g. "longhorn"
   prometheus: 10Gi
   victoriametrics: 10Gi

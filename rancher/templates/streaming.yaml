@@ -1,5 +1,6 @@
 {{- if .Values.kafka.enabled }}
 # Single-node Apache Kafka (KRaft, no ZooKeeper) - the event backbone.
+{{- if not .Values.storage.ephemeral }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -13,6 +14,7 @@ spec:
     requests:
       storage: {{ .Values.storage.kafka }}
 ---
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -44,7 +46,7 @@ spec:
           volumeMounts:
             - { name: data, mountPath: /bitnami/kafka }
       volumes:
-        - { name: data, persistentVolumeClaim: { claimName: kafka-data } }
+        - {{ include "traceflix.pvVolume" (dict "name" "data" "claim" "kafka-data" "root" $) }}
 ---
 apiVersion: v1
 kind: Service

@@ -1,0 +1,1271 @@
+---
+# Source: traceflix/templates/aiops.yaml
+# AIOps engine + dashboard (GPU). Serves the React dashboard on :8000; the live
+# collectors (TF_LIVE=1) read the in-cluster telemetry, and the k8s-events
+# collector lists events in this namespace (RBAC below).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aiops
+---
+# Source: traceflix/templates/otel-grafana.yaml
+# ---- OpenTelemetry Collector ----------------------------------------------
+# Mirrors deploy/virtfusion/vm2-services/otel-collector-config.yml, with endpoints
+# pointed at the in-cluster Services. Receives OTLP from the java-agents; exports
+# traces->Tempo, logs->Loki, metrics->:8889 (scraped by Prometheus).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+data:
+  collector-config.yml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:4317"
+          http:
+            endpoint: "0.0.0.0:4318"
+    processors:
+      batch: {}
+      resourcedetection:
+        detectors: [env, system]
+    exporters:
+      otlp/tempo:
+        endpoint: "tempo:4317"
+        tls:
+          insecure: true
+      loki:
+        endpoint: "http://loki:3100/loki/api/v1/push"
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+        resource_to_telemetry_conversion:
+          enabled: true
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [resourcedetection, batch]
+          exporters: [otlp/tempo]
+        metrics:
+          receivers: [otlp]
+          processors: [resourcedetection, batch]
+          exporters: [prometheus]
+        logs:
+          receivers: [otlp]
+          processors: [resourcedetection, batch]
+          exporters: [loki]
+---
+# Source: traceflix/templates/otel-grafana.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - { name: Prometheus, uid: prometheus_ds, type: prometheus, access: proxy, url: http://prometheus:9090, isDefault: true }
+      - { name: VictoriaMetrics, uid: victoriametrics_ds, type: prometheus, access: proxy, url: http://victoriametrics:8428 }
+      - { name: Loki, uid: loki_ds, type: loki, access: proxy, url: http://loki:3100 }
+      - { name: Tempo, uid: tempo_ds, type: tempo, access: proxy, url: http://tempo:3200 }
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+# ---- Prometheus ------------------------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 10s
+      evaluation_interval: 10s
+    remote_write:
+      - url: http://victoriametrics:8428/api/v1/write
+    scrape_configs:
+      - job_name: otel-collector
+        static_configs:
+          - targets: ["otel-collector:8889"]
+      - job_name: prometheus
+        static_configs:
+          - targets: ["localhost:9090"]
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-config
+data:
+  loki-config.yaml: |
+    auth_enabled: false
+    server:
+      http_listen_address: 0.0.0.0
+      http_listen_port: 3100
+    common:
+      instance_addr: 127.0.0.1
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        kvstore:
+          store: inmemory
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+    limits_config:
+      retention_period: 24h
+      reject_old_samples: false
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tempo-config
+data:
+  tempo.yaml: |
+    server:
+      http_listen_address: 0.0.0.0
+      http_listen_port: 3200
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: "0.0.0.0:4317"
+            http:
+              endpoint: "0.0.0.0:4318"
+    ingester:
+      trace_idle_period: 10s
+      max_block_bytes: 1048576
+      max_block_duration: 5m
+    compactor:
+      compaction:
+        block_retention: 1h
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /var/tempo/traces
+        wal:
+          path: /var/tempo/wal
+---
+# Source: traceflix/templates/streaming.yaml
+# Single-node Apache Kafka (KRaft, no ZooKeeper) - the event backbone.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kafka-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 8Gi
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: victoriametrics-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loki-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tempo-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Source: traceflix/templates/aiops.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: aiops-events-reader
+rules:
+  - apiGroups: [""]
+    resources: ["events", "pods"]
+    verbs: ["get", "list", "watch"]
+---
+# Source: traceflix/templates/aiops.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aiops-events-reader
+subjects:
+  - kind: ServiceAccount
+    name: aiops
+roleRef:
+  kind: Role
+  name: aiops-events-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: traceflix/templates/aiops.yaml
+apiVersion: v1
+kind: Service
+metadata: { name: aiops, labels: { app: aiops } }
+spec:
+  selector: { app: aiops }
+  ports: [{ name: http, port: 8000, targetPort: 8000 }]
+---
+# Source: traceflix/templates/otel-grafana.yaml
+apiVersion: v1
+kind: Service
+metadata: { name: otel-collector, labels: { app: otel-collector } }
+spec:
+  selector: { app: otel-collector }
+  ports:
+    - { name: otlp-grpc, port: 4317, targetPort: 4317 }
+    - { name: otlp-http, port: 4318, targetPort: 4318 }
+    - { name: prom-exp, port: 8889, targetPort: 8889 }
+# ---- Grafana ---------------------------------------------------------------
+---
+# Source: traceflix/templates/otel-grafana.yaml
+apiVersion: v1
+kind: Service
+metadata: { name: grafana, labels: { app: grafana } }
+spec:
+  selector: { app: grafana }
+  ports: [{ name: http, port: 3000, targetPort: 3000 }]
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+  labels:
+    app: gateway-service
+spec:
+  selector:
+    app: gateway-service
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: movie-service
+  labels:
+    app: movie-service
+spec:
+  selector:
+    app: movie-service
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  labels:
+    app: user-service
+spec:
+  selector:
+    app: user-service
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: search-service
+  labels:
+    app: search-service
+spec:
+  selector:
+    app: search-service
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommendation-service
+  labels:
+    app: recommendation-service
+spec:
+  selector:
+    app: recommendation-service
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: actor-service
+  labels:
+    app: actor-service
+spec:
+  selector:
+    app: actor-service
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: review-service
+  labels:
+    app: review-service
+spec:
+  selector:
+    app: review-service
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  labels:
+    app: auth-service
+spec:
+  selector:
+    app: auth-service
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+  labels:
+    app: catalog-service
+spec:
+  selector:
+    app: catalog-service
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }
+---
+# Source: traceflix/templates/streaming.yaml
+apiVersion: v1
+kind: Service
+metadata: { name: kafka, labels: { app: kafka } }
+spec:
+  selector: { app: kafka }
+  ports: [{ name: kafka, port: 9092, targetPort: 9092 }]
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+apiVersion: v1
+kind: Service
+metadata: { name: prometheus, labels: { app: prometheus } }
+spec:
+  selector: { app: prometheus }
+  ports: [{ name: http, port: 9090, targetPort: 9090 }]
+# ---- VictoriaMetrics (C4 long-range baseline) ------------------------------
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+apiVersion: v1
+kind: Service
+metadata: { name: victoriametrics, labels: { app: victoriametrics } }
+spec:
+  selector: { app: victoriametrics }
+  ports: [{ name: http, port: 8428, targetPort: 8428 }]
+# ---- Loki ------------------------------------------------------------------
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+apiVersion: v1
+kind: Service
+metadata: { name: loki, labels: { app: loki } }
+spec:
+  selector: { app: loki }
+  ports: [{ name: http, port: 3100, targetPort: 3100 }]
+# ---- Tempo -----------------------------------------------------------------
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+apiVersion: v1
+kind: Service
+metadata: { name: tempo, labels: { app: tempo } }
+spec:
+  selector: { app: tempo }
+  ports:
+    - { name: http, port: 3200, targetPort: 3200 }
+    - { name: otlp-grpc, port: 4317, targetPort: 4317 }
+---
+# Source: traceflix/templates/aiops.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aiops
+  labels: { app: aiops }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: aiops } }
+  template:
+    metadata: { labels: { app: aiops } }
+    spec:
+      serviceAccountName: aiops
+      containers:
+        - name: aiops
+          image: "ghcr.io/ducanhptitb19cn028/traceflix-aiops:gpu"
+          imagePullPolicy: IfNotPresent
+          ports: [{ name: http, containerPort: 8000 }]
+          env:
+            - { name: PROM_URL, value: "http://prometheus:9090" }
+            - { name: VM_URL, value: "http://victoriametrics:8428" }
+            - { name: LOKI_URL, value: "http://loki:3100" }
+            - { name: TEMPO_URL, value: "http://tempo:3200" }
+            - { name: TF_NAMESPACE, value: "default" }
+            - { name: TF_LIVE, value: "0" }
+            - { name: TF_KAFKA_BOOTSTRAP, value: "kafka:9092" }
+---
+# Source: traceflix/templates/otel-grafana.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  labels: { app: otel-collector }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: otel-collector } }
+  template:
+    metadata: { labels: { app: otel-collector } }
+    spec:
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.110.0
+          args: ["--config=/etc/otel/collector-config.yml"]
+          ports:
+            - { name: otlp-grpc, containerPort: 4317 }
+            - { name: otlp-http, containerPort: 4318 }
+            - { name: prom-exp, containerPort: 8889 }
+          volumeMounts:
+            - { name: config, mountPath: /etc/otel }
+      volumes:
+        - { name: config, configMap: { name: otel-collector-config } }
+---
+# Source: traceflix/templates/otel-grafana.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  labels: { app: grafana }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: grafana } }
+  template:
+    metadata: { labels: { app: grafana } }
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.1.4
+          env:
+            - { name: GF_SECURITY_ADMIN_USER, value: "admin" }
+            - { name: GF_SECURITY_ADMIN_PASSWORD, value: "change-me-please" }
+          ports: [{ name: http, containerPort: 3000 }]
+          volumeMounts:
+            - { name: datasources, mountPath: /etc/grafana/provisioning/datasources }
+      volumes:
+        - { name: datasources, configMap: { name: grafana-datasources } }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-service
+  labels:
+    app: gateway-service
+    app.kubernetes.io/part-of: traceflix
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: traceflix-1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway-service
+  template:
+    metadata:
+      labels:
+        app: gateway-service
+    spec:
+      initContainers:
+        - name: otel-agent
+          image: curlimages/curl:8.7.1
+          command: ["sh", "-c"]
+          args: ["curl -fsSL -o /otel/opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar"]
+          volumeMounts:
+            - { name: otel, mountPath: /otel }
+      containers:
+        - name: app
+          image: "ghcr.io/ducanhptitb19cn028/gateway-service:1.0.0"
+          imagePullPolicy: IfNotPresent
+          command: ["java"]
+          args:
+            - "-javaagent:/otel/opentelemetry-javaagent.jar"
+            - "-Dotel.service.name=gateway-service"
+            - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+            - "-Dotel.exporter.otlp.protocol=grpc"
+            - "-Dotel.metrics.exporter=otlp"
+            - "-Dotel.logs.exporter=otlp"
+            - "-jar"
+            - "/app/app.jar"
+          env:
+            - name: MOVIE_SERVICE_URL
+              value: "http://movie-service:8080"
+            - name: SEARCH_SERVICE_URL
+              value: "http://search-service:8080"
+            - name: USER_SERVICE_URL
+              value: "http://user-service:8080"
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - { name: otel, mountPath: /otel, readOnly: true }
+          readinessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      volumes:
+        - { name: otel, emptyDir: {} }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movie-service
+  labels:
+    app: movie-service
+    app.kubernetes.io/part-of: traceflix
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: traceflix-1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: movie-service
+  template:
+    metadata:
+      labels:
+        app: movie-service
+    spec:
+      initContainers:
+        - name: otel-agent
+          image: curlimages/curl:8.7.1
+          command: ["sh", "-c"]
+          args: ["curl -fsSL -o /otel/opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar"]
+          volumeMounts:
+            - { name: otel, mountPath: /otel }
+      containers:
+        - name: app
+          image: "ghcr.io/ducanhptitb19cn028/movie-service:1.0.0"
+          imagePullPolicy: IfNotPresent
+          command: ["java"]
+          args:
+            - "-javaagent:/otel/opentelemetry-javaagent.jar"
+            - "-Dotel.service.name=movie-service"
+            - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+            - "-Dotel.exporter.otlp.protocol=grpc"
+            - "-Dotel.metrics.exporter=otlp"
+            - "-Dotel.logs.exporter=otlp"
+            - "-jar"
+            - "/app/app.jar"
+          env:
+            - name: ACTOR_SERVICE_URL
+              value: "http://actor-service:8080/api/actors/"
+            - name: REVIEW_SERVICE_URL
+              value: "http://review-service:8080/api/reviews"
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - { name: otel, mountPath: /otel, readOnly: true }
+          readinessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      volumes:
+        - { name: otel, emptyDir: {} }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  labels:
+    app: user-service
+    app.kubernetes.io/part-of: traceflix
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: traceflix-1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      initContainers:
+        - name: otel-agent
+          image: curlimages/curl:8.7.1
+          command: ["sh", "-c"]
+          args: ["curl -fsSL -o /otel/opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar"]
+          volumeMounts:
+            - { name: otel, mountPath: /otel }
+      containers:
+        - name: app
+          image: "ghcr.io/ducanhptitb19cn028/user-service:1.0.0"
+          imagePullPolicy: IfNotPresent
+          command: ["java"]
+          args:
+            - "-javaagent:/otel/opentelemetry-javaagent.jar"
+            - "-Dotel.service.name=user-service"
+            - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+            - "-Dotel.exporter.otlp.protocol=grpc"
+            - "-Dotel.metrics.exporter=otlp"
+            - "-Dotel.logs.exporter=otlp"
+            - "-jar"
+            - "/app/app.jar"
+          env:
+            - name: AUTH_SERVICE_URL
+              value: "http://auth-service:8080"
+            - name: RECOMMENDATION_SERVICE_URL
+              value: "http://recommendation-service:8080/api/recommendations"
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - { name: otel, mountPath: /otel, readOnly: true }
+          readinessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      volumes:
+        - { name: otel, emptyDir: {} }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-service
+  labels:
+    app: search-service
+    app.kubernetes.io/part-of: traceflix
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: traceflix-1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: search-service
+  template:
+    metadata:
+      labels:
+        app: search-service
+    spec:
+      initContainers:
+        - name: otel-agent
+          image: curlimages/curl:8.7.1
+          command: ["sh", "-c"]
+          args: ["curl -fsSL -o /otel/opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar"]
+          volumeMounts:
+            - { name: otel, mountPath: /otel }
+      containers:
+        - name: app
+          image: "ghcr.io/ducanhptitb19cn028/search-service:1.0.0"
+          imagePullPolicy: IfNotPresent
+          command: ["java"]
+          args:
+            - "-javaagent:/otel/opentelemetry-javaagent.jar"
+            - "-Dotel.service.name=search-service"
+            - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+            - "-Dotel.exporter.otlp.protocol=grpc"
+            - "-Dotel.metrics.exporter=otlp"
+            - "-Dotel.logs.exporter=otlp"
+            - "-jar"
+            - "/app/app.jar"
+          env:
+            - name: CATALOG_SERVICE_URL
+              value: "http://catalog-service:8080"
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - { name: otel, mountPath: /otel, readOnly: true }
+          readinessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      volumes:
+        - { name: otel, emptyDir: {} }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendation-service
+  labels:
+    app: recommendation-service
+    app.kubernetes.io/part-of: traceflix
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: traceflix-1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: recommendation-service
+  template:
+    metadata:
+      labels:
+        app: recommendation-service
+    spec:
+      initContainers:
+        - name: otel-agent
+          image: curlimages/curl:8.7.1
+          command: ["sh", "-c"]
+          args: ["curl -fsSL -o /otel/opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar"]
+          volumeMounts:
+            - { name: otel, mountPath: /otel }
+      containers:
+        - name: app
+          image: "ghcr.io/ducanhptitb19cn028/recommendation-service:1.0.0"
+          imagePullPolicy: IfNotPresent
+          command: ["java"]
+          args:
+            - "-javaagent:/otel/opentelemetry-javaagent.jar"
+            - "-Dotel.service.name=recommendation-service"
+            - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+            - "-Dotel.exporter.otlp.protocol=grpc"
+            - "-Dotel.metrics.exporter=otlp"
+            - "-Dotel.logs.exporter=otlp"
+            - "-jar"
+            - "/app/app.jar"
+          env:
+            - name: CATALOG_SERVICE_URL
+              value: "http://catalog-service:8080"
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - { name: otel, mountPath: /otel, readOnly: true }
+          readinessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      volumes:
+        - { name: otel, emptyDir: {} }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: actor-service
+  labels:
+    app: actor-service
+    app.kubernetes.io/part-of: traceflix
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: traceflix-1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: actor-service
+  template:
+    metadata:
+      labels:
+        app: actor-service
+    spec:
+      initContainers:
+        - name: otel-agent
+          image: curlimages/curl:8.7.1
+          command: ["sh", "-c"]
+          args: ["curl -fsSL -o /otel/opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar"]
+          volumeMounts:
+            - { name: otel, mountPath: /otel }
+      containers:
+        - name: app
+          image: "ghcr.io/ducanhptitb19cn028/actor-service:1.0.0"
+          imagePullPolicy: IfNotPresent
+          command: ["java"]
+          args:
+            - "-javaagent:/otel/opentelemetry-javaagent.jar"
+            - "-Dotel.service.name=actor-service"
+            - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+            - "-Dotel.exporter.otlp.protocol=grpc"
+            - "-Dotel.metrics.exporter=otlp"
+            - "-Dotel.logs.exporter=otlp"
+            - "-jar"
+            - "/app/app.jar"
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - { name: otel, mountPath: /otel, readOnly: true }
+          readinessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      volumes:
+        - { name: otel, emptyDir: {} }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: review-service
+  labels:
+    app: review-service
+    app.kubernetes.io/part-of: traceflix
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: traceflix-1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: review-service
+  template:
+    metadata:
+      labels:
+        app: review-service
+    spec:
+      initContainers:
+        - name: otel-agent
+          image: curlimages/curl:8.7.1
+          command: ["sh", "-c"]
+          args: ["curl -fsSL -o /otel/opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar"]
+          volumeMounts:
+            - { name: otel, mountPath: /otel }
+      containers:
+        - name: app
+          image: "ghcr.io/ducanhptitb19cn028/review-service:1.0.0"
+          imagePullPolicy: IfNotPresent
+          command: ["java"]
+          args:
+            - "-javaagent:/otel/opentelemetry-javaagent.jar"
+            - "-Dotel.service.name=review-service"
+            - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+            - "-Dotel.exporter.otlp.protocol=grpc"
+            - "-Dotel.metrics.exporter=otlp"
+            - "-Dotel.logs.exporter=otlp"
+            - "-jar"
+            - "/app/app.jar"
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - { name: otel, mountPath: /otel, readOnly: true }
+          readinessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      volumes:
+        - { name: otel, emptyDir: {} }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  labels:
+    app: auth-service
+    app.kubernetes.io/part-of: traceflix
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: traceflix-1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      initContainers:
+        - name: otel-agent
+          image: curlimages/curl:8.7.1
+          command: ["sh", "-c"]
+          args: ["curl -fsSL -o /otel/opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar"]
+          volumeMounts:
+            - { name: otel, mountPath: /otel }
+      containers:
+        - name: app
+          image: "ghcr.io/ducanhptitb19cn028/auth-service:1.0.0"
+          imagePullPolicy: IfNotPresent
+          command: ["java"]
+          args:
+            - "-javaagent:/otel/opentelemetry-javaagent.jar"
+            - "-Dotel.service.name=auth-service"
+            - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+            - "-Dotel.exporter.otlp.protocol=grpc"
+            - "-Dotel.metrics.exporter=otlp"
+            - "-Dotel.logs.exporter=otlp"
+            - "-jar"
+            - "/app/app.jar"
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - { name: otel, mountPath: /otel, readOnly: true }
+          readinessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      volumes:
+        - { name: otel, emptyDir: {} }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-service
+  labels:
+    app: catalog-service
+    app.kubernetes.io/part-of: traceflix
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: traceflix-1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog-service
+  template:
+    metadata:
+      labels:
+        app: catalog-service
+    spec:
+      initContainers:
+        - name: otel-agent
+          image: curlimages/curl:8.7.1
+          command: ["sh", "-c"]
+          args: ["curl -fsSL -o /otel/opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar"]
+          volumeMounts:
+            - { name: otel, mountPath: /otel }
+      containers:
+        - name: app
+          image: "ghcr.io/ducanhptitb19cn028/catalog-service:1.0.0"
+          imagePullPolicy: IfNotPresent
+          command: ["java"]
+          args:
+            - "-javaagent:/otel/opentelemetry-javaagent.jar"
+            - "-Dotel.service.name=catalog-service"
+            - "-Dotel.exporter.otlp.endpoint=http://otel-collector:4317"
+            - "-Dotel.exporter.otlp.protocol=grpc"
+            - "-Dotel.metrics.exporter=otlp"
+            - "-Dotel.logs.exporter=otlp"
+            - "-jar"
+            - "/app/app.jar"
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - { name: otel, mountPath: /otel, readOnly: true }
+          readinessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      volumes:
+        - { name: otel, emptyDir: {} }
+---
+# Source: traceflix/templates/services.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-generator
+  labels:
+    app: load-generator
+    app.kubernetes.io/part-of: traceflix
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: traceflix-1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: load-generator
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      containers:
+        - name: loadgen
+          image: curlimages/curl:8.7.1
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                for u in 1 2 3 4 5; do
+                  curl -s "http://gateway-service:8080/api/browse?userId=$u" >/dev/null
+                done
+                sleep 1
+              done
+---
+# Source: traceflix/templates/streaming.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+  labels: { app: kafka }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: kafka } }
+  template:
+    metadata: { labels: { app: kafka } }
+    spec:
+      securityContext: { fsGroup: 1001 }
+      containers:
+        - name: kafka
+          image: bitnami/kafka:3.7
+          env:
+            - { name: KAFKA_CFG_NODE_ID, value: "0" }
+            - { name: KAFKA_CFG_PROCESS_ROLES, value: "controller,broker" }
+            - { name: KAFKA_CFG_CONTROLLER_QUORUM_VOTERS, value: "0@kafka:9093" }
+            - { name: KAFKA_CFG_LISTENERS, value: "PLAINTEXT://:9092,CONTROLLER://:9093" }
+            - { name: KAFKA_CFG_ADVERTISED_LISTENERS, value: "PLAINTEXT://kafka:9092" }
+            - { name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP, value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT" }
+            - { name: KAFKA_CFG_CONTROLLER_LISTENER_NAMES, value: "CONTROLLER" }
+            - { name: KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE, value: "true" }
+            - { name: ALLOW_PLAINTEXT_LISTENER, value: "yes" }
+          ports:
+            - { name: kafka, containerPort: 9092 }
+          volumeMounts:
+            - { name: data, mountPath: /bitnami/kafka }
+      volumes:
+        - { name: data, persistentVolumeClaim: { claimName: kafka-data } }
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  labels: { app: prometheus }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: prometheus } }
+  template:
+    metadata: { labels: { app: prometheus } }
+    spec:
+      securityContext: { fsGroup: 65534 }
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.54.1
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--web.enable-lifecycle"
+          ports: [{ name: http, containerPort: 9090 }]
+          volumeMounts:
+            - { name: config, mountPath: /etc/prometheus }
+            - { name: data, mountPath: /prometheus }
+      volumes:
+        - { name: config, configMap: { name: prometheus-config } }
+        - { name: data, persistentVolumeClaim: { claimName: prometheus-data } }
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: victoriametrics
+  labels: { app: victoriametrics }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: victoriametrics } }
+  template:
+    metadata: { labels: { app: victoriametrics } }
+    spec:
+      containers:
+        - name: victoriametrics
+          image: victoriametrics/victoria-metrics:v1.103.0
+          args:
+            - "-storageDataPath=/storage"
+            - "-retentionPeriod=1"
+            - "-httpListenAddr=:8428"
+          ports: [{ name: http, containerPort: 8428 }]
+          volumeMounts:
+            - { name: data, mountPath: /storage }
+      volumes:
+        - { name: data, persistentVolumeClaim: { claimName: victoriametrics-data } }
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+  labels: { app: loki }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: loki } }
+  template:
+    metadata: { labels: { app: loki } }
+    spec:
+      containers:
+        - name: loki
+          image: grafana/loki:2.9.8
+          args: ["-config.file=/etc/loki/loki-config.yaml"]
+          ports: [{ name: http, containerPort: 3100 }]
+          volumeMounts:
+            - { name: config, mountPath: /etc/loki }
+            - { name: data, mountPath: /loki }
+      volumes:
+        - { name: config, configMap: { name: loki-config } }
+        - { name: data, persistentVolumeClaim: { claimName: loki-data } }
+---
+# Source: traceflix/templates/telemetry-backends.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+  labels: { app: tempo }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: tempo } }
+  template:
+    metadata: { labels: { app: tempo } }
+    spec:
+      containers:
+        - name: tempo
+          image: grafana/tempo:2.5.0
+          args: ["-config.file=/etc/tempo/tempo.yaml"]
+          ports:
+            - { name: http, containerPort: 3200 }
+            - { name: otlp-grpc, containerPort: 4317 }
+          volumeMounts:
+            - { name: config, mountPath: /etc/tempo }
+            - { name: data, mountPath: /var/tempo }
+      volumes:
+        - { name: config, configMap: { name: tempo-config } }
+        - { name: data, persistentVolumeClaim: { claimName: tempo-data } }
+---
+# Source: traceflix/templates/services.yaml
+# The nine Spring Boot microservices. Each is OTel-instrumented by injecting the
+# java-agent via an initContainer into a shared emptyDir, exactly as the Compose
+# deploy does. k8s Service names equal the service names so the baked downstream
+# URLs (and otel.service.name) resolve via in-namespace DNS.

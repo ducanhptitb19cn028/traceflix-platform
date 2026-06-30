@@ -27,3 +27,14 @@ runtimeClassName: {{ .Values.gpu.runtimeClassName }}
 storageClassName: {{ .root.Values.storage.className }}
 {{- end }}
 {{- end -}}
+
+{{/* A pod volume backed by a PVC normally, or an emptyDir when
+     storage.ephemeral=true (no StorageClass needed; data is lost on pod restart).
+     Usage: - {{ include "traceflix.pvVolume" (dict "name" "data" "claim" "prometheus-data" "root" $) }} */}}
+{{- define "traceflix.pvVolume" -}}
+{{- if .root.Values.storage.ephemeral -}}
+{ name: {{ .name }}, emptyDir: {} }
+{{- else -}}
+{ name: {{ .name }}, persistentVolumeClaim: { claimName: {{ .claim }} } }
+{{- end -}}
+{{- end -}}

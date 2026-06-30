@@ -1,0 +1,42 @@
+# ============================================================================
+# TraceFlix overlay: VirtFusion tenant (CPU, no GPU) + NO PVCs (emptyDir).
+# ============================================================================
+# Same as values-virtfusion.yaml but the stateful backends (Prometheus,
+# VictoriaMetrics, Loki, Tempo, Kafka) use emptyDir instead of PVCs — for a
+# cluster with NO default StorageClass, where PVCs would hang Pending.
+#
+# Trade-off: telemetry data is lost if a backend pod restarts. Fine for a demo.
+#
+# Render:  helm template traceflix ./rancher -f rancher/values-virtfusion-emptydir.yaml
+# Install: helm install  traceflix ./rancher -n <ns> -f rancher/values-virtfusion-emptydir.yaml
+
+image:
+  registry: ghcr.io/ducanhptitb19cn028
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+aiops:
+  gpu: false
+  enableLLM: false
+  live: false
+
+ollama:
+  enabled: false
+
+gpu:
+  count: 0
+  nodeSelector: {}
+  tolerations: []
+
+ingress:
+  enabled: false
+
+# the whole point of this variant:
+storage:
+  ephemeral: true
+
+grafana:
+  adminPassword: change-me-please
+
+kafka:
+  enabled: true

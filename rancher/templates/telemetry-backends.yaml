@@ -18,6 +18,7 @@ data:
         static_configs:
           - targets: ["localhost:9090"]
 ---
+{{- if not .Values.storage.ephemeral }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -31,6 +32,7 @@ spec:
     requests:
       storage: {{ .Values.storage.prometheus }}
 ---
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -56,7 +58,7 @@ spec:
             - { name: data, mountPath: /prometheus }
       volumes:
         - { name: config, configMap: { name: prometheus-config } }
-        - { name: data, persistentVolumeClaim: { claimName: prometheus-data } }
+        - {{ include "traceflix.pvVolume" (dict "name" "data" "claim" "prometheus-data" "root" $) }}
 ---
 apiVersion: v1
 kind: Service
@@ -66,6 +68,7 @@ spec:
   ports: [{ name: http, port: 9090, targetPort: 9090 }]
 # ---- VictoriaMetrics (C4 long-range baseline) ------------------------------
 ---
+{{- if not .Values.storage.ephemeral }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -79,6 +82,7 @@ spec:
     requests:
       storage: {{ .Values.storage.victoriametrics }}
 ---
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -101,7 +105,7 @@ spec:
           volumeMounts:
             - { name: data, mountPath: /storage }
       volumes:
-        - { name: data, persistentVolumeClaim: { claimName: victoriametrics-data } }
+        - {{ include "traceflix.pvVolume" (dict "name" "data" "claim" "victoriametrics-data" "root" $) }}
 ---
 apiVersion: v1
 kind: Service
@@ -145,6 +149,7 @@ data:
       retention_period: 24h
       reject_old_samples: false
 ---
+{{- if not .Values.storage.ephemeral }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -158,6 +163,7 @@ spec:
     requests:
       storage: {{ .Values.storage.loki }}
 ---
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -179,7 +185,7 @@ spec:
             - { name: data, mountPath: /loki }
       volumes:
         - { name: config, configMap: { name: loki-config } }
-        - { name: data, persistentVolumeClaim: { claimName: loki-data } }
+        - {{ include "traceflix.pvVolume" (dict "name" "data" "claim" "loki-data" "root" $) }}
 ---
 apiVersion: v1
 kind: Service
@@ -221,6 +227,7 @@ data:
         wal:
           path: /var/tempo/wal
 ---
+{{- if not .Values.storage.ephemeral }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -234,6 +241,7 @@ spec:
     requests:
       storage: {{ .Values.storage.tempo }}
 ---
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -257,7 +265,7 @@ spec:
             - { name: data, mountPath: /var/tempo }
       volumes:
         - { name: config, configMap: { name: tempo-config } }
-        - { name: data, persistentVolumeClaim: { claimName: tempo-data } }
+        - {{ include "traceflix.pvVolume" (dict "name" "data" "claim" "tempo-data" "root" $) }}
 ---
 apiVersion: v1
 kind: Service
