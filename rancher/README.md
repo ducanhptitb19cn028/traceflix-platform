@@ -10,6 +10,16 @@ the nine-service mesh, MELT observability, the Kafka backbone, the local LLM
 > Kubernetes equivalent of the `deploy/virtfusion/` Compose overlay — one cluster
 > with GPU instead of four VMs.
 
+### Two ways to deploy
+
+| Path | How images are built | How the chart is installed | Use when |
+|------|----------------------|----------------------------|----------|
+| **A — Manual Helm** (Steps 0–6) | `rancher/build-push.*` from your laptop | `helm install` (or Rancher Apps → Charts) | one-off / first try |
+| **B — GitOps with Fleet** ([jump](#deploy-with-rancher-fleet-gitops)) | GitHub Actions → GHCR (`.github/workflows/images.yml`) | Rancher Fleet watches `rancher/` + `fleet.yaml` | every `git push` auto-deploys |
+
+Both deploy **pre-built images** — neither Rancher nor Fleet compiles your source.
+Path B is the recommended "point Rancher at a git repo" workflow.
+
 **What you'll have at the end:** real distributed traces across nine services in
 Grafana, the AIOps dashboard live on an ingress URL (Online / Offline / **Streaming**
 / Comparison), the RQ1–RQ4 experiments reproducible inside the cluster, and
@@ -74,8 +84,14 @@ All commands below are run from this repo root.
 
 ## Step 2 — Build and push the images
 
+> **Prefer CI?** `.github/workflows/images.yml` already builds all ten images and
+> pushes them to **GHCR** (`ghcr.io/<owner>/...`) on every push to `main`. If you use
+> that (and Path B does), skip this step — just make the packages public, or set up a
+> pull secret ([below](#private-registry--ghcr-pull-secret)). The manual script below
+> is for building from your laptop.
+
 A helper script builds the nine services **and** the AIOps image, then pushes them.
-Pass your registry:
+Pass your registry (e.g. `ghcr.io/ducanhptitb19cn028`):
 
 **Windows (PowerShell):**
 
@@ -124,13 +140,32 @@ docker push "$REG/traceflix-aiops:gpu"
 
 </details>
 
-Private registry? Create a pull secret and pass it later via `image.pullSecrets`:
+<a id="private-registry--ghcr-pull-secret"></a>
+### Private registry / GHCR pull secret
+
+Public images need nothing. For **private GHCR packages**, give the cluster a pull
+secret — the token must **never** be committed to git. Two options:
+
+**A) Create it once with `kubectl`** (recommended — token stays out of git), then set
+`image.pullSecrets`:
 
 ```bash
 kubectl create namespace traceflix
-kubectl -n traceflix create secret docker-registry regcred \
-  --docker-server=$REG --docker-username=… --docker-password=…
+kubectl -n traceflix create secret docker-registry ghcr-cred \
+  --docker-server=ghcr.io \
+  --docker-username=ducanhptitb19cn028 \
+  --docker-password=<GitHub PAT (classic) with read:packages>
+# then: --set-json 'image.pullSecrets=[{"name":"ghcr-cred"}]'
 ```
+
+**B) Let the chart create it** — `templates/image-pull-secret.yaml` builds the secret
+when `imagePullSecret.create=true`; supply the credentials at install time only
+(`--set imagePullSecret.username=… --set imagePullSecret.password=…`), never in a
+committed file. See `rancher/extras/ghcr-pull-secret.example.yaml` for the object shape.
+
+> The easiest demo path is to make the packages **public**: GitHub → your profile →
+> **Packages** → each package → **Package settings → Change visibility → Public**.
+> Then no pull secret is needed.
 
 ---
 
@@ -171,6 +206,40 @@ Prefer a file? `cp rancher/values.yaml my-values.yaml`, edit, then
 > The dashboard runs **synthetic** experiments out of the box (`aiops.live=false`),
 > so it works before any live telemetry flows; the model is pulled by a one-shot
 > Job after install.
+
+---
+
+## Deploy with Rancher Fleet (GitOps)
+
+The "point Rancher at a git repo and it deploys" path. Rancher **Fleet**
+(Continuous Delivery) watches your repo and applies the Helm chart in `rancher/`;
+`rancher/fleet.yaml` holds the value overrides. Fleet deploys images — it does **not**
+build them — so GitHub Actions builds and pushes to GHCR first.
+
+```
+git push ─► GitHub Actions builds 10 images ─► ghcr.io/ducanhptitb19cn028/…
+git push ─► Fleet sees rancher/fleet.yaml ──► helm install/upgrade ─► pods pull from GHCR
+```
+
+1. **Build the images via CI.** Push to `main`; `.github/workflows/images.yml` builds
+   the nine services + the aiops image and pushes them to GHCR. Confirm under GitHub →
+   **Actions**, then GitHub → **Packages**. Make them **public** or set up a pull
+   secret ([above](#private-registry--ghcr-pull-secret)).
+
+2. **Set cluster-specific values in `rancher/fleet.yaml`** — `image.registry`
+   (`ghcr.io/ducanhptitb19cn028`), `storage.className`, `grafana.adminPassword`, the
+   ingress hosts, and the GPU `nodeSelector`/`tolerations` (Step 3). Commit and push.
+
+3. **Register the repo in Rancher** → your cluster → **☰ → Continuous Delivery →
+   Git Repos → Create**:
+   - **Repository URL:** `https://github.com/ducanhptitb19cn028/traceflix-platform.git`
+   - **Branch:** `main`  · **Path:** `rancher`
+   - **Target:** the GPU cluster / workspace
+   - Private repo? Attach an SSH-key or token **Auth** secret here.
+
+4. Fleet clones, finds the chart + `fleet.yaml`, and installs. The **Continuous
+   Delivery → Git Repos** view shows the bundle reach **Active**. From then on every
+   `git push` auto-deploys. Continue at **Step 5** to verify.
 
 ---
 
@@ -270,6 +339,10 @@ helm uninstall traceflix -n traceflix
 kubectl delete namespace traceflix          # also removes the PVCs
 helm uninstall chaos-mesh -n chaos-mesh      # if installed
 ```
+
+> **Using Fleet?** Don't `helm uninstall` — Fleet owns the release and would
+> re-apply it. Instead delete the **Git Repo** in Rancher → Continuous Delivery
+> (removes the workloads), then `kubectl delete namespace traceflix` for the PVCs.
 
 ---
 

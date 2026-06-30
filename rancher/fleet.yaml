@@ -18,18 +18,41 @@ helm:
   # Wait for resources to be ready before reporting the bundle healthy.
   takeOwnership: true
   timeoutSeconds: 600
+  # For chart-managed pull secret (option B): inject the token from a Secret that
+  # you create in the cluster's fleet bundle namespace — keeps it out of git.
+  #   valuesFrom:
+  #     - secretKeyRef:
+  #         name: traceflix-ghcr-values   # data key "values.yaml" holds imagePullSecret.{username,password}
+  #         key: values.yaml
   values:
     image:
       # ghcr.io/<owner> — must match where the workflow pushes. Lowercase.
       registry: ghcr.io/ducanhptitb19cn028
       tag: "1.0.0"
       pullPolicy: IfNotPresent
-      # If the GHCR packages are PRIVATE, create a pull secret in the traceflix
-      # namespace and reference it here, e.g.:
+      # PRIVATE GHCR packages -> uncomment to reference the pull secret:
       #   pullSecrets: [{ name: ghcr-cred }]
-      # Easiest for a demo: make the packages public in GitHub -> Packages -> each
-      # package -> Package settings -> Change visibility -> Public. Then leave empty:
+      # Public packages (simplest for a demo) -> leave empty:
       pullSecrets: []
+
+    # ---- pull secret for PRIVATE images --------------------------------------
+    # Two ways (see rancher/templates/image-pull-secret.yaml and extras/ghcr-pull-secret.example.yaml):
+    #
+    # A) RECOMMENDED for Fleet — create the secret once, out of band, so the token
+    #    is never in git, then just set image.pullSecrets above:
+    #      kubectl -n traceflix create secret docker-registry ghcr-cred \
+    #        --docker-server=ghcr.io --docker-username=ducanhptitb19cn028 \
+    #        --docker-password=<PAT read:packages>
+    #
+    # B) Chart-managed — Fleet creates the secret, but the token must be injected
+    #    WITHOUT committing it. Set imagePullSecret.create=true here and supply
+    #    username/password via a Fleet values secret (helm.valuesFrom below), NOT
+    #    inline in this committed file:
+    # imagePullSecret:
+    #   create: true
+    #   name: ghcr-cred
+    #   registry: ghcr.io
+    #   # username/password come from helm.valuesFrom, never from git.
 
     aiops:
       tag: gpu
