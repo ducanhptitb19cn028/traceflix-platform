@@ -1,0 +1,604 @@
+{
+  "info": {
+    "name": "TraceFlix Platform",
+    "_postman_id": "traceflix-platform-0001",
+    "description": "API tests for the TraceFlix microservices platform (Spring Boot, com.vinsguru).\n\nAll services expose port 8080 internally. For local testing, port-forward / map each service to a distinct host port and set the matching `*Url` collection variable.\n\nSuggested defaults:\n- gatewayUrl        -> http://localhost:8080\n- movieUrl          -> http://localhost:8081\n- actorUrl          -> http://localhost:8082\n- reviewUrl         -> http://localhost:8083\n- catalogUrl        -> http://localhost:8084\n- searchUrl         -> http://localhost:8085\n- authUrl           -> http://localhost:8086\n- userUrl           -> http://localhost:8087\n- recommendationUrl -> http://localhost:8088\n\nSeed accounts (auth-service data.sql): id 1 alice/PREMIUM/tok-alice, 2 bob/STANDARD/tok-bob, 3 carol/PREMIUM/tok-carol, 4 dave/BASIC/tok-dave, 5 erin/STANDARD/tok-erin.\n\nIf running everything behind a single gateway/port, just point every `*Url` variable at the same base URL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "gatewayUrl", "value": "http://localhost:8080" },
+    { "key": "movieUrl", "value": "http://localhost:8081" },
+    { "key": "actorUrl", "value": "http://localhost:8082" },
+    { "key": "reviewUrl", "value": "http://localhost:8083" },
+    { "key": "catalogUrl", "value": "http://localhost:8084" },
+    { "key": "searchUrl", "value": "http://localhost:8085" },
+    { "key": "authUrl", "value": "http://localhost:8086" },
+    { "key": "userUrl", "value": "http://localhost:8087" },
+    { "key": "recommendationUrl", "value": "http://localhost:8088" },
+    { "key": "userId", "value": "1" },
+    { "key": "movieId", "value": "1" },
+    { "key": "actorId", "value": "1" },
+    { "key": "catalogId", "value": "1" },
+    { "key": "token", "value": "tok-alice" }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-level smoke tests applied to every request.",
+          "pm.test('status is 2xx or expected 404', function () {",
+          "    pm.expect([200, 404]).to.include(pm.response.code);",
+          "});",
+          "pm.test('responds within 5s', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Gateway",
+      "item": [
+        {
+          "name": "Browse home page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/api/browse?userId={{userId}}",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["api", "browse"],
+              "query": [{ "key": "userId", "value": "{{userId}}" }]
+            },
+            "description": "Aggregated home page for a user (user profile+recs, trending, featured)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('has userId', () => pm.expect(b).to.have.property('userId'));",
+                  "pm.test('carries aggregated sections', () => {",
+                  "    pm.expect(b).to.have.property('user');",
+                  "    pm.expect(b).to.have.property('trending');",
+                  "    pm.expect(b).to.have.property('featured');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Validate token (valid)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{authUrl}}/api/auth/validate?token={{token}}",
+              "host": ["{{authUrl}}"],
+              "path": ["api", "auth", "validate"],
+              "query": [{ "key": "token", "value": "{{token}}" }]
+            },
+            "description": "Validate an auth token. Seed token 'tok-alice' -> alice/PREMIUM."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('valid is true', () => pm.expect(b.valid).to.be.true);",
+                  "pm.test('has username and role', () => {",
+                  "    pm.expect(b.username).to.be.a('string').and.not.empty;",
+                  "    pm.expect(b.role).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validate token (invalid)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{authUrl}}/api/auth/validate?token=not-a-real-token",
+              "host": ["{{authUrl}}"],
+              "path": ["api", "auth", "validate"],
+              "query": [{ "key": "token", "value": "not-a-real-token" }]
+            },
+            "description": "An unknown token returns valid=false with null username/role."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('valid is false', () => pm.expect(b.valid).to.be.false);",
+                  "pm.test('username is null', () => pm.expect(b.username).to.be.null);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get account by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{authUrl}}/api/auth/{{userId}}",
+              "host": ["{{authUrl}}"],
+              "path": ["api", "auth", "{{userId}}"]
+            },
+            "description": "Fetch account (id, username, role). 404 when not found."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('id matches request', () => pm.expect(String(b.id)).to.eql(pm.variables.get('userId')));",
+                  "pm.test('has username and role', () => {",
+                  "    pm.expect(b.username).to.be.a('string');",
+                  "    pm.expect(b.role).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get account by id (not found)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{authUrl}}/api/auth/999999",
+              "host": ["{{authUrl}}"],
+              "path": ["api", "auth", "999999"]
+            },
+            "description": "Unknown user id returns 404."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Movie",
+      "item": [
+        {
+          "name": "Get movie by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{movieUrl}}/api/movies/{{movieId}}",
+              "host": ["{{movieUrl}}"],
+              "path": ["api", "movies", "{{movieId}}"]
+            },
+            "description": "Movie aggregate with actors + reviews composed from downstream services."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('id matches request', () => pm.expect(String(b.id)).to.eql(pm.variables.get('movieId')));",
+                  "pm.test('has title and releaseYear', () => {",
+                  "    pm.expect(b.title).to.be.a('string');",
+                  "    pm.expect(b.releaseYear).to.be.a('number');",
+                  "});",
+                  "pm.test('actors and reviews are arrays', () => {",
+                  "    pm.expect(b.actors).to.be.an('array');",
+                  "    pm.expect(b.reviews).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get movie by id (not found)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{movieUrl}}/api/movies/999999",
+              "host": ["{{movieUrl}}"],
+              "path": ["api", "movies", "999999"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Actor",
+      "item": [
+        {
+          "name": "Get actor by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{actorUrl}}/api/actors/{{actorId}}",
+              "host": ["{{actorUrl}}"],
+              "path": ["api", "actors", "{{actorId}}"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('id matches request', () => pm.expect(String(b.id)).to.eql(pm.variables.get('actorId')));",
+                  "pm.test('has name', () => pm.expect(b.name).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get actor by id (not found)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{actorUrl}}/api/actors/999999",
+              "host": ["{{actorUrl}}"],
+              "path": ["api", "actors", "999999"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Catalog",
+      "item": [
+        {
+          "name": "List all titles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogUrl}}/api/catalog",
+              "host": ["{{catalogUrl}}"],
+              "path": ["api", "catalog"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('is an array', () => pm.expect(b).to.be.an('array'));",
+                  "pm.test('items have title shape', () => {",
+                  "    if (b.length) {",
+                  "        pm.expect(b[0]).to.have.property('id');",
+                  "        pm.expect(b[0]).to.have.property('name');",
+                  "        pm.expect(b[0]).to.have.property('genre');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search titles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogUrl}}/api/catalog/search?q=a",
+              "host": ["{{catalogUrl}}"],
+              "path": ["api", "catalog", "search"],
+              "query": [{ "key": "q", "value": "a" }]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get title by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogUrl}}/api/catalog/{{catalogId}}",
+              "host": ["{{catalogUrl}}"],
+              "path": ["api", "catalog", "{{catalogId}}"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('id matches request', () => pm.expect(String(b.id)).to.eql(pm.variables.get('catalogId')));",
+                  "pm.test('has name and genre', () => {",
+                  "    pm.expect(b.name).to.be.a('string');",
+                  "    pm.expect(b.genre).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get title by id (not found)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogUrl}}/api/catalog/999999",
+              "host": ["{{catalogUrl}}"],
+              "path": ["api", "catalog", "999999"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Review",
+      "item": [
+        {
+          "name": "Get reviews for movie",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{reviewUrl}}/api/reviews?movieId={{movieId}}",
+              "host": ["{{reviewUrl}}"],
+              "path": ["api", "reviews"],
+              "query": [{ "key": "movieId", "value": "{{movieId}}" }]
+            },
+            "description": "Reviews for a movie. Note the contract is a query param (?movieId=), not a path segment."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('is an array', () => pm.expect(b).to.be.an('array'));",
+                  "pm.test('items have review shape', () => {",
+                  "    if (b.length) {",
+                  "        pm.expect(b[0]).to.have.property('rating');",
+                  "        pm.expect(b[0]).to.have.property('comment');",
+                  "        pm.expect(b[0]).to.have.property('reviewer');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Search titles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{searchUrl}}/api/search?q=a",
+              "host": ["{{searchUrl}}"],
+              "path": ["api", "search"],
+              "query": [{ "key": "q", "value": "a" }]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Get user profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{userUrl}}/api/users/{{userId}}",
+              "host": ["{{userUrl}}"],
+              "path": ["api", "users", "{{userId}}"]
+            },
+            "description": "User profile with recommendations composed from downstream services."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('id matches request', () => pm.expect(String(b.id)).to.eql(pm.variables.get('userId')));",
+                  "pm.test('has name and tier', () => {",
+                  "    pm.expect(b.name).to.be.a('string');",
+                  "    pm.expect(b.tier).to.be.a('string');",
+                  "});",
+                  "pm.test('recommendations is an array', () => pm.expect(b.recommendations).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get user profile (not found)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{userUrl}}/api/users/999999",
+              "host": ["{{userUrl}}"],
+              "path": ["api", "users", "999999"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Recommendation",
+      "item": [
+        {
+          "name": "Get recommendations for user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{recommendationUrl}}/api/recommendations?userId={{userId}}",
+              "host": ["{{recommendationUrl}}"],
+              "path": ["api", "recommendations"],
+              "query": [{ "key": "userId", "value": "{{userId}}" }]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -631,17 +631,6 @@ In: \bbtitle{Companion Proceedings of the ACM Web Conference (WWW)}
 \endbibitem
 
 %%% 38
-\bibitem[\protect\citeauthoryear{{Amazon Web Services}}{2022}]{aws2022obs}
-\begin{botherref}
-\oauthor{\bsnm{{Amazon Web Services}}}:
-Cloud-native observability ({eBook} 5).
-Technical report,
-AWS Marketplace
-(2022)
-\end{botherref}
-\endbibitem
-
-%%% 39
 \bibitem[\protect\citeauthoryear{Greshake et~al.}{2023}]{greshake2023}
 \begin{bchapter}
 \bauthor{\bsnm{Greshake}, \binits{K.}},
@@ -659,7 +648,7 @@ pp. \bfpage{79}--\blpage{90}
 \end{bchapter}
 \endbibitem
 
-%%% 40
+%%% 39
 \bibitem[\protect\citeauthoryear{Faseeha
   et~al.}{2025}]{faseeha2025observability}
 \begin{botherref}
@@ -677,7 +666,7 @@ IEEE Access
 \end{botherref}
 \endbibitem
 
-%%% 41
+%%% 40
 \bibitem[\protect\citeauthoryear{{Honeycomb}}{2021}]{beginnersobs}
 \begin{botherref}
 \oauthor{\bsnm{{Honeycomb}}}:
@@ -685,6 +674,17 @@ A beginner's guide to observability.
 Technical report,
 Honeycomb.io
 (2021)
+\end{botherref}
+\endbibitem
+
+%%% 41
+\bibitem[\protect\citeauthoryear{{Amazon Web Services}}{2022}]{aws2022obs}
+\begin{botherref}
+\oauthor{\bsnm{{Amazon Web Services}}}:
+Cloud-native observability ({eBook} 5).
+Technical report,
+AWS Marketplace
+(2022)
 \end{botherref}
 \endbibitem
 

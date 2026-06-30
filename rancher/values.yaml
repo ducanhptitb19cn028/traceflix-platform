@@ -11,7 +11,23 @@ image:
   registry: registry.example.com/traceflix
   tag: "1.0.0"
   pullPolicy: IfNotPresent
-  pullSecrets: []          # e.g. [{ name: regcred }]
+  pullSecrets: []          # for PRIVATE images set [{ name: ghcr-cred }] (see imagePullSecret below)
+
+# ---- pull secret for a PRIVATE registry (e.g. private GHCR packages) --------
+# Two ways to use it:
+#   A) Create the secret once with kubectl (token never in git), then set
+#      image.pullSecrets: [{ name: ghcr-cred }] and leave create=false. See the
+#      kubectl command in templates/image-pull-secret.yaml.
+#   B) Let the chart create it (create=true) and supply username/password at
+#      install time (--set / a local -f file / Fleet helm.valuesFrom secret).
+#      NEVER commit a real token. For GHCR the password is a GitHub PAT (classic)
+#      with the read:packages scope.
+imagePullSecret:
+  create: false
+  name: ghcr-cred
+  registry: ghcr.io
+  username: ""             # GitHub username
+  password: ""             # GitHub PAT (classic) with read:packages — supply at install, do not commit
 
 # ---- the nine microservices ------------------------------------------------
 # k8s Service names MUST equal these names: the services' baked downstream URLs

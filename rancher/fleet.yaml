@@ -1,0 +1,56 @@
+# Rancher Fleet (Continuous Delivery) config for the TraceFlix Helm chart.
+#
+# Fleet finds the Helm chart in this directory (Chart.yaml) and installs it with the
+# value overrides below. Edit the marked lines for YOUR cluster, commit, push — Fleet
+# applies the change automatically. Fleet deploys the images that the
+# .github/workflows/images.yml workflow pushes to GHCR; it does not build them.
+#
+# Wire it up once: Rancher UI -> Continuous Delivery -> Git Repos -> Add Repository
+#   Repo URL : https://github.com/ducanhptitb19cn028/traceflix-platform.git
+#   Branch   : main
+#   Path     : rancher
+#   Target   : your GPU cluster / workspace
+
+defaultNamespace: traceflix
+
+helm:
+  releaseName: traceflix
+  # Wait for resources to be ready before reporting the bundle healthy.
+  takeOwnership: true
+  timeoutSeconds: 600
+  values:
+    image:
+      # ghcr.io/<owner> — must match where the workflow pushes. Lowercase.
+      registry: ghcr.io/ducanhptitb19cn028
+      tag: "1.0.0"
+      pullPolicy: IfNotPresent
+      # If the GHCR packages are PRIVATE, create a pull secret in the traceflix
+      # namespace and reference it here, e.g.:
+      #   pullSecrets: [{ name: ghcr-cred }]
+      # Easiest for a demo: make the packages public in GitHub -> Packages -> each
+      # package -> Package settings -> Change visibility -> Public. Then leave empty:
+      pullSecrets: []
+
+    aiops:
+      tag: gpu
+
+    # ---- EDIT for your cluster ------------------------------------------------
+    storage:
+      className: ""                 # "" = cluster default; else e.g. "longhorn"
+
+    grafana:
+      adminPassword: change-me-please
+
+    ingress:
+      enabled: true
+      className: nginx
+      grafanaHost: grafana.traceflix.example.com
+      dashboardHost: traceflix.example.com
+
+    # GPU scheduling — fill from `kubectl get nodes -L nvidia.com/gpu.present`
+    # and `kubectl describe node <gpu-node> | grep -i taint`.
+    gpu:
+      count: 1
+      nodeSelector: {}              # e.g. { nvidia.com/gpu.present: "true" }
+      tolerations: []               # e.g. [{ key: nvidia.com/gpu, operator: Exists, effect: NoSchedule }]
+      runtimeClassName: ""          # e.g. "nvidia" only if your cluster requires it

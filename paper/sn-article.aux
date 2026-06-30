@@ -32,13 +32,14 @@
 \newlabel{sec:contributions}{{1.3}{5}{Contributions}{subsection.1.3}{}}
 \citation{kosinska2023}
 \citation{boten2022,chapman2023}
+\citation{han2024}
+\citation{mart2020}
 \@writefile{toc}{\contentsline {section}{\numberline {2}Background and a Taxonomy of Cloud-Native Anomaly Detection}{6}{section.2}\protected@file@percent }
 \newlabel{sec:foundations}{{2}{6}{Background and a Taxonomy of Cloud-Native Anomaly Detection}{section.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Concepts and vocabulary}{6}{subsection.2.1}\protected@file@percent }
 \newlabel{sec:fnd-concepts}{{2.1}{6}{Concepts and vocabulary}{subsection.2.1}{}}
 \@writefile{toc}{\contentsline {paragraph}{Observability and the MELT model.}{6}{section*.2}\protected@file@percent }
-\citation{han2024}
-\citation{mart2020}
+\@writefile{toc}{\contentsline {paragraph}{The detection task and its relatives.}{6}{section*.3}\protected@file@percent }
 \citation{arora2024drift,lukats2025drift}
 \citation{mart2020}
 \citation{islam2021}
@@ -55,173 +56,126 @@
 \citation{chen2023tracegra,akmeemana2025galmad,han2024}
 \citation{guan2024logllm,zhuang2024multimodal}
 \citation{han2024,wang2025multimodal}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces A taxonomy of cloud-native anomaly-detection approaches---from statistical and threshold rules and classical machine learning, through the deep-learning families (reconstruction, sequential and graph models), to LLM-based and multimodal MELT-fusion detectors---with representative works. The strongest recent results cluster at the multimodal end (shaded). Cutting \emph  {across} this technique taxonomy are two choices the field rarely varies---how a detector \emph  {learns} as the system changes (static, periodic or online) and whether it is \emph  {evaluated} under drift---which \S  \ref {sec:problem} makes the explicit axes of this study.}}{7}{figure.1}\protected@file@percent }
+\newlabel{fig:taxonomy}{{1}{7}{A taxonomy of cloud-native anomaly-detection approaches---from statistical and threshold rules and classical machine learning, through the deep-learning families (reconstruction, sequential and graph models), to LLM-based and multimodal MELT-fusion detectors---with representative works. The strongest recent results cluster at the multimodal end (shaded). Cutting \emph {across} this technique taxonomy are two choices the field rarely varies---how a detector \emph {learns} as the system changes (static, periodic or online) and whether it is \emph {evaluated} under drift---which \S \ref {sec:problem} makes the explicit axes of this study}{figure.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Non-stationarity and concept drift.}{7}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}A taxonomy of cloud-native anomaly detection}{7}{subsection.2.2}\protected@file@percent }
+\newlabel{sec:fnd-taxonomy}{{2.2}{7}{A taxonomy of cloud-native anomaly detection}{subsection.2.2}{}}
 \citation{wette2024omlad,li2023autoencoder}
 \citation{lukats2025drift}
 \citation{bakhtin2025lo2,pham2025rcaeval}
 \citation{islam2021,hrusto2026}
-\@writefile{toc}{\contentsline {paragraph}{The detection task and its relatives.}{7}{section*.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Non-stationarity and concept drift.}{7}{section*.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}A taxonomy of cloud-native anomaly detection}{7}{subsection.2.2}\protected@file@percent }
-\newlabel{sec:fnd-taxonomy}{{2.2}{7}{A taxonomy of cloud-native anomaly detection}{subsection.2.2}{}}
 \citation{lomio2022,dkmak2025,han2024}
 \citation{raeiszadeh2026}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces A taxonomy of cloud-native anomaly-detection approaches---from statistical and threshold rules and classical machine learning, through the deep-learning families (reconstruction, sequential and graph models), to LLM-based and multimodal MELT-fusion detectors---with representative works. The strongest recent results cluster at the multimodal end (shaded). Cutting \emph  {across} this technique taxonomy are two choices the field rarely varies---how a detector \emph  {learns} as the system changes (static, periodic or online) and whether it is \emph  {evaluated} under drift---which \S  \ref {sec:problem} makes the explicit axes of this study.}}{8}{figure.1}\protected@file@percent }
-\newlabel{fig:taxonomy}{{1}{8}{A taxonomy of cloud-native anomaly-detection approaches---from statistical and threshold rules and classical machine learning, through the deep-learning families (reconstruction, sequential and graph models), to LLM-based and multimodal MELT-fusion detectors---with representative works. The strongest recent results cluster at the multimodal end (shaded). Cutting \emph {across} this technique taxonomy are two choices the field rarely varies---how a detector \emph {learns} as the system changes (static, periodic or online) and whether it is \emph {evaluated} under drift---which \S \ref {sec:problem} makes the explicit axes of this study}{figure.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Problem Formulation}{8}{section.3}\protected@file@percent }
+\newlabel{sec:problem}{{3}{8}{Problem Formulation}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Windowed detection}{8}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:prob-detect}{{3.1}{8}{Windowed detection}{subsection.3.1}{}}
 \citation{arora2024drift}
-\@writefile{toc}{\contentsline {section}{\numberline {3}Problem Formulation}{9}{section.3}\protected@file@percent }
-\newlabel{sec:problem}{{3}{9}{Problem Formulation}{section.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Windowed detection}{9}{subsection.3.1}\protected@file@percent }
-\newlabel{sec:prob-detect}{{3.1}{9}{Windowed detection}{subsection.3.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Drift and the temporal axis}{10}{subsection.3.2}\protected@file@percent }
-\newlabel{sec:prob-drift}{{3.2}{10}{Drift and the temporal axis}{subsection.3.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Drift and the temporal axis}{9}{subsection.3.2}\protected@file@percent }
+\newlabel{sec:prob-drift}{{3.2}{9}{Drift and the temporal axis}{subsection.3.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}The two-axis design}{10}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:prob-design}{{3.3}{10}{The two-axis design}{subsection.3.3}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces The two-axis experimental design. The identical pipeline is evaluated over a grid of \emph  {telemetry completeness} (C1--C4, horizontal; each a superset of the previous) and \emph  {learning paradigm} (static / periodic / online, vertical). RQ1 reads detection along the completeness axis (on the drifted stream, with the static row as a held-out reference) and RQ2 reads localisation on that reference; RQ3 sweeps the whole grid on the drifted stream as the regimes $R_0\!\rightarrow \!R_3$ shift the distribution.}}{11}{figure.2}\protected@file@percent }
 \newlabel{fig:design}{{2}{11}{The two-axis experimental design. The identical pipeline is evaluated over a grid of \emph {telemetry completeness} (C1--C4, horizontal; each a superset of the previous) and \emph {learning paradigm} (static / periodic / online, vertical). RQ1 reads detection along the completeness axis (on the drifted stream, with the static row as a held-out reference) and RQ2 reads localisation on that reference; RQ3 sweeps the whole grid on the drifted stream as the regimes $R_0\!\rightarrow \!R_3$ shift the distribution}{figure.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}The two-axis design}{11}{subsection.3.3}\protected@file@percent }
-\newlabel{sec:prob-design}{{3.3}{11}{The two-axis design}{subsection.3.3}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {4}Methodology}{11}{section.4}\protected@file@percent }
 \newlabel{sec:method}{{4}{11}{Methodology}{section.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Research design and philosophy}{11}{subsection.4.1}\protected@file@percent }
-\newlabel{sec:method-design}{{4.1}{11}{Research design and philosophy}{subsection.4.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Research system design and philosophy}{11}{subsection.4.1}\protected@file@percent }
+\newlabel{sec:method-design}{{4.1}{11}{Research system design and philosophy}{subsection.4.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}The TraceFlix testbed}{11}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:method-testbed}{{4.2}{11}{The TraceFlix testbed}{subsection.4.2}{}}
 \citation{boten2022,hrusto2026}
 \citation{kreps2011kafka}
 \citation{kosinska2023}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}The TraceFlix testbed}{12}{subsection.4.2}\protected@file@percent }
-\newlabel{sec:method-testbed}{{4.2}{12}{The TraceFlix testbed}{subsection.4.2}{}}
+\citation{kreps2011kafka}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Streaming realisation and the local-LLM detector}{12}{subsection.4.3}\protected@file@percent }
 \newlabel{sec:method-streaming}{{4.3}{12}{Streaming realisation and the local-LLM detector}{subsection.4.3}{}}
-\citation{kreps2011kafka}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces The TraceFlix testbed and detection pipeline. A load generator drives the instrumented nine-service mesh (full call graph in Fig.~\ref {fig:mesh}); Chaos Mesh (or Pumba, on the Compose deployment) injects timestamped faults. OpenTelemetry collects MELT telemetry into per-pillar backends, whose signals flow over an \emph  {Apache Kafka} event backbone (Fig.~\ref {fig:dataflow}) to a configuration-aware feature extractor (C1--C4) feeding the three learning policies, a local-LLM detector (Qwen2.5-3B; Fig.~\ref {fig:llm}), and the evaluation harness.}}{13}{figure.3}\protected@file@percent }
-\newlabel{fig:arch}{{3}{13}{The TraceFlix testbed and detection pipeline. A load generator drives the instrumented nine-service mesh (full call graph in Fig.~\ref {fig:mesh}); Chaos Mesh (or Pumba, on the Compose deployment) injects timestamped faults. OpenTelemetry collects MELT telemetry into per-pillar backends, whose signals flow over an \emph {Apache Kafka} event backbone (Fig.~\ref {fig:dataflow}) to a configuration-aware feature extractor (C1--C4) feeding the three learning policies, a local-LLM detector (Qwen2.5-3B; Fig.~\ref {fig:llm}), and the evaluation harness}{figure.3}{}}
-\@writefile{toc}{\contentsline {paragraph}{The service mesh (Fig.~\ref {fig:mesh}).}{13}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The service mesh (Fig.~\ref {fig:mesh}).}{12}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The Kafka event backbone (Fig.~\ref {fig:dataflow}).}{12}{section*.6}\protected@file@percent }
 \citation{qwen2025}
 \citation{ollama2024}
 \citation{hu2022lora}
 \citation{guan2024logllm,zhuang2024multimodal}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces The TraceFlix testbed and detection pipeline. A load generator drives the instrumented nine-service mesh (full call graph in Fig.~\ref {fig:mesh}); Chaos Mesh (or Pumba, on the Compose deployment) injects timestamped faults. OpenTelemetry collects MELT telemetry into per-pillar backends, whose signals flow over an \emph  {Apache Kafka} event backbone (Fig.~\ref {fig:dataflow}) to a configuration-aware feature extractor (C1--C4) feeding the three learning policies, a local-LLM detector (Qwen2.5-3B; Fig.~\ref {fig:llm}), and the evaluation harness.}}{13}{figure.3}\protected@file@percent }
+\newlabel{fig:arch}{{3}{13}{The TraceFlix testbed and detection pipeline. A load generator drives the instrumented nine-service mesh (full call graph in Fig.~\ref {fig:mesh}); Chaos Mesh (or Pumba, on the Compose deployment) injects timestamped faults. OpenTelemetry collects MELT telemetry into per-pillar backends, whose signals flow over an \emph {Apache Kafka} event backbone (Fig.~\ref {fig:dataflow}) to a configuration-aware feature extractor (C1--C4) feeding the three learning policies, a local-LLM detector (Qwen2.5-3B; Fig.~\ref {fig:llm}), and the evaluation harness}{figure.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{The local-LLM detector (Fig.~\ref {fig:llm}).}{13}{section*.7}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces The nine-service call graph (depth four). \texttt  {gateway} is the entry; blue nodes are internal callers, green nodes are leaves. \texttt  {catalog} is a shared \emph  {fan-in} reached by both \texttt  {search} and \texttt  {recommendation}. Data owners (\texttt  {catalog}, \texttt  {auth}, \texttt  {user}) persist with Spring Data JPA; the rest orchestrate downstream calls. A fault at a leaf induces secondary latency in every ancestor on its path---the propagation RQ2 exploits.}}{14}{figure.4}\protected@file@percent }
 \newlabel{fig:mesh}{{4}{14}{The nine-service call graph (depth four). \texttt {gateway} is the entry; blue nodes are internal callers, green nodes are leaves. \texttt {catalog} is a shared \emph {fan-in} reached by both \texttt {search} and \texttt {recommendation}. Data owners (\texttt {catalog}, \texttt {auth}, \texttt {user}) persist with Spring Data JPA; the rest orchestrate downstream calls. A fault at a leaf induces secondary latency in every ancestor on its path---the propagation RQ2 exploits}{figure.4}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces The Kafka streaming dataflow. Per-window telemetry is produced to \texttt  {tf.telemetry.windows}; the online ML detector and the local-LLM detector consume it in independent consumer groups and emit binary verdicts to \texttt  {tf.anomalies}, tagged by detector for head-to-head comparison.}}{14}{figure.5}\protected@file@percent }
 \newlabel{fig:dataflow}{{5}{14}{The Kafka streaming dataflow. Per-window telemetry is produced to \texttt {tf.telemetry.windows}; the online ML detector and the local-LLM detector consume it in independent consumer groups and emit binary verdicts to \texttt {tf.anomalies}, tagged by detector for head-to-head comparison}{figure.5}{}}
-\@writefile{toc}{\contentsline {paragraph}{The Kafka event backbone (Fig.~\ref {fig:dataflow}).}{14}{section*.6}\protected@file@percent }
 \citation{pedroso2025}
 \@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces The local-LLM detector pipeline. A window's raw signals are formatted into a prompt (fault-signature rules {+} few-shot exemplars); Qwen2.5-3B, served by Ollama and optionally LoRA-tuned, returns a strict JSON binary verdict that is parsed to the same $0/1$ output as the other detectors. When no model is served the pipeline falls back to a clearly-marked z-score heuristic (dashed), never silently substituted for the model.}}{15}{figure.6}\protected@file@percent }
 \newlabel{fig:llm}{{6}{15}{The local-LLM detector pipeline. A window's raw signals are formatted into a prompt (fault-signature rules {+} few-shot exemplars); Qwen2.5-3B, served by Ollama and optionally LoRA-tuned, returns a strict JSON binary verdict that is parsed to the same $0/1$ output as the other detectors. When no model is served the pipeline falls back to a clearly-marked z-score heuristic (dashed), never silently substituted for the model}{figure.6}{}}
-\@writefile{toc}{\contentsline {paragraph}{The local-LLM detector (Fig.~\ref {fig:llm}).}{15}{section*.7}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Fault injection and ground-truth labelling}{15}{subsection.4.4}\protected@file@percent }
 \newlabel{sec:method-faults}{{4.4}{15}{Fault injection and ground-truth labelling}{subsection.4.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Telemetry configurations (the completeness axis)}{15}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:method-configs}{{4.5}{15}{Telemetry configurations (the completeness axis)}{subsection.4.5}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces The four telemetry configurations (completeness axis). Each is a strict superset of the previous, enabling marginal-contribution analysis.}}{16}{table.1}\protected@file@percent }
 \newlabel{tab:configs}{{1}{16}{The four telemetry configurations (completeness axis). Each is a strict superset of the previous, enabling marginal-contribution analysis}{table.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Telemetry configurations (the completeness axis)}{16}{subsection.4.5}\protected@file@percent }
-\newlabel{sec:method-configs}{{4.5}{16}{Telemetry configurations (the completeness axis)}{subsection.4.5}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Feature families added by each pillar. Counts are cumulative across the nested configurations (cf.\ Appendix~\ref {app:features}).}}{17}{table.2}\protected@file@percent }
-\newlabel{tab:features}{{2}{17}{Feature families added by each pillar. Counts are cumulative across the nested configurations (cf.\ Appendix~\ref {app:features})}{table.2}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Learners instantiating the temporal axis.}}{17}{table.3}\protected@file@percent }
-\newlabel{tab:learners}{{3}{17}{Learners instantiating the temporal axis}{table.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Drift regimes (the temporal axis)}{17}{subsection.4.6}\protected@file@percent }
-\newlabel{sec:method-regimes}{{4.6}{17}{Drift regimes (the temporal axis)}{subsection.4.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Drift regimes (the temporal axis)}{16}{subsection.4.6}\protected@file@percent }
+\newlabel{sec:method-regimes}{{4.6}{16}{Drift regimes (the temporal axis)}{subsection.4.6}{}}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Online-adaptive prequential detection}}{17}{algorithm.1}\protected@file@percent }
+\newlabel{alg:online}{{1}{17}{Learners and the online model}{algorithm.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.7}Learners and the online model}{17}{subsection.4.7}\protected@file@percent }
 \newlabel{sec:method-learners}{{4.7}{17}{Learners and the online model}{subsection.4.7}{}}
-\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Online-adaptive prequential detection}}{18}{algorithm.1}\protected@file@percent }
-\newlabel{alg:online}{{1}{18}{Learners and the online model}{algorithm.1}{}}
 \citation{han2024}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.8}Evaluation and cost metrics}{19}{subsection.4.8}\protected@file@percent }
-\newlabel{sec:method-metrics}{{4.8}{19}{Evaluation and cost metrics}{subsection.4.8}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.9}Reproducibility}{19}{subsection.4.9}\protected@file@percent }
-\newlabel{sec:method-repro}{{4.9}{19}{Reproducibility}{subsection.4.9}{}}
-\citation{hrusto2026}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.10}Threats to validity}{20}{subsection.4.10}\protected@file@percent }
-\newlabel{sec:method-threats}{{4.10}{20}{Threats to validity}{subsection.4.10}{}}
-\@writefile{toc}{\contentsline {paragraph}{Internal validity.}{20}{section*.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{External validity.}{20}{section*.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Construct validity.}{20}{section*.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Conclusion validity.}{20}{section*.11}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5}Results}{20}{section.5}\protected@file@percent }
-\newlabel{sec:results}{{5}{20}{Results}{section.5}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}RQ1: Does richer telemetry raise detection under non-stationarity?}{20}{subsection.5.1}\protected@file@percent }
-\newlabel{sec:res-rq1}{{5.1}{20}{RQ1: Does richer telemetry raise detection under non-stationarity?}{subsection.5.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.8}Evaluation and cost metrics}{18}{subsection.4.8}\protected@file@percent }
+\newlabel{sec:method-metrics}{{4.8}{18}{Evaluation and cost metrics}{subsection.4.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9}Reproducibility}{18}{subsection.4.9}\protected@file@percent }
+\newlabel{sec:method-repro}{{4.9}{18}{Reproducibility}{subsection.4.9}{}}
 \citation{lomio2022,han2024}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces RQ1 --- detection by configuration under non-stationarity. F1 on the drifted future stream is for the deployable continual-learning detector (the operative measurement); the held-out slice is a stationary reference. Both rise with completeness; distributed traces are the decisive increment, and more so under drift.}}{21}{table.4}\protected@file@percent }
-\newlabel{tab:rq1}{{4}{21}{RQ1 --- detection by configuration under non-stationarity. F1 on the drifted future stream is for the deployable continual-learning detector (the operative measurement); the held-out slice is a stationary reference. Both rise with completeness; distributed traces are the decisive increment, and more so under drift}{table.4}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces RQ1 --- detection F1 across the four telemetry configurations under non-stationarity: on the held-out reference and on the drifted future stream (continual-learning detector). Completeness improves detection in both settings, and the single decisive increment is the addition of traces (C2$\rightarrow $C3), whose effect is larger under drift.}}{21}{figure.7}\protected@file@percent }
-\newlabel{fig:rq1}{{7}{21}{RQ1 --- detection F1 across the four telemetry configurations under non-stationarity: on the held-out reference and on the drifted future stream (continual-learning detector). Completeness improves detection in both settings, and the single decisive increment is the addition of traces (C2$\rightarrow $C3), whose effect is larger under drift}{figure.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces RQ1 --- detection by configuration under non-stationarity. F1 on the drifted future stream is for the deployable continual-learning detector (the operative measurement); the held-out slice is a stationary reference. Both rise with completeness; distributed traces are the decisive increment, and more so under drift.}}{19}{table.2}\protected@file@percent }
+\newlabel{tab:rq1}{{2}{19}{RQ1 --- detection by configuration under non-stationarity. F1 on the drifted future stream is for the deployable continual-learning detector (the operative measurement); the held-out slice is a stationary reference. Both rise with completeness; distributed traces are the decisive increment, and more so under drift}{table.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Results}{19}{section.5}\protected@file@percent }
+\newlabel{sec:results}{{5}{19}{Results}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}RQ1: Does richer telemetry raise detection under non-stationarity?}{19}{subsection.5.1}\protected@file@percent }
+\newlabel{sec:res-rq1}{{5.1}{19}{RQ1: Does richer telemetry raise detection under non-stationarity?}{subsection.5.1}{}}
 \citation{han2024}
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces RQ2 --- root-cause localisation on the nine-service mesh, traces excluded (C2) vs.\ included (C3). On a deep graph top-$k$ does not saturate without traces; tracing attains perfect localisation at every $k$.}}{22}{table.5}\protected@file@percent }
-\newlabel{tab:rq2}{{5}{22}{RQ2 --- root-cause localisation on the nine-service mesh, traces excluded (C2) vs.\ included (C3). On a deep graph top-$k$ does not saturate without traces; tracing attains perfect localisation at every $k$}{table.5}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}RQ2: What does distributed tracing add to localisation?}{22}{subsection.5.2}\protected@file@percent }
-\newlabel{sec:res-rq2}{{5.2}{22}{RQ2: What does distributed tracing add to localisation?}{subsection.5.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}RQ3: Does the learning paradigm matter under drift?}{22}{subsection.5.3}\protected@file@percent }
-\newlabel{sec:res-rq3}{{5.3}{22}{RQ3: Does the learning paradigm matter under drift?}{subsection.5.3}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces RQ3 headline --- F1 on the future (drifted) stream. Best realisable learner in bold.}}{23}{table.6}\protected@file@percent }
-\newlabel{tab:rq3-head}{{6}{23}{RQ3 headline --- F1 on the future (drifted) stream. Best realisable learner in bold}{table.6}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.1}Headline: F1 on the drifted stream}{23}{subsubsection.5.3.1}\protected@file@percent }
-\newlabel{sec:res-rq3-head}{{5.3.1}{23}{Headline: F1 on the drifted stream}{subsubsection.5.3.1}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.2}Precision, recall and the stale-normal signature}{23}{subsubsection.5.3.2}\protected@file@percent }
-\newlabel{sec:res-rq3-prf}{{5.3.2}{23}{Precision, recall and the stale-normal signature}{subsubsection.5.3.2}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces RQ3 headline --- F1 on the drifted future stream by learning policy and configuration. The frozen static model (grey) is flat and low regardless of telemetry; periodic retraining (orange) recovers partially; the online-adaptive model (green) dominates everywhere and, under C3/C4, exceeds the all-regimes oracle (dashed). Contrast with the monotonic baseline ceiling of Fig.~\ref {fig:rq1}.}}{24}{figure.8}\protected@file@percent }
-\newlabel{fig:rq3head}{{8}{24}{RQ3 headline --- F1 on the drifted future stream by learning policy and configuration. The frozen static model (grey) is flat and low regardless of telemetry; periodic retraining (orange) recovers partially; the online-adaptive model (green) dominates everywhere and, under C3/C4, exceeds the all-regimes oracle (dashed). Contrast with the monotonic baseline ceiling of Fig.~\ref {fig:rq1}}{figure.8}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.3}Per-regime breakdown}{24}{subsubsection.5.3.3}\protected@file@percent }
-\newlabel{sec:res-rq3-regime}{{5.3.3}{24}{Per-regime breakdown}{subsubsection.5.3.3}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces RQ3 --- future-stream precision (P), recall (R) and AUC-ROC by policy and configuration. The static model's flat, collapsed precision with near-perfect recall is the stale-normal signature.}}{25}{table.7}\protected@file@percent }
-\newlabel{tab:rq3-prf}{{7}{25}{RQ3 --- future-stream precision (P), recall (R) and AUC-ROC by policy and configuration. The static model's flat, collapsed precision with near-perfect recall is the stale-normal signature}{table.7}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.4}Operational cost}{25}{subsubsection.5.3.4}\protected@file@percent }
-\newlabel{sec:res-rq3-cost}{{5.3.4}{25}{Operational cost}{subsubsection.5.3.4}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces RQ3 per-regime F1 by configuration. Best learner per cell in bold. (s = static, p = periodic, o = online.) The all-regimes oracle attains 0.812 (C1), 0.817 (C2), 0.929 (C3), 0.927 (C4); the online model exceeds it at every configuration, decisively so at C3--C4.}}{26}{table.8}\protected@file@percent }
-\newlabel{tab:rq3-regime}{{8}{26}{RQ3 per-regime F1 by configuration. Best learner per cell in bold. (s = static, p = periodic, o = online.) The all-regimes oracle attains 0.812 (C1), 0.817 (C2), 0.929 (C3), 0.927 (C4); the online model exceeds it at every configuration, decisively so at C3--C4}{table.8}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces RQ3 cost --- periodic vs.\ online. Latency is the per-window maximum (tail); operational columns are from the cost-profiling run, F1 is the Run-B future-stream F1 of Table~\ref {tab:rq3-head}.}}{26}{table.9}\protected@file@percent }
-\newlabel{tab:rq3-cost}{{9}{26}{RQ3 cost --- periodic vs.\ online. Latency is the per-window maximum (tail); operational columns are from the cost-profiling run, F1 is the Run-B future-stream F1 of Table~\ref {tab:rq3-head}}{table.9}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces RQ3 cost/quality trade-off (periodic vs.\ online). The online learner (green) sits top-left---higher F1 at an order-of-magnitude lower tail latency---with a tiny footprint (marker area $\propto $ model size), while periodic retraining (orange) pays $\sim $600\,ms refit spikes and a multi-megabyte footprint for lower F1.}}{27}{figure.9}\protected@file@percent }
-\newlabel{fig:rq3cost}{{9}{27}{RQ3 cost/quality trade-off (periodic vs.\ online). The online learner (green) sits top-left---higher F1 at an order-of-magnitude lower tail latency---with a tiny footprint (marker area $\propto $ model size), while periodic retraining (orange) pays $\sim $600\,ms refit spikes and a multi-megabyte footprint for lower F1}{figure.9}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces RQ3 cost ratios (periodic relative to online unless noted).}}{27}{table.10}\protected@file@percent }
-\newlabel{tab:rq3-ratios}{{10}{27}{RQ3 cost ratios (periodic relative to online unless noted)}{table.10}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.5}Adaptation behaviour}{27}{subsubsection.5.3.5}\protected@file@percent }
-\newlabel{sec:res-rq3-adapt}{{5.3.5}{27}{Adaptation behaviour}{subsubsection.5.3.5}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces RQ3 online adaptation behaviour by configuration.}}{28}{table.11}\protected@file@percent }
-\newlabel{tab:rq3-adapt}{{11}{28}{RQ3 online adaptation behaviour by configuration}{table.11}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces RQ4 --- detection by model family on full MELT (C4). The three ensemble-tree models lead and are statistically indistinguishable.}}{28}{table.12}\protected@file@percent }
-\newlabel{tab:rq4}{{12}{28}{RQ4 --- detection by model family on full MELT (C4). The three ensemble-tree models lead and are statistically indistinguishable}{table.12}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}RQ4: Which model family best exploits multimodal telemetry?}{28}{subsection.5.4}\protected@file@percent }
-\newlabel{sec:res-rq4}{{5.4}{28}{RQ4: Which model family best exploits multimodal telemetry?}{subsection.5.4}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Discussion}{29}{section.6}\protected@file@percent }
-\newlabel{sec:lessons}{{6}{29}{Discussion}{section.6}{}}
-\newlabel{sec:discussion}{{6}{29}{Discussion}{section.6}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Drift, not completeness, is the deciding factor}{29}{subsection.6.1}\protected@file@percent }
-\newlabel{sec:disc-drift}{{6.1}{29}{Drift, not completeness, is the deciding factor}{subsection.6.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}The completeness$\times $adaptation interaction}{29}{subsection.6.2}\protected@file@percent }
-\newlabel{sec:disc-interaction}{{6.2}{29}{The completeness$\times $adaptation interaction}{subsection.6.2}{}}
-\citation{leadingobs,aws2022obs}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Operational implications and an SLA framing}{30}{subsection.6.3}\protected@file@percent }
-\newlabel{sec:disc-ops}{{6.3}{30}{Operational implications and an SLA framing}{subsection.6.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}When is periodic retraining acceptable?}{30}{subsection.6.4}\protected@file@percent }
-\newlabel{sec:disc-periodic}{{6.4}{30}{When is periodic retraining acceptable?}{subsection.6.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.5}Practical guidance}{31}{subsection.6.5}\protected@file@percent }
-\newlabel{sec:disc-guidance}{{6.5}{31}{Practical guidance}{subsection.6.5}{}}
-\citation{han2024}
-\citation{chen2025}
-\citation{wang2018}
-\citation{lomio2022}
-\citation{dkmak2025}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.6}Analysis by fault category}{32}{subsection.6.6}\protected@file@percent }
-\newlabel{sec:disc-faults}{{6.6}{32}{Analysis by fault category}{subsection.6.6}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.7}Relation to prior work}{32}{subsection.6.7}\protected@file@percent }
-\newlabel{sec:disc-prior}{{6.7}{32}{Relation to prior work}{subsection.6.7}{}}
-\citation{raeiszadeh2026}
-\citation{hrusto2026}
-\citation{islam2021}
-\citation{mart2020}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces RQ1 --- detection F1 across the four telemetry configurations under non-stationarity: on the held-out reference and on the drifted future stream (continual-learning detector). Completeness improves detection in both settings, and the single decisive increment is the addition of traces (C2$\rightarrow $C3), whose effect is larger under drift.}}{20}{figure.7}\protected@file@percent }
+\newlabel{fig:rq1}{{7}{20}{RQ1 --- detection F1 across the four telemetry configurations under non-stationarity: on the held-out reference and on the drifted future stream (continual-learning detector). Completeness improves detection in both settings, and the single decisive increment is the addition of traces (C2$\rightarrow $C3), whose effect is larger under drift}{figure.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}RQ2: What does distributed tracing add to localisation?}{20}{subsection.5.2}\protected@file@percent }
+\newlabel{sec:res-rq2}{{5.2}{20}{RQ2: What does distributed tracing add to localisation?}{subsection.5.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces RQ2 --- root-cause localisation on the nine-service mesh, traces excluded (C2) vs.\ included (C3). On a deep graph top-$k$ does not saturate without traces; tracing attains perfect localisation at every $k$.}}{21}{table.3}\protected@file@percent }
+\newlabel{tab:rq2}{{3}{21}{RQ2 --- root-cause localisation on the nine-service mesh, traces excluded (C2) vs.\ included (C3). On a deep graph top-$k$ does not saturate without traces; tracing attains perfect localisation at every $k$}{table.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}RQ3: Does the learning paradigm matter under drift?}{21}{subsection.5.3}\protected@file@percent }
+\newlabel{sec:res-rq3}{{5.3}{21}{RQ3: Does the learning paradigm matter under drift?}{subsection.5.3}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.1}Headline: F1 on the drifted stream}{21}{subsubsection.5.3.1}\protected@file@percent }
+\newlabel{sec:res-rq3-head}{{5.3.1}{21}{Headline: F1 on the drifted stream}{subsubsection.5.3.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces RQ3 headline --- F1 on the future (drifted) stream. Best realisable learner in bold.}}{22}{table.4}\protected@file@percent }
+\newlabel{tab:rq3-head}{{4}{22}{RQ3 headline --- F1 on the future (drifted) stream. Best realisable learner in bold}{table.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces RQ3 headline --- F1 on the drifted future stream by learning policy and configuration. The frozen static model (grey) is flat and low regardless of telemetry; periodic retraining (orange) recovers partially; the online-adaptive model (green) dominates everywhere and, under C3/C4, exceeds the all-regimes oracle (dashed). Contrast with the monotonic baseline ceiling of Fig.~\ref {fig:rq1}.}}{22}{figure.8}\protected@file@percent }
+\newlabel{fig:rq3head}{{8}{22}{RQ3 headline --- F1 on the drifted future stream by learning policy and configuration. The frozen static model (grey) is flat and low regardless of telemetry; periodic retraining (orange) recovers partially; the online-adaptive model (green) dominates everywhere and, under C3/C4, exceeds the all-regimes oracle (dashed). Contrast with the monotonic baseline ceiling of Fig.~\ref {fig:rq1}}{figure.8}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.2}Precision, recall and the stale-normal signature}{22}{subsubsection.5.3.2}\protected@file@percent }
+\newlabel{sec:res-rq3-prf}{{5.3.2}{22}{Precision, recall and the stale-normal signature}{subsubsection.5.3.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces RQ3 --- future-stream precision (P), recall (R) and AUC-ROC by policy and configuration. The static model's flat, collapsed precision with near-perfect recall is the stale-normal signature.}}{23}{table.5}\protected@file@percent }
+\newlabel{tab:rq3-prf}{{5}{23}{RQ3 --- future-stream precision (P), recall (R) and AUC-ROC by policy and configuration. The static model's flat, collapsed precision with near-perfect recall is the stale-normal signature}{table.5}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.3}Per-regime breakdown}{23}{subsubsection.5.3.3}\protected@file@percent }
+\newlabel{sec:res-rq3-regime}{{5.3.3}{23}{Per-regime breakdown}{subsubsection.5.3.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces RQ3 per-regime F1 by configuration. Best learner per cell in bold. (s = static, p = periodic, o = online.) The all-regimes oracle attains 0.812 (C1), 0.817 (C2), 0.929 (C3), 0.927 (C4); the online model exceeds it at every configuration, decisively so at C3--C4.}}{24}{table.6}\protected@file@percent }
+\newlabel{tab:rq3-regime}{{6}{24}{RQ3 per-regime F1 by configuration. Best learner per cell in bold. (s = static, p = periodic, o = online.) The all-regimes oracle attains 0.812 (C1), 0.817 (C2), 0.929 (C3), 0.927 (C4); the online model exceeds it at every configuration, decisively so at C3--C4}{table.6}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.4}Operational cost}{24}{subsubsection.5.3.4}\protected@file@percent }
+\newlabel{sec:res-rq3-cost}{{5.3.4}{24}{Operational cost}{subsubsection.5.3.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces RQ3 cost --- periodic vs.\ online. Latency is the per-window maximum (tail); operational columns are from the cost-profiling run, F1 is the Run-B future-stream F1 of Table~\ref {tab:rq3-head}.}}{25}{table.7}\protected@file@percent }
+\newlabel{tab:rq3-cost}{{7}{25}{RQ3 cost --- periodic vs.\ online. Latency is the per-window maximum (tail); operational columns are from the cost-profiling run, F1 is the Run-B future-stream F1 of Table~\ref {tab:rq3-head}}{table.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces RQ3 cost/quality trade-off (periodic vs.\ online). The online learner (green) sits top-left---higher F1 at an order-of-magnitude lower tail latency---with a tiny footprint (marker area $\propto $ model size), while periodic retraining (orange) pays $\sim $600\,ms refit spikes and a multi-megabyte footprint for lower F1.}}{25}{figure.9}\protected@file@percent }
+\newlabel{fig:rq3cost}{{9}{25}{RQ3 cost/quality trade-off (periodic vs.\ online). The online learner (green) sits top-left---higher F1 at an order-of-magnitude lower tail latency---with a tiny footprint (marker area $\propto $ model size), while periodic retraining (orange) pays $\sim $600\,ms refit spikes and a multi-megabyte footprint for lower F1}{figure.9}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.5}Adaptation behaviour}{25}{subsubsection.5.3.5}\protected@file@percent }
+\newlabel{sec:res-rq3-adapt}{{5.3.5}{25}{Adaptation behaviour}{subsubsection.5.3.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces RQ4 --- detection by model family on full MELT (C4). The three ensemble-tree models lead and are statistically indistinguishable.}}{26}{table.8}\protected@file@percent }
+\newlabel{tab:rq4}{{8}{26}{RQ4 --- detection by model family on full MELT (C4). The three ensemble-tree models lead and are statistically indistinguishable}{table.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}RQ4: Which model family best exploits multimodal telemetry?}{26}{subsection.5.4}\protected@file@percent }
+\newlabel{sec:res-rq4}{{5.4}{26}{RQ4: Which model family best exploits multimodal telemetry?}{subsection.5.4}{}}
 \citation{greshake2023}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Threats to Validity}{27}{section.6}\protected@file@percent }
+\newlabel{sec:threats}{{6}{27}{Threats to Validity}{section.6}{}}
+\newlabel{sec:disc-threats}{{6}{27}{Threats to Validity}{section.6}{}}
 \citation{hrusto2026,islam2021}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Threats to Validity}{33}{section.7}\protected@file@percent }
-\newlabel{sec:threats}{{7}{33}{Threats to Validity}{section.7}{}}
-\newlabel{sec:disc-threats}{{7}{33}{Threats to Validity}{section.7}{}}
 \citation{kosinska2023}
 \citation{kosinska2023}
 \citation{faseeha2025observability}
 \citation{boten2022,chapman2023}
 \citation{beginnersobs,aws2022obs}
 \citation{leadingobs,kosinska2023}
-\@writefile{toc}{\contentsline {section}{\numberline {8}Related Work}{34}{section.8}\protected@file@percent }
-\newlabel{sec:background}{{8}{34}{Related Work}{section.8}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Observability in cloud-native systems}{34}{subsection.8.1}\protected@file@percent }
-\newlabel{sec:bg-obs}{{8.1}{34}{Observability in cloud-native systems}{subsection.8.1}{}}
 \citation{boten2022,chapman2023,aws2022obs,beginnersobs}
 \citation{boten2022,opentelemetry2024spec}
 \citation{hrusto2026}
@@ -229,19 +183,21 @@
 \citation{huang2025mint,wu2025tracesampling}
 \citation{ashok2024traceweaver}
 \citation{hausenblas2023roi}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Related Work}{28}{section.7}\protected@file@percent }
+\newlabel{sec:background}{{7}{28}{Related Work}{section.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Observability in cloud-native systems}{28}{subsection.7.1}\protected@file@percent }
+\newlabel{sec:bg-obs}{{7.1}{28}{Observability in cloud-native systems}{subsection.7.1}{}}
 \citation{chapman2023}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}The observability pipeline and its tooling}{35}{subsection.8.2}\protected@file@percent }
-\newlabel{sec:bg-tooling}{{8.2}{35}{The observability pipeline and its tooling}{subsection.8.2}{}}
 \citation{aws2022obs,beginnersobs,leadingobs}
-\citation{leadingobs}
 \citation{raeiszadeh2026}
 \citation{lomio2022}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}The observability pipeline and its tooling}{29}{subsection.7.2}\protected@file@percent }
+\newlabel{sec:bg-tooling}{{7.2}{29}{The observability pipeline and its tooling}{subsection.7.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Anomaly-detection techniques}{29}{subsection.7.3}\protected@file@percent }
+\newlabel{sec:bg-ad}{{7.3}{29}{Anomaly-detection techniques}{subsection.7.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Classical machine learning.}{29}{section*.8}\protected@file@percent }
 \citation{dkmak2025}
 \citation{raeiszadeh2026}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Anomaly-detection techniques}{36}{subsection.8.3}\protected@file@percent }
-\newlabel{sec:bg-ad}{{8.3}{36}{Anomaly-detection techniques}{subsection.8.3}{}}
-\@writefile{toc}{\contentsline {paragraph}{Classical machine learning.}{36}{section*.12}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Deep and temporal models.}{36}{section*.13}\protected@file@percent }
 \citation{wang2025mtssurvey,xia2024coupled,choi2024selfsup}
 \citation{singal2025metric}
 \citation{sarfraz2024quovadis,wagner2025metrics}
@@ -252,9 +208,10 @@
 \citation{zhang2024aiops}
 \citation{xu2024forecasting,wette2024omlad}
 \citation{mart2020}
-\@writefile{toc}{\contentsline {paragraph}{The recent surge, by modality.}{37}{section*.14}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Multimodal fusion and the LLM turn.}{37}{section*.15}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Observability-integrated, proactive detection.}{37}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Deep and temporal models.}{30}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The recent surge, by modality.}{30}{section*.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Multimodal fusion and the LLM turn.}{30}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Observability-integrated, proactive detection.}{30}{section*.12}\protected@file@percent }
 \citation{han2024}
 \citation{wang2018}
 \citation{chen2025}
@@ -266,22 +223,24 @@
 \citation{zhang2025thinkfl}
 \citation{pham2025rcaeval}
 \citation{arora2024drift,hovakimyan2024drift,lukats2025drift}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Root-cause analysis through observability data}{38}{subsection.8.4}\protected@file@percent }
-\newlabel{sec:bg-rca}{{8.4}{38}{Root-cause analysis through observability data}{subsection.8.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Root-cause analysis through observability data}{31}{subsection.7.4}\protected@file@percent }
+\newlabel{sec:bg-rca}{{7.4}{31}{Root-cause analysis through observability data}{subsection.7.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.5}Concept drift and online learning}{31}{subsection.7.5}\protected@file@percent }
+\newlabel{sec:bg-drift}{{7.5}{31}{Concept drift and online learning}{subsection.7.5}{}}
 \citation{islam2021}
 \citation{raeiszadeh2026}
 \citation{li2023autoencoder}
 \citation{li2024incremental}
 \citation{wette2024omlad}
 \citation{leest2025mlmonitoring}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.5}Concept drift and online learning}{39}{subsection.8.5}\protected@file@percent }
-\newlabel{sec:bg-drift}{{8.5}{39}{Concept drift and online learning}{subsection.8.5}{}}
 \citation{hrusto2026}
 \citation{islam2021}
 \citation{islam2025cloud}
 \citation{bakhtin2025lo2,pham2025rcaeval,ping2026anomod}
 \citation{owotogbe2026chaos}
 \citation{sarfraz2024quovadis,wagner2025metrics}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.6}Monitoring data and real-world evaluation}{32}{subsection.7.6}\protected@file@percent }
+\newlabel{sec:bg-eval}{{7.6}{32}{Monitoring data and real-world evaluation}{subsection.7.6}{}}
 \citation{lomio2022,mart2020}
 \citation{han2024}
 \citation{lomio2022,dkmak2025,han2024}
@@ -289,35 +248,25 @@
 \citation{hrusto2026,islam2021}
 \citation{leadingobs,kosinska2023}
 \citation{islam2021}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.6}Monitoring data and real-world evaluation}{40}{subsection.8.6}\protected@file@percent }
-\newlabel{sec:bg-eval}{{8.6}{40}{Monitoring data and real-world evaluation}{subsection.8.6}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.7}Synthesis and research gap}{40}{subsection.8.7}\protected@file@percent }
-\newlabel{sec:bg-gap}{{8.7}{40}{Synthesis and research gap}{subsection.8.7}{}}
-\citation{lomio2022}
-\citation{mart2020}
-\citation{dkmak2025}
-\citation{han2024}
-\citation{wang2018}
-\citation{chen2025}
-\citation{pedroso2025}
+\citation{lomio2022,mart2020}
+\citation{dkmak2025,han2024,wang2018,chen2025,pedroso2025}
 \citation{islam2021}
-\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces Positioning against representative prior work. \text  {$\mathsurround \z@ \mathchar "458$}\ = addressed; \texttt  {part} = partially or implicitly; --- = not addressed.}}{41}{table.13}\protected@file@percent }
-\newlabel{tab:positioning}{{13}{41}{Positioning against representative prior work. \checkmark \ = addressed; \texttt {part} = partially or implicitly; --- = not addressed}{table.13}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {9}Conclusion and Future Work}{41}{section.9}\protected@file@percent }
-\newlabel{sec:conclusion}{{9}{41}{Conclusion and Future Work}{section.9}{}}
-\citation{pedroso2025}
-\citation{han2024}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.7}Synthesis and research gap}{33}{subsection.7.7}\protected@file@percent }
+\newlabel{sec:bg-gap}{{7.7}{33}{Synthesis and research gap}{subsection.7.7}{}}
+\citation{pedroso2025,han2024}
 \citation{hu2022lora}
 \citation{greshake2023}
-\@writefile{toc}{\contentsline {subparagraph}{Acknowledgements}{42}{section*.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusion and Future Work}{34}{section.8}\protected@file@percent }
+\newlabel{sec:conclusion}{{8}{34}{Conclusion and Future Work}{section.8}{}}
+\@writefile{toc}{\contentsline {subparagraph}{Acknowledgements}{35}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {A}Full feature listing}{35}{section.1.A}\protected@file@percent }
+\newlabel{app:features}{{A}{35}{Full feature listing}{section.1.A}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {A1}{\ignorespaces Engineered features by pillar. Counts are per-pillar additions; cumulative totals are 10 (C1), 14 (C2), 18 (C3), 23 (C4).}}{35}{table.1}\protected@file@percent }
+\newlabel{tab:appfeatures}{{A1}{35}{Engineered features by pillar. Counts are per-pillar additions; cumulative totals are 10 (C1), 14 (C2), 18 (C3), 23 (C4)}{table.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {B}Experimental constants}{35}{section.1.B}\protected@file@percent }
+\newlabel{app:constants}{{B}{35}{Experimental constants}{section.1.B}{}}
 \bibdata{sn-bibliography}
 \bibcite{cncf2024survey}{{1}{2024}{{{Cloud Native Computing Foundation}}}{{}}}
-\@writefile{toc}{\contentsline {section}{\numberline {A}Full feature listing}{43}{section.1.A}\protected@file@percent }
-\newlabel{app:features}{{A}{43}{Full feature listing}{section.1.A}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {A1}{\ignorespaces Engineered features by pillar. Counts are per-pillar additions; cumulative totals are 10 (C1), 14 (C2), 18 (C3), 23 (C4).}}{43}{table.1}\protected@file@percent }
-\newlabel{tab:appfeatures}{{A1}{43}{Engineered features by pillar. Counts are per-pillar additions; cumulative totals are 10 (C1), 14 (C2), 18 (C3), 23 (C4)}{table.1}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {B}Experimental constants}{43}{section.1.B}\protected@file@percent }
-\newlabel{app:constants}{{B}{43}{Experimental constants}{section.1.B}{}}
 \bibcite{dora2024}{{2}{2024}{{{DORA}}}{{}}}
 \bibcite{mohammad2025resilient}{{3}{2025}{{Mohammad}}{{}}}
 \bibcite{islam2021}{{4}{2021}{{Islam et~al.}}{{}}}
@@ -325,8 +274,8 @@
 \bibcite{kosinska2023}{{6}{2023}{{Kosi{\'n}ska et~al.}}{{}}}
 \bibcite{boten2022}{{7}{2022}{{Boten}}{{}}}
 \bibcite{chapman2023}{{8}{2023}{{Chapman and Holmes}}{{}}}
-\@writefile{lot}{\contentsline {table}{\numberline {B2}{\ignorespaces Fixed experimental parameters.}}{44}{table.2}\protected@file@percent }
-\newlabel{tab:appconst}{{B2}{44}{Fixed experimental parameters}{table.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {B1}{\ignorespaces Fixed experimental parameters.}}{36}{table.1}\protected@file@percent }
+\newlabel{tab:appconst}{{B1}{36}{Fixed experimental parameters}{table.1}{}}
 \bibcite{lomio2022}{{9}{2022}{{Lomio et~al.}}{{}}}
 \bibcite{dkmak2025}{{10}{2025}{{Dkmak et~al.}}{{}}}
 \bibcite{han2024}{{11}{2024}{{Han et~al.}}{{}}}
@@ -356,10 +305,10 @@
 \bibcite{bakhtin2025lo2}{{35}{2025}{{Bakhtin et~al.}}{{}}}
 \bibcite{pham2025rcaeval}{{36}{2025}{{Pham et~al.}}{{}}}
 \bibcite{pedroso2025}{{37}{2025}{{Pedroso et~al.}}{{}}}
-\bibcite{aws2022obs}{{38}{2022}{{{Amazon Web Services}}}{{}}}
-\bibcite{greshake2023}{{39}{2023}{{Greshake et~al.}}{{}}}
-\bibcite{faseeha2025observability}{{40}{2025}{{Faseeha et~al.}}{{}}}
-\bibcite{beginnersobs}{{41}{2021}{{{Honeycomb}}}{{}}}
+\bibcite{greshake2023}{{38}{2023}{{Greshake et~al.}}{{}}}
+\bibcite{faseeha2025observability}{{39}{2025}{{Faseeha et~al.}}{{}}}
+\bibcite{beginnersobs}{{40}{2021}{{{Honeycomb}}}{{}}}
+\bibcite{aws2022obs}{{41}{2022}{{{Amazon Web Services}}}{{}}}
 \bibcite{opentelemetry2024spec}{{42}{2024}{{{OpenTelemetry Authors}}}{{}}}
 \bibcite{wu2025tracesampling}{{43}{2025}{{Wu et~al.}}{{}}}
 \bibcite{ashok2024traceweaver}{{44}{2024}{{Ashok et~al.}}{{}}}
@@ -385,4 +334,4 @@
 \bibcite{islam2025cloud}{{64}{2025}{{Islam et~al.}}{{}}}
 \bibcite{ping2026anomod}{{65}{2026}{{Ping et~al.}}{{}}}
 \bibcite{owotogbe2026chaos}{{66}{2026}{{Owotogbe et~al.}}{{}}}
-\gdef \@abspage@last{50}
+\gdef \@abspage@last{42}
