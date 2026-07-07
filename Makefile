@@ -48,7 +48,17 @@ ALL_SVCS := movie actor review $(NEW_SVCS)
 # paper compile (Docker TeX Live). Override PAPER_DIR on Windows if the mount
 # path needs a Windows-style absolute path.
 PAPER_DIR ?= $(CURDIR)/paper
+PAPER_IEEE_DIR ?= $(CURDIR)/paper/paper_IEEE
 TEXIMG    := texlive/texlive:latest
+
+# Pick the LaTeX toolchain at parse time (shell-agnostic: works whether make's
+# recipe shell is sh or cmd.exe). Prefer a local tectonic install; fall back to
+# Docker TeX Live. Force Docker with `make paper USE_DOCKER=1`.
+ifeq ($(USE_DOCKER),1)
+HAS_TECTONIC := 0
+else
+HAS_TECTONIC := $(shell $(PY) -c "import shutil;print(1 if shutil.which('tectonic') else 0)")
+endif
 
 DC_VM1 := deploy/virtfusion/vm1-gpu
 DC_VM2 := deploy/virtfusion/vm2-services
@@ -64,9 +74,10 @@ DC_VM4 := deploy/virtfusion/vm4-gateway
         test test-aiops test-services \
         deploy-up deploy-down mesh-up mesh-down telemetry-up telemetry-down \
         kafka-llm-up kafka-llm-down gateway-up gateway-down \
-        bootstrap k8s-deploy k8s-delete chaos-install \
+        bootstrap k8s-deploy k8s-delete chaos-install status \
         live live-episodes inject \
-        paper paper-pages paper-clean dissertation \
+        paper paper-pages paper-clean \
+        paper_IEEE paper_IEEE-pages paper_IEEE-clean dissertation \
         clean clean-results clean-all
 
 # ---- help ------------------------------------------------------------------
@@ -81,7 +92,7 @@ help:
 	@echo "  TESTS        test  test-aiops  test-services"
 	@echo "  COMPOSE      deploy-up/down  mesh-up/down  telemetry-up/down"
 	@echo "               kafka-llm-up/down  gateway-up/down"
-	@echo "  KUBERNETES   bootstrap  k8s-deploy  k8s-delete  chaos-install"
+	@echo "  KUBERNETES   bootstrap  k8s-deploy  k8s-delete  chaos-install  status"
 	@echo "  FAULTS/LIVE  live  live-episodes  inject  (SVC= FAULT= DUR=)"
 	@echo "  PAPER/DOCS   paper  paper-pages  paper-clean  dissertation"
 	@echo "  CLEAN        clean  clean-results  clean-all"
@@ -206,6 +217,10 @@ k8s-delete:
 chaos-install:
 	cd $(AIOPS) && bash scripts/install_chaos_mesh.sh
 
+# Show all pods in the project namespace.
+status:
+	kubectl get pods -n $(NS) -o wide
+
 # ---- fault injection / live ------------------------------------------------
 # Run the analysis against live PromQL/LogQL/TraceQL (point the URLs at your stack).
 live:
@@ -226,19 +241,41 @@ inject:
 
 # ---- paper / dissertation --------------------------------------------------
 paper:
-	$(PY) paper/make_figures.py
+# 	$(PY) paper/make_figures.py
+# ifeq ($(HAS_TECTONIC),1)
+# 	tectonic -X compile --keep-logs "$(PAPER_DIR)/sn-article.tex"
+# else
 	docker run --rm -v "$(PAPER_DIR):/data" -w /data $(TEXIMG) sh -c "\
 	  pdflatex -interaction=nonstopmode sn-article.tex && \
 	  bibtex sn-article && \
 	  pdflatex -interaction=nonstopmode sn-article.tex && \
 	  pdflatex -interaction=nonstopmode sn-article.tex"
+# endif
+
+
+paper_IEEE:
+# 	$(PY) paper/make_figures.py
+# ifeq ($(HAS_TECTONIC),1)
+# 	tectonic -X compile --keep-logs "$(PAPER_IEEE_DIR)/bare_jrnl.tex"
+# else
+	docker run --rm -v "$(PAPER_IEEE_DIR):/data" -w /data $(TEXIMG) sh -c "\
+	  pdflatex -interaction=nonstopmode bare_jrnl.tex && \
+	  bibtex bare_jrnl && \
+	  pdflatex -interaction=nonstopmode bare_jrnl.tex && \
+	  pdflatex -interaction=nonstopmode bare_jrnl.tex"
+# endif
 
 paper-pages:
-	@grep -o '([0-9]* pages' paper/sn-article.log | tail -1 | tr -d '('
+	@$(PY) -c "import re;t=open('paper/sn-article.log',encoding='utf-8',errors='replace').read();m=re.findall(r'\((\d+)\s+pages?',t);print((m[-1]+' pages') if m else 'no page count (compile first)')"
+
+paper_IEEE-pages:
+	@$(PY) -c "import re;t=open('paper/paper_IEEE/bare_jrnl.log',encoding='utf-8',errors='replace').read();m=re.findall(r'\((\d+)\s+pages?',t);print((m[-1]+' pages') if m else 'no page count (compile first)')"
 
 paper-clean:
-	-rm -f paper/sn-article.aux paper/sn-article.bbl paper/sn-article.blg \
-	       paper/sn-article.log paper/sn-article.out
+	-$(PY) -c "import os,sys;[os.remove(f) for f in sys.argv[1:] if os.path.exists(f)]" paper/sn-article.aux paper/sn-article.bbl paper/sn-article.blg paper/sn-article.log paper/sn-article.out
+
+paper_IEEE-clean:
+	-$(PY) -c "import os,sys;[os.remove(f) for f in sys.argv[1:] if os.path.exists(f)]" paper/paper_IEEE/bare_jrnl.aux paper/paper_IEEE/bare_jrnl.bbl paper/paper_IEEE/bare_jrnl.blg paper/paper_IEEE/bare_jrnl.log paper/paper_IEEE/bare_jrnl.out
 
 dissertation:
 	cd dissertation && $(PY) md2docx.py
@@ -246,9 +283,9 @@ dissertation:
 # ---- clean -----------------------------------------------------------------
 clean:
 	-cd $(SERVICES) && mvn -q clean
-	-find $(AIOPS) -type d -name __pycache__ -prune -exec rm -rf {} +
+	-$(PY) -c "import shutil,pathlib,sys;[shutil.rmtree(p,ignore_errors=True) for p in pathlib.Path(sys.argv[1]).rglob('__pycache__')]" $(AIOPS)
 
 clean-results:
-	-rm -f $(RESULTS)/*.csv $(RESULTS)/*.json $(RESULTS)/figures/*.png
+	-$(PY) -c "import glob,os,sys;[os.remove(f) for pat in sys.argv[1:] for f in glob.glob(pat)]" "$(RESULTS)/*.csv" "$(RESULTS)/*.json" "$(RESULTS)/figures/*.png"
 
 clean-all: clean clean-results paper-clean
