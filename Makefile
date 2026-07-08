@@ -39,6 +39,27 @@ SVC             := $(strip $(SVC))
 FAULT           := $(strip $(FAULT))
 DUR             := $(strip $(DUR))
 
+# Shell for .sh helper scripts. On Windows the `bash` first on PATH is normally
+# C:\Windows\System32\bash.exe (the WSL launcher); WSL can't see the Windows
+# JDK/Maven/JAVA_HOME this build uses, so bootstrap dies with "JAVA_HOME ... not
+# defined correctly". Force Git Bash by full path. Override if Git lives
+# elsewhere, e.g.  make bootstrap BASH_BIN=/path/to/bash
+ifeq ($(OS),Windows_NT)
+BASH_BIN := C:/Program Files/Git/bin/bash.exe
+else
+BASH_BIN := bash
+endif
+
+# Windows-native project runner (run.ps1). Uses PowerShell directly so it does
+# NOT depend on make's bash/WSL shell resolution. Pass flags via RUN_ARGS, e.g.
+#   make run RUN_ARGS="-SkipExperiments"
+ifeq ($(OS),Windows_NT)
+PWSH := powershell -NoProfile -ExecutionPolicy Bypass -File
+else
+PWSH := pwsh -NoProfile -File
+endif
+RUN_ARGS ?=
+
 AIOPS    := aiops
 SERVICES := services
 RESULTS  := $(AIOPS)/$(OUT)
@@ -66,7 +87,7 @@ DC_VM3 := deploy/virtfusion/vm3-telemetry
 DC_VM4 := deploy/virtfusion/vm4-gateway
 
 .DEFAULT_GOAL := help
-.PHONY: help all setup setup-llm \
+.PHONY: help all run run-platform run-experiments run-down aiops-up aiops-down setup setup-llm \
         experiments repro quick rq124 rq3 cost plots figures \
         streaming llm lora \
         webui webui-build \
@@ -84,10 +105,12 @@ DC_VM4 := deploy/virtfusion/vm4-gateway
 help:
 	@echo "TraceFlix - whole-project automation. Targets by area:"
 	@echo ""
+	@echo "  RUN (win)    run  run-platform  run-experiments  run-down   (RUN_ARGS=...)"
 	@echo "  SETUP        setup  setup-llm"
 	@echo "  EXPERIMENTS  experiments  repro  quick  rq124  rq3  cost  plots  figures"
 	@echo "  STREAM/LLM   streaming  llm  lora"
 	@echo "  WEBUI        webui  webui-build"
+	@echo "  AIOPS (k8s)  aiops-up  aiops-down"
 	@echo "  JAVA         build-services  compile-services  images  test-services"
 	@echo "  TESTS        test  test-aiops  test-services"
 	@echo "  COMPOSE      deploy-up/down  mesh-up/down  telemetry-up/down"
@@ -101,6 +124,21 @@ help:
 
 # build the core deliverables: Java services, offline results, paper
 all: build-services experiments paper
+
+# ---- run: one-command local k8s platform + experiments (run.ps1) -----------
+# The whole project on the local docker-desktop cluster (on-demand-observability
+# namespace) plus the offline experiments. Pass extra flags with RUN_ARGS.
+run:
+	$(PWSH) run.ps1 $(RUN_ARGS)
+
+run-platform:
+	$(PWSH) run.ps1 -SkipExperiments $(RUN_ARGS)
+
+run-experiments:
+	$(PWSH) run.ps1 -SkipDeploy $(RUN_ARGS)
+
+run-down:
+	$(PWSH) run.ps1 -Teardown
 
 # ---- setup -----------------------------------------------------------------
 setup:
@@ -153,6 +191,17 @@ webui:
 webui-build:
 	cd $(AIOPS)/webui/frontend && npm install && npm run build
 
+# ---- AIOps (local k8s) -----------------------------------------------------
+# Re-apply / remove the in-cluster AIOps engine + dashboard in the $(NS) namespace.
+# NOTE: the dashboard SPA is injected by an initContainer using the local image
+# traceflix/aiops-dist:1.0.0, which must already be built and loaded into the kind
+# nodes -- `make run-platform` (run.ps1) does that. Use these for a quick re-apply.
+aiops-up:
+	kubectl apply -f $(AIOPS)/k8s/aiops.yaml
+
+aiops-down:
+	kubectl delete -f $(AIOPS)/k8s/aiops.yaml --ignore-not-found
+
 # ---- Java services ---------------------------------------------------------
 build-services:
 	cd $(SERVICES) && mvn -q clean package -DskipTests
@@ -203,7 +252,7 @@ gateway-down:
 
 # ---- deploy: Kubernetes ----------------------------------------------------
 bootstrap:
-	bash scripts/bootstrap.sh
+	"$(BASH_BIN)" scripts/bootstrap.sh
 
 k8s-deploy:
 	kubectl apply -f $(SERVICES)/deployment.yaml
@@ -215,7 +264,7 @@ k8s-delete:
 	-kubectl delete namespace $(NS)
 
 chaos-install:
-	cd $(AIOPS) && bash scripts/install_chaos_mesh.sh
+	cd $(AIOPS) && "$(BASH_BIN)" scripts/install_chaos_mesh.sh
 
 # Show all pods in the project namespace.
 status:

@@ -176,9 +176,15 @@ Outputs are written to (and a frozen copy is committed under)
   the experiments run against live PromQL/LogQL/TraceQL — see
   [`deploy/virtfusion/README.md`](deploy/virtfusion/README.md) and Track C of
   [`DEMO.md`](DEMO.md).
+- **Live deployment (local Kubernetes, one command):** bring up the full
+  nine-service mesh + observability stack in the `on-demand-observability`
+  namespace on Docker Desktop's Kubernetes with `make run-platform` — see
+  [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## Further documentation
 
+- [`DEPLOYMENT.md`](DEPLOYMENT.md) — one-command local Kubernetes bring-up
+  (Windows / Docker Desktop): the nine-service mesh + observability stack.
 - [`DEMO.md`](DEMO.md) — guided three-track walkthrough of the whole project.
 - [`aiops/README.md`](aiops/README.md) — the experiment layer in depth.
 - [`aiops/docs/`](aiops/docs/) — integration/data-flow, mesh expansion, the online

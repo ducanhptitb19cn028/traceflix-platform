@@ -763,3 +763,389 @@ spec:
             limits:
               cpu: 50m
               memory: 32Mi
+---
+# ===========================
+# Mesh services (the other 6 of the 9 TraceFlix Java services)
+# gateway / user / search / recommendation / auth / catalog + a mesh load-gen.
+# All imagePullPolicy: Never -> build local images first (run.ps1 builds all 9).
+# ===========================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-service
+  namespace: on-demand-observability
+  labels: {app: gateway-service, tier: mesh}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: gateway-service}
+  template:
+    metadata:
+      labels: {app: gateway-service, tier: mesh}
+    spec:
+      initContainers:
+        - name: otel-agent-init
+          image: curlimages/curl:8.7.1
+          command: ["sh","-c"]
+          args:
+            - >
+              test -f /otel/opentelemetry-javaagent.jar ||
+              curl -L -o /otel/opentelemetry-javaagent.jar
+              https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.12.0/opentelemetry-javaagent.jar
+          volumeMounts:
+            - {name: otel-agent, mountPath: /otel}
+      containers:
+        - name: gateway-service
+          image: traceflix/gateway-service:1.0.0
+          imagePullPolicy: Never
+          ports:
+            - {name: http, containerPort: 8080}
+          volumeMounts:
+            - {name: otel-agent, mountPath: /otel}
+          env:
+            - {name: JAVA_TOOL_OPTIONS, value: "-javaagent:/otel/opentelemetry-javaagent.jar"}
+            - name: JDK_JAVA_OPTIONS
+              value: "--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED -Djdk.attach.allowAttachSelf=true"
+            - {name: OTEL_SERVICE_NAME, value: gateway-service}
+            - {name: OTEL_RESOURCE_ATTRIBUTES, value: "service.namespace=on-demand-observability,deployment.environment=minikube,service.version=1.0.0"}
+            - {name: OTEL_TRACES_SAMPLER, value: "parentbased_traceidratio"}
+            - {name: OTEL_TRACES_SAMPLER_ARG, value: "1.0"}
+            - {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector:4317"}
+            - {name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc"}
+            - {name: OTEL_TRACES_EXPORTER, value: "otlp"}
+            - {name: OTEL_METRICS_EXPORTER, value: "otlp"}
+            - {name: OTEL_LOGS_EXPORTER, value: "otlp"}
+      volumes:
+        - {name: otel-agent, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+  namespace: on-demand-observability
+spec:
+  selector: {app: gateway-service}
+  ports:
+    - {name: http, port: 8080, targetPort: 8080}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: on-demand-observability
+  labels: {app: user-service, tier: mesh}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: user-service}
+  template:
+    metadata:
+      labels: {app: user-service, tier: mesh}
+    spec:
+      initContainers:
+        - name: otel-agent-init
+          image: curlimages/curl:8.7.1
+          command: ["sh","-c"]
+          args:
+            - >
+              test -f /otel/opentelemetry-javaagent.jar ||
+              curl -L -o /otel/opentelemetry-javaagent.jar
+              https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.12.0/opentelemetry-javaagent.jar
+          volumeMounts:
+            - {name: otel-agent, mountPath: /otel}
+      containers:
+        - name: user-service
+          image: traceflix/user-service:1.0.0
+          imagePullPolicy: Never
+          ports:
+            - {name: http, containerPort: 8080}
+          volumeMounts:
+            - {name: otel-agent, mountPath: /otel}
+          env:
+            - {name: JAVA_TOOL_OPTIONS, value: "-javaagent:/otel/opentelemetry-javaagent.jar"}
+            - name: JDK_JAVA_OPTIONS
+              value: "--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED -Djdk.attach.allowAttachSelf=true"
+            - {name: OTEL_SERVICE_NAME, value: user-service}
+            - {name: OTEL_RESOURCE_ATTRIBUTES, value: "service.namespace=on-demand-observability,deployment.environment=minikube,service.version=1.0.0"}
+            - {name: OTEL_TRACES_SAMPLER, value: "parentbased_traceidratio"}
+            - {name: OTEL_TRACES_SAMPLER_ARG, value: "1.0"}
+            - {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector:4317"}
+            - {name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc"}
+            - {name: OTEL_TRACES_EXPORTER, value: "otlp"}
+            - {name: OTEL_METRICS_EXPORTER, value: "otlp"}
+            - {name: OTEL_LOGS_EXPORTER, value: "otlp"}
+      volumes:
+        - {name: otel-agent, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: on-demand-observability
+spec:
+  selector: {app: user-service}
+  ports:
+    - {name: http, port: 8080, targetPort: 8080}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-service
+  namespace: on-demand-observability
+  labels: {app: search-service, tier: mesh}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: search-service}
+  template:
+    metadata:
+      labels: {app: search-service, tier: mesh}
+    spec:
+      initContainers:
+        - name: otel-agent-init
+          image: curlimages/curl:8.7.1
+          command: ["sh","-c"]
+          args:
+            - >
+              test -f /otel/opentelemetry-javaagent.jar ||
+              curl -L -o /otel/opentelemetry-javaagent.jar
+              https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.12.0/opentelemetry-javaagent.jar
+          volumeMounts:
+            - {name: otel-agent, mountPath: /otel}
+      containers:
+        - name: search-service
+          image: traceflix/search-service:1.0.0
+          imagePullPolicy: Never
+          ports:
+            - {name: http, containerPort: 8080}
+          volumeMounts:
+            - {name: otel-agent, mountPath: /otel}
+          env:
+            - {name: JAVA_TOOL_OPTIONS, value: "-javaagent:/otel/opentelemetry-javaagent.jar"}
+            - name: JDK_JAVA_OPTIONS
+              value: "--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED -Djdk.attach.allowAttachSelf=true"
+            - {name: OTEL_SERVICE_NAME, value: search-service}
+            - {name: OTEL_RESOURCE_ATTRIBUTES, value: "service.namespace=on-demand-observability,deployment.environment=minikube,service.version=1.0.0"}
+            - {name: OTEL_TRACES_SAMPLER, value: "parentbased_traceidratio"}
+            - {name: OTEL_TRACES_SAMPLER_ARG, value: "1.0"}
+            - {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector:4317"}
+            - {name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc"}
+            - {name: OTEL_TRACES_EXPORTER, value: "otlp"}
+            - {name: OTEL_METRICS_EXPORTER, value: "otlp"}
+            - {name: OTEL_LOGS_EXPORTER, value: "otlp"}
+      volumes:
+        - {name: otel-agent, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search-service
+  namespace: on-demand-observability
+spec:
+  selector: {app: search-service}
+  ports:
+    - {name: http, port: 8080, targetPort: 8080}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendation-service
+  namespace: on-demand-observability
+  labels: {app: recommendation-service, tier: mesh}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: recommendation-service}
+  template:
+    metadata:
+      labels: {app: recommendation-service, tier: mesh}
+    spec:
+      initContainers:
+        - name: otel-agent-init
+          image: curlimages/curl:8.7.1
+          command: ["sh","-c"]
+          args:
+            - >
+              test -f /otel/opentelemetry-javaagent.jar ||
+              curl -L -o /otel/opentelemetry-javaagent.jar
+              https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.12.0/opentelemetry-javaagent.jar
+          volumeMounts:
+            - {name: otel-agent, mountPath: /otel}
+      containers:
+        - name: recommendation-service
+          image: traceflix/recommendation-service:1.0.0
+          imagePullPolicy: Never
+          ports:
+            - {name: http, containerPort: 8080}
+          volumeMounts:
+            - {name: otel-agent, mountPath: /otel}
+          env:
+            - {name: JAVA_TOOL_OPTIONS, value: "-javaagent:/otel/opentelemetry-javaagent.jar"}
+            - name: JDK_JAVA_OPTIONS
+              value: "--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED -Djdk.attach.allowAttachSelf=true"
+            - {name: OTEL_SERVICE_NAME, value: recommendation-service}
+            - {name: OTEL_RESOURCE_ATTRIBUTES, value: "service.namespace=on-demand-observability,deployment.environment=minikube,service.version=1.0.0"}
+            - {name: OTEL_TRACES_SAMPLER, value: "parentbased_traceidratio"}
+            - {name: OTEL_TRACES_SAMPLER_ARG, value: "1.0"}
+            - {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector:4317"}
+            - {name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc"}
+            - {name: OTEL_TRACES_EXPORTER, value: "otlp"}
+            - {name: OTEL_METRICS_EXPORTER, value: "otlp"}
+            - {name: OTEL_LOGS_EXPORTER, value: "otlp"}
+      volumes:
+        - {name: otel-agent, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommendation-service
+  namespace: on-demand-observability
+spec:
+  selector: {app: recommendation-service}
+  ports:
+    - {name: http, port: 8080, targetPort: 8080}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: on-demand-observability
+  labels: {app: auth-service, tier: mesh}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: auth-service}
+  template:
+    metadata:
+      labels: {app: auth-service, tier: mesh}
+    spec:
+      initContainers:
+        - name: otel-agent-init
+          image: curlimages/curl:8.7.1
+          command: ["sh","-c"]
+          args:
+            - >
+              test -f /otel/opentelemetry-javaagent.jar ||
+              curl -L -o /otel/opentelemetry-javaagent.jar
+              https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.12.0/opentelemetry-javaagent.jar
+          volumeMounts:
+            - {name: otel-agent, mountPath: /otel}
+      containers:
+        - name: auth-service
+          image: traceflix/auth-service:1.0.0
+          imagePullPolicy: Never
+          ports:
+            - {name: http, containerPort: 8080}
+          volumeMounts:
+            - {name: otel-agent, mountPath: /otel}
+          env:
+            - {name: JAVA_TOOL_OPTIONS, value: "-javaagent:/otel/opentelemetry-javaagent.jar"}
+            - name: JDK_JAVA_OPTIONS
+              value: "--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED -Djdk.attach.allowAttachSelf=true"
+            - {name: OTEL_SERVICE_NAME, value: auth-service}
+            - {name: OTEL_RESOURCE_ATTRIBUTES, value: "service.namespace=on-demand-observability,deployment.environment=minikube,service.version=1.0.0"}
+            - {name: OTEL_TRACES_SAMPLER, value: "parentbased_traceidratio"}
+            - {name: OTEL_TRACES_SAMPLER_ARG, value: "1.0"}
+            - {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector:4317"}
+            - {name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc"}
+            - {name: OTEL_TRACES_EXPORTER, value: "otlp"}
+            - {name: OTEL_METRICS_EXPORTER, value: "otlp"}
+            - {name: OTEL_LOGS_EXPORTER, value: "otlp"}
+      volumes:
+        - {name: otel-agent, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: on-demand-observability
+spec:
+  selector: {app: auth-service}
+  ports:
+    - {name: http, port: 8080, targetPort: 8080}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-service
+  namespace: on-demand-observability
+  labels: {app: catalog-service, tier: mesh}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: catalog-service}
+  template:
+    metadata:
+      labels: {app: catalog-service, tier: mesh}
+    spec:
+      initContainers:
+        - name: otel-agent-init
+          image: curlimages/curl:8.7.1
+          command: ["sh","-c"]
+          args:
+            - >
+              test -f /otel/opentelemetry-javaagent.jar ||
+              curl -L -o /otel/opentelemetry-javaagent.jar
+              https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.12.0/opentelemetry-javaagent.jar
+          volumeMounts:
+            - {name: otel-agent, mountPath: /otel}
+      containers:
+        - name: catalog-service
+          image: traceflix/catalog-service:1.0.0
+          imagePullPolicy: Never
+          ports:
+            - {name: http, containerPort: 8080}
+          volumeMounts:
+            - {name: otel-agent, mountPath: /otel}
+          env:
+            - {name: JAVA_TOOL_OPTIONS, value: "-javaagent:/otel/opentelemetry-javaagent.jar"}
+            - name: JDK_JAVA_OPTIONS
+              value: "--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED -Djdk.attach.allowAttachSelf=true"
+            - {name: OTEL_SERVICE_NAME, value: catalog-service}
+            - {name: OTEL_RESOURCE_ATTRIBUTES, value: "service.namespace=on-demand-observability,deployment.environment=minikube,service.version=1.0.0"}
+            - {name: OTEL_TRACES_SAMPLER, value: "parentbased_traceidratio"}
+            - {name: OTEL_TRACES_SAMPLER_ARG, value: "1.0"}
+            - {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector:4317"}
+            - {name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc"}
+            - {name: OTEL_TRACES_EXPORTER, value: "otlp"}
+            - {name: OTEL_METRICS_EXPORTER, value: "otlp"}
+            - {name: OTEL_LOGS_EXPORTER, value: "otlp"}
+      volumes:
+        - {name: otel-agent, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+  namespace: on-demand-observability
+spec:
+  selector: {app: catalog-service}
+  ports:
+    - {name: http, port: 8080, targetPort: 8080}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mesh-load-generator
+  namespace: on-demand-observability
+  labels: {app: mesh-load-generator}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: mesh-load-generator}
+  template:
+    metadata:
+      labels: {app: mesh-load-generator}
+    spec:
+      containers:
+        - name: loadgen
+          image: curlimages/curl:8.7.1
+          command: ["/bin/sh","-c"]
+          args:
+            - |
+              while true; do
+                for u in 1 2 3 4 5; do
+                  curl -s "http://gateway-service:8080/api/browse?userId=$u" >/dev/null
+                done
+                sleep 1
+              done

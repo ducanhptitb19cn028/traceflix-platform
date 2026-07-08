@@ -1,0 +1,99 @@
+# AIOps engine + dashboard, deployed alongside the 9 services in the
+# on-demand-observability namespace. Reads their live telemetry (metrics/logs/
+# traces) and lists k8s events for root-cause context. Serves the React
+# dashboard + API on :8000.
+#
+# Adapted from rancher/templates/aiops.yaml for LOCAL Docker Desktop:
+#   * no nvidia.com/gpu request (Docker Desktop has no GPU) -> torch runs on CPU
+#   * VM_URL points cross-namespace at VictoriaMetrics in devops-agent
+#   * TF_LIVE=1 so the live collectors read the in-cluster stack (not synthetic)
+# The image is pulled from GHCR (public), so no local build/load is needed.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aiops
+  namespace: on-demand-observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: aiops-events-reader
+  namespace: on-demand-observability
+rules:
+  - apiGroups: [""]
+    resources: ["events", "pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aiops-events-reader
+  namespace: on-demand-observability
+subjects:
+  - kind: ServiceAccount
+    name: aiops
+    namespace: on-demand-observability
+roleRef:
+  kind: Role
+  name: aiops-events-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aiops
+  namespace: on-demand-observability
+  labels: {app: aiops}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: aiops}}
+  template:
+    metadata: {labels: {app: aiops}}
+    spec:
+      serviceAccountName: aiops
+      # The published :gpu image was built without the React dashboard. This
+      # initContainer injects the prebuilt SPA (dist) into a shared volume so the
+      # FastAPI backend serves it at / -- no multi-GB CUDA rebuild needed.
+      initContainers:
+        - name: spa
+          image: traceflix/aiops-dist:1.0.0
+          imagePullPolicy: Never
+          command: ["sh", "-c", "cp -r /dist/. /spa/"]
+          volumeMounts:
+            - {name: spa, mountPath: /spa}
+      containers:
+        - name: aiops
+          image: ghcr.io/ducanhptitb19cn028/traceflix-aiops:gpu
+          imagePullPolicy: IfNotPresent
+          ports:
+            - {name: http, containerPort: 8000}
+          volumeMounts:
+            - {name: spa, mountPath: /opt/traceflix/aiops/webui/frontend/dist}
+          env:
+            - {name: PROM_URL,     value: "http://prometheus:9090"}
+            - {name: VM_URL,       value: "http://victoriametrics.devops-agent.svc.cluster.local:8428"}
+            - {name: LOKI_URL,     value: "http://loki:3100"}
+            - {name: TEMPO_URL,    value: "http://tempo:3200"}
+            - {name: TF_NAMESPACE, value: "on-demand-observability"}
+            - {name: TF_LIVE,      value: "1"}
+          resources:
+            requests: {cpu: 100m, memory: 512Mi}
+            limits:   {memory: 3Gi}
+          readinessProbe:
+            httpGet: {path: /api/health, port: 8000}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 30
+      volumes:
+        - {name: spa, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aiops
+  namespace: on-demand-observability
+  labels: {app: aiops}
+spec:
+  selector: {app: aiops}
+  ports:
+    - {name: http, port: 8000, targetPort: 8000}
