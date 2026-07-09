@@ -80,6 +80,12 @@ label.inline select { background: var(--panel2); color: var(--text); border: 1px
 .status.muted { background: var(--panel2); color: var(--muted); }
 
 .chart-box, .events { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 16px 0; }
+.verdict-json { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 14px; line-height: 1.5; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin: 6px 0; white-space: pre; overflow-x: auto; }
+.verdict-json.anom { border-color: var(--red); color: var(--red); }
+.verdict-json.ok { border-color: var(--green); color: var(--green); }
+.feed { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; margin: 12px 0; max-height: 320px; overflow-y: auto; }
+.feed .table { margin: 0; }
+.feed .table th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
 
 /* tables */
 .table { width: 100%; border-collapse: collapse; margin: 10px 0; }

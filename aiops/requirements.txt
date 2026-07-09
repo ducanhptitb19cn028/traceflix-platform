@@ -6,6 +6,7 @@ matplotlib>=3.8       # result figures
 openpyxl>=3.1         # Excel export (ml.eval.export_observability / to_excel)
 fastapi>=0.110        # webui/backend API (online/offline/comparison)
 uvicorn[standard]>=0.29  # ASGI server for the webui backend
+python-dotenv>=1.0    # webui/backend loads aiops/.env (live Streaming config)
 # Optional (full RQ2 / events pillar):
 xgboost>=2.0          # gradient-boosting baseline
 torch>=2.2            # LSTM temporal model (heuristic fallback if absent)

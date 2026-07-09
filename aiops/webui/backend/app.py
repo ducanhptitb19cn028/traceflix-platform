@@ -34,6 +34,16 @@ AIOPS = Path(__file__).resolve().parents[2]
 if str(AIOPS) not in sys.path:
     sys.path.insert(0, str(AIOPS))
 
+# Load aiops/.env BEFORE importing modules that read env at import time:
+# streaming.bus reads TF_KAFKA_BOOTSTRAP, ml.models.llm_detector reads OLLAMA_URL/
+# OLLAMA_MODEL. This is what makes the Streaming page live without exporting env on
+# the command line. Silently skipped if python-dotenv or the file is absent.
+try:
+    from dotenv import load_dotenv
+    load_dotenv(AIOPS / ".env")
+except ImportError:
+    pass
+
 from ml.configs import CONFIGS                       # noqa: E402
 from ml.online_sim import run_simulation             # noqa: E402
 from streaming.webui_stream import (                 # noqa: E402

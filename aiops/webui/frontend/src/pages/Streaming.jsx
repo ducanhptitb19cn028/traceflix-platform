@@ -87,6 +87,9 @@ export default function Streaming() {
 
   const pct = snap ? Math.round((snap.processed / snap.total) * 100) : 0;
   const llmMode = snap?.llm?.mode ?? info?.llm?.mode;
+  const backend = snap?.backend ?? info?.backend;
+  const bootstrap = snap?.bootstrap ?? info?.bootstrap;
+  const kafkaLive = backend === "kafka";
 
   return (
     <div className="page">
@@ -94,6 +97,8 @@ export default function Streaming() {
       <p className="subtitle">
         Telemetry windows flow through Kafka topics to two parallel binary detectors:
         the online ML model and a local-LLM detector (Qwen2.5-3B) reasoning over raw signals.
+        The <b>⚡ Kafka</b> and <b>LLM</b> chips below show whether it is wired to a live broker
+        + real Ollama, or the in-process / heuristic fallbacks.
       </p>
 
       <div className="controls">
@@ -113,6 +118,14 @@ export default function Streaming() {
         {!running
           ? <button className="btn primary" onClick={start}>▶ Start backbone</button>
           : <button className="btn danger" onClick={stop}>■ Stop</button>}
+        {backend && (
+          <span className={"chip " + (kafkaLive ? "chip-green" : "chip-amber")}
+            style={{ alignSelf: "center" }}
+            title={kafkaLive ? "verdicts are produced to a real Kafka broker"
+                             : "no broker reachable — using the in-process bus"}>
+            {kafkaLive ? `⚡ Kafka: ${bootstrap || "live"}` : "in-memory bus"}
+          </span>
+        )}
         {llmMode && (
           <span className={"chip " + (llmMode === "llm" ? "chip-green" : "chip-amber")}
             style={{ alignSelf: "center" }}>
@@ -139,6 +152,41 @@ export default function Streaming() {
           <span>window {snap.processed.toLocaleString()}/{snap.total.toLocaleString()} ({pct}%)
             · current service <b>{snap.service}</b></span>
         </div>
+      )}
+
+      {/* ---- LIVE VERDICT FEED (messages landing on tf.anomalies) ---- */}
+      {snap?.feed?.length > 0 && (
+        <>
+          <h3>📨 <code>tf.anomalies</code> — live verdict feed
+            <span className={"chip " + (kafkaLive ? "chip-green" : "chip-amber")}
+              style={{ marginLeft: 8 }}>
+              {kafkaLive ? "produced to Kafka" : "in-memory"}
+            </span>
+          </h3>
+          <div className="feed">
+            <table className="table" style={{ margin: 0 }}>
+              <thead>
+                <tr>
+                  <th>detector</th><th>service</th><th>verdict</th>
+                  <th style={{ textAlign: "right" }}>p</th><th>truth</th>
+                </tr>
+              </thead>
+              <tbody>
+                {snap.feed.map((f, idx) => (
+                  <tr key={idx}>
+                    <td><span className={"chip " + (f.detector === "llm" ? "chip-amber" : "chip-green")}>
+                      {f.detector}</span></td>
+                    <td><code>{f.service}</code></td>
+                    <td><span className={"chip " + (f.y_pred === 1 ? "chip-red" : "chip-green")}>
+                      {f.y_pred === 1 ? "ANOMALY" : "normal"}</span></td>
+                    <td style={{ textAlign: "right" }}>{f.proba?.toFixed(2)}</td>
+                    <td className="muted" style={{ fontSize: 12 }}>{f.label === 1 ? "anomaly" : "normal"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* ---- MELT ---- */}
@@ -177,6 +225,45 @@ export default function Streaming() {
           )}
         </div>
       </div>
+
+      {/* ---- Fig 4.4b: single-window LLM inference — raw MELT window → strict JSON ---- */}
+      {snap?.llm?.json && (
+        <>
+          <h3>🔬 Single-window LLM inference — one raw MELT window → strict JSON verdict
+            <span className={"chip " + (llmMode === "llm" ? "chip-green" : "chip-amber")}
+              style={{ marginLeft: 8 }}>{snap.llm.model} ({llmMode})</span>
+          </h3>
+          <div className="pipes">
+            <div className="pipe">
+              <h3>📥 INPUT — raw MELT signals · <code>{snap.service}</code></h3>
+              <div style={{ maxHeight: 260, overflowY: "auto" }}>
+                <table className="table" style={{ margin: 0 }}>
+                  <tbody>
+                    {Object.entries(snap.llm.signals ?? {}).map(([k, v]) => (
+                      <tr key={k}>
+                        <td className="muted" style={{ fontSize: 12 }}>{k}</td>
+                        <td style={{ textAlign: "right" }}>{fmt(v)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="pipe">
+              <h3>📤 OUTPUT — strict JSON verdict</h3>
+              <pre className={"verdict-json " + (snap.llm.pred === 1 ? "anom" : "ok")}>
+{JSON.stringify(JSON.parse(snap.llm.json), null, 2)}
+              </pre>
+              <div className="muted" style={{ fontSize: 12 }}>
+                {llmMode === "llm"
+                  ? <>Ollama <code>/api/chat</code> · <code>format=json</code> · temp=0</>
+                  : <>heuristic fallback (no LLM reachable)</>}
+                {" "}· ground truth: <b>{snap.label}</b>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="chart-box">
         <h3>Rolling F1 — both detectors over the stream</h3>

@@ -10,7 +10,7 @@ const links = [
   { to: "/", label: "Home", end: true },
   { to: "/online", label: "🟢 Online Mode" },
   { to: "/offline", label: "🔵 Offline Mode" },
-  { to: "/streaming", label: "🌊 Streaming" },
+  { to: "/streaming", label: "🌊 Live Kafka + LLM" },
   { to: "/pipelines", label: "🔀 Pipelines" },
   { to: "/comparison", label: "📊 Result Comparison" },
 ];

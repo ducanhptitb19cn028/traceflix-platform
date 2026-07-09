@@ -94,3 +94,43 @@ Open **http://localhost:8000**.
 
 The Online Mode runs in-process (no Kubernetes needed); the drift stream mirrors
 the live `Window` schema.
+
+## Streaming page — live Kafka broker + real Ollama LLM
+
+The 🌊 **Live Kafka + LLM** page (nav bar) drives the *in-process* bus and the
+*heuristic* LLM fallback by default, so it runs with no infrastructure. To make it
+**live** — verdicts produced to a real Kafka broker and scored by the real
+Qwen2.5-3B model — start the two containers and configure the backend via **`.env`**
+(no command-line env needed):
+
+```powershell
+# 1. containers (scale the k8s mesh down first if it's running — RAM)
+docker start tf-kafka tf-ollama          # or the `docker run` lines in dissertation/FIGURES.md §6
+docker exec tf-kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic tf.telemetry.windows --if-not-exists
+docker exec tf-kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic tf.anomalies --if-not-exists
+
+# 2. one-time deps + config
+cd aiops
+python -m pip install kafka-python python-dotenv
+copy .env.example .env                   # already points at localhost:9092 / :11434
+
+# 3. launch (the backend loads aiops/.env at startup)
+python -m uvicorn webui.backend.app:app --port 8000     # or ./scripts/run_webui.ps1
+```
+
+**`aiops/.env`** (created from `.env.example`) holds the live config:
+
+```dotenv
+TF_KAFKA_BOOTSTRAP=localhost:9092    # unset/empty -> in-memory bus
+OLLAMA_URL=http://localhost:11434    # unreachable -> heuristic fallback
+OLLAMA_MODEL=qwen2.5:3b
+```
+
+`webui/backend/app.py` calls `load_dotenv(aiops/.env)` **before** importing the
+modules that read these at import time. The page's header chips then read
+**⚡ Kafka: localhost:9092** and **LLM: qwen2.5:3b (llm)** instead of *in-memory* /
+*heuristic*, the topic counters count real messages on `tf.telemetry.windows` /
+`tf.anomalies`, and the **live verdict feed** shows each `online_sgd` + `llm` verdict
+as it lands on the broker. Everything falls back to the in-process bus / heuristic
+automatically if the broker or Ollama is unreachable, so nothing breaks when the
+containers are down. `.env` is git-ignored; `.env.example` is the tracked template.
