@@ -1,5 +1,23 @@
 # Online vs Offline Model Pipeline: Consolidated Results (RQ1, RQ2, RQ3)
 
+> ### ⚠️ Status: partially superseded — read the README first
+>
+> This document predates the validity audit and **some of its numbers are from an older
+> run**. The authoritative results are Chapter 5 of the dissertation and the
+> [root README](../../README.md). Three corrections apply throughout:
+>
+> 1. **RQ2 is WITHDRAWN** (§3 below) — the localisation result is circular. The ranking
+>    feature is derived from the ground-truth label.
+> 2. **The RQ1 trace increment is discounted** — the generator both sharpens the trace
+>    signal and exempts it from drift (`_DRIFT_FIELDS` in [`../ml/drift.py`](../ml/drift.py)),
+>    so its magnitude is partly constructed rather than measured.
+> 3. **The paradigm comparison is confounded with model family** — `offline_static` and
+>    `offline_periodic` are Random Forests, `online_adaptive` is linear. The clean
+>    contrast is **static vs periodic** (same family): **0.36 → 0.92**.
+>
+> Also note: all results here are produced by the **synthetic generator**, not collected
+> from the live cluster. See [How the data is generated](../../README.md#how-the-data-is-generated-read-this-first).
+
 This document collects **all** experimental results for the anomaly-detection
 study: detection completeness across telemetry configurations (**RQ1**),
 root-cause localisation (**RQ2**), and the head-to-head comparison between the
@@ -68,22 +86,29 @@ behaves once the stream drifts.
 
 ---
 
-## 3. RQ2 — Root-cause localisation (top-k accuracy)
+## 3. RQ2 — Root-cause localisation (top-k accuracy) — ⚠️ WITHDRAWN
 
-Once an anomaly is detected, can the pipeline name the culprit service? Top-k
-localisation accuracy over the injected fault episodes (`rq2_localisation.csv`). Higher is
-better.
+> **This result is withdrawn and must not be cited.** The C3 figure is **circular**: the
+> feature the localiser ranks on (`traces.error_spans`) is assigned in the generator by
+> the rule `(fault != "normal" and is_origin)`, and `is_origin` **is** the ground-truth
+> label the localiser is being asked to recover. The feature is the answer key, so a
+> perfect score is arithmetic rather than evidence. It measures the generator, not the
+> method. See [`DemoRQ2.md`](../../DemoRQ2.md) for the full analysis and the corrected
+> experiment, and §5.2 of the dissertation for the withdrawal.
 
-| Approach | top-1 accuracy | top-2 accuracy |
-|--|--|--|
-| metrics + logs (C2) | 0.9068 | 1.0000 |
-| metrics + logs + traces (C3) | **1.0000** | **1.0000** |
+Current numbers on the nine-service mesh (`rq2_localisation.csv`, *n* = 39 episodes):
 
-**Reading:** with metrics + logs alone the correct service is ranked #1 in ~91%
-of cases and is always within the top 2. **Adding traces makes localisation
-perfect** — top-1 accuracy reaches 100%, because span-level dependency
-information pinpoints the originating service directly rather than inferring it
-from correlated symptoms. This mirrors RQ1: traces are the decisive signal.
+| Approach | top-1 | top-2 | top-3 |
+|--|--|--|--|
+| metrics + logs (C2) | 0.7692 | 0.8974 | 0.9487 |
+| metrics + logs + traces (C3) | ~~1.0000~~ | ~~1.0000~~ | ~~1.0000~~ |
+
+**What survives:** only the C2 row, and only as a statement about the *topology*. Top-1
+is 0.769 and top-*k* does **not** saturate even at *k* = 3, because a fault at a leaf
+inflates latency in every ancestor on its path, so four or five services look almost
+equally guilty. That a depth-four call graph makes latency-based attribution genuinely
+ambiguous is real. **How much of that ambiguity real distributed traces would resolve is
+not measured here, and is not claimed.**
 
 ---
 
@@ -220,12 +245,16 @@ both raises accuracy and stabilises the adaptation process.
 
 ## 8. Conclusion
 
-**RQ1 (completeness)** and **RQ2 (localisation)** establish that telemetry
-richness drives both detection and root-cause quality: F1 climbs monotonically
-from 0.906 (Metrics-Only) to 0.994 (Full MELT), and **traces are the decisive
-signal** — they push detection F1 from 0.933 to 0.988 and root-cause top-1
-accuracy from 0.91 to a perfect 1.0. But RQ1 measures a *stationary* ceiling;
-RQ3 shows what happens once the stream drifts.
+**RQ1 (completeness)** establishes that detection F1 climbs monotonically with
+telemetry richness, with the largest single increment at traces. That trace
+increment is **discounted** — the generator both sharpens the trace signal and
+exempts it from drift, so its magnitude is partly a modelling choice rather than a
+measurement. **RQ2 (localisation) is withdrawn**: its ranking feature is derived
+from the ground-truth label, so it measures the generator and not the method, and it
+provides no support for any claim about tracing (§3).
+
+What RQ1 measures is in any case a *stationary* ceiling. RQ3 shows what happens once
+the stream drifts — and that is where the study's actual finding lives.
 
 Across **every** configuration and the **large majority of regimes**, the **online
 adaptive pipeline dominates the offline pipelines** on detection quality, and it

@@ -186,10 +186,18 @@ held-out F1:   C1 0.896   C2 0.915   C3 0.985   C4 0.986
 top-1 RCA:   metrics+logs 0.77   →   +traces 1.00     (top-2 0.90→1.0, top-3 0.95→1.0)
 ```
 
-> 🗣 Say: "On the nine-service mesh, multi-hop latency implicates four or five
-> ancestors, so top-*k* does **not** saturate without traces. Only the originating
-> service accumulates originating error spans — so adding traces lifts **top-1 from
-> 0.77 to a perfect 1.0**. A flat three-service chain could never show this."
+> ⚠️ **This result is WITHDRAWN — do not present it as a finding.** The C3 figure is
+> circular: `error_spans` is assigned in the generator from `is_origin`, which *is* the
+> ground-truth label the localiser must recover. The perfect 1.0 is arithmetic. See
+> [`DemoRQ2.md`](DemoRQ2.md).
+>
+> 🗣 Say instead: "On the nine-service mesh, multi-hop latency implicates four or five
+> ancestors, so top-*k* does **not** saturate without traces — top-1 is only 0.77 and even
+> top-3 reaches just 0.95. That much is real, and it's a property of the depth-four
+> topology. But the trace result next to it is **circular** — my generator emits error
+> spans only at the fault origin, and the origin is the label. So I withdraw it and make
+> **no claim** about what tracing contributes to localisation. Fixing that — propagating
+> error spans along the call path — is my first future-work item."
 
 ### RQ3 — the headline: static detection collapses under drift
 

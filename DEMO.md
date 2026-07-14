@@ -93,15 +93,20 @@ RQ4  GB 0.988 / RF 0.986 / XGB 0.984 F1; fusion 0.891 (hi-precision); LSTM 0.259
 
 - **RQ1 (completeness)** — detection F1 climbs as pillars are added
   (metrics→+logs→+traces→+events). Distributed **traces give the biggest jump**;
-  events/history (C3→C4) add almost nothing to detection.
-- **RQ2 (localisation)** — on the deep mesh a downstream fault raises latency in
-  *every* ancestor, so top-*k* does **not** saturate without traces. Only the
-  originating service accumulates originating error spans, so adding traces lifts
-  **top-1 from 0.77 to a perfect 1.00**. This is the discriminating result the old
-  three-service chain could not show.
-- **RQ4 (model family)** — ensemble trees lead and are statistically tied (GB
-  0.988, RF 0.986, XGB 0.984); the LSTM and late-fusion underperform on this
-  windowed representation.
+  events/history (C3→C4) add almost nothing to detection. ⚠️ The **trace magnitude is
+  discounted**: the generator both sharpens the trace signal and exempts it from drift,
+  so its size is partly constructed. Direction credible, magnitude not claimed.
+- **RQ2 (localisation)** — ⚠️ **WITHDRAWN.** The reported lift (top-1 0.77 → 1.00) is
+  **circular**: the ranking feature `error_spans` is assigned in the generator from
+  `is_origin`, which *is* the ground-truth label. A perfect score is arithmetic, not
+  evidence. See [`DemoRQ2.md`](DemoRQ2.md). What survives is the C2 row — top-1 of 0.77,
+  not saturating even at top-3 — which shows the depth-four topology makes latency-based
+  attribution genuinely ambiguous.
+- **RQ4 (model family)** — ensemble trees lead (GB 0.988, RF 0.986, XGB 0.984); their
+  mutual differences are smaller than the seed spread, so no ordering is claimed. The
+  **LSTM (0.259) is mis-specified, not a negative result** — it scores below the
+  always-alarm floor because the interleaved per-service stream carries almost no
+  temporal structure.
 
 Every model in A1 is **trained once on a static split.** That assumption is what
 A2 breaks.
