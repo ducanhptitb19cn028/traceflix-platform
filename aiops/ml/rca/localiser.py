@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 
 from collectors.telemetry import Window
+from ..configs import DEPENDENCIES
 
 
 def _anomaly_score(df_service: pd.DataFrame, use_traces: bool) -> float:
@@ -38,25 +39,49 @@ def _anomaly_score(df_service: pd.DataFrame, use_traces: bool) -> float:
 
 
 def rank_root_causes(
-    features: pd.DataFrame, use_traces: bool
+    features: pd.DataFrame, use_traces: bool, graph_aware: bool = False
 ) -> list[tuple[str, float]]:
-    """Rank services by anomaly score for a single fault window batch."""
-    ranking = []
-    for service, grp in features.groupby("label_service"):
-        ranking.append((service, _anomaly_score(grp, use_traces)))
+    """Rank services by anomaly score for a single fault window batch.
+
+    ``graph_aware`` selects the *root-of-the-error-tree* rule: a service is
+    scored by how much more anomalous it is than its most anomalous dependency,
+
+        score(s) = anomaly(s) - max{ anomaly(c) : c in callees(s) },
+
+    which peaks at the service where the anomaly *starts* rather than at every
+    service that merely inherits it. The subtraction is what a flat ranking
+    cannot do on a depth-four graph, where an ancestor looks as sick as its
+    failing dependency.
+
+    Note the control: the functional form is identical whether or not traces are
+    available, and ``use_traces`` changes only which features reach
+    ``_anomaly_score``. The C2-vs-C3 contrast therefore isolates the *signal*,
+    not the ranking algorithm -- the confound this study criticises elsewhere.
+    """
+    anomaly = {svc: _anomaly_score(grp, use_traces)
+               for svc, grp in features.groupby("label_service")}
+    if not graph_aware:
+        ranking = list(anomaly.items())
+    else:
+        ranking = [
+            (svc, a - max((anomaly.get(c, 0.0) for c in DEPENDENCIES.get(svc, [])),
+                          default=0.0))
+            for svc, a in anomaly.items()
+        ]
     ranking.sort(key=lambda kv: kv[1], reverse=True)
     return ranking
 
 
 def topk_accuracy(
-    episodes: list[tuple[pd.DataFrame, str]], k: int, use_traces: bool
+    episodes: list[tuple[pd.DataFrame, str]], k: int, use_traces: bool,
+    graph_aware: bool = False
 ) -> float:
     """episodes: list of (feature_frame_for_episode, true_root_cause_service)."""
     if not episodes:
         return 0.0
     hits = 0
     for feats, truth in episodes:
-        ranking = rank_root_causes(feats, use_traces)
+        ranking = rank_root_causes(feats, use_traces, graph_aware)
         topk = {svc for svc, _ in ranking[:k]}
         hits += int(truth in topk)
     return hits / len(episodes)

@@ -184,11 +184,22 @@ _FAULT_SHIFT = {
     "latency_spike": {"p50_latency": 2.0, "p99_latency": 2.3, "threads": 1.5},
     "pod_kill": {"err_rate": 2.4, "req_rate": 0.5, "restart": 1.0},
     "network_partition": {"err_rate": 2.2, "req_rate": 0.5, "request_logs": 0.5},
+    # A caller whose dependency is failing: it returns errors of its own while it
+    # waits on and retries the failing callee. Used only by the *propagating*
+    # generator (ml.dataset.generate_rca_run); never drawn as an injected fault,
+    # so it is absent from FAULT_TYPES and cannot appear in the detection runs.
+    "downstream_errors": {"err_rate": 1.8, "p50_latency": 1.9, "p99_latency": 2.2,
+                          "threads": 1.5},
+    # An unrelated background incident: a service erroring on its own account,
+    # off the injected fault's call path. Real meshes are never quiet, and this
+    # is the confounder that a "root of the error tree" rule must survive --
+    # it presents a second, spurious root. Localisation experiment only.
+    "background_errors": {"err_rate": 1.6, "p99_latency": 1.3},
 }
 
 
 def _synth(service: str, fault: str, ts: float, rng: random.Random,
-           is_origin: bool = True) -> Window:
+           is_origin: bool = True, err_span_level: float | None = None) -> Window:
     sh = _FAULT_SHIFT.get(fault, {})
     g = lambda base, key, noise=0.35: max(
         0.0, base * sh.get(key, 1.0) * (1 + rng.gauss(0, noise))
@@ -214,10 +225,27 @@ def _synth(service: str, fault: str, ts: float, rng: random.Random,
         "trace_count": g(20, "req_rate"),
         "mean_span_ms": g(30, "p50_latency") * 1000,
         "p99_span_ms": g(150, "p99_latency") * 1000,
-        "error_spans": (g(5.0, "err_rate", 0.3)
-                        if (fault != "normal" and is_origin)
-                        else g(0.2, "err_rate", 0.4)),
     }
+    # NB: error_spans MUST be drawn after the three fields above. `g` consumes
+    # the rng, so reordering these draws silently changes every trace-bearing
+    # window and moves the C3/C4 detection results.
+    if err_span_level is None:
+        # BASE generator (detection: RQ1/RQ3/RQ4). Error spans are
+        # origin-conditional, which makes the origin the *unique* emitter.
+        # This is why the base generator cannot support a localisation
+        # experiment: the feature is then a rescaling of the ground-truth
+        # origin flag. See generate_rca_run for the propagating variant.
+        traces["error_spans"] = (g(5.0, "err_rate", 0.3)
+                                 if (fault != "normal" and is_origin)
+                                 else g(0.2, "err_rate", 0.4))
+    else:
+        # PROPAGATING generator (localisation: RQ2). Error spans are produced by
+        # the fault travelling up the call path and attenuating as it goes; the
+        # level is supplied by the caller from *hop distance*, and `is_origin` is
+        # not consulted at all. Every service on the error path therefore emits
+        # spans, and the origin is distinguished only by sitting at the root of
+        # the error tree -- which a localiser must recover from the call graph.
+        traces["error_spans"] = g(0.2 + 4.8 * err_span_level, "err_rate", 0.45)
     events = {
         "oomkilled": 1.0 if (fault == "memory_leak" and rng.random() < 0.3) else 0.0,
         "crashloop": 1.0 if fault == "pod_kill" else 0.0,
@@ -228,7 +256,8 @@ def _synth(service: str, fault: str, ts: float, rng: random.Random,
 
 
 def collect_window(service: str, fault: str, ts: float, rng: random.Random,
-                   is_origin: bool = True) -> Window:
+                   is_origin: bool = True,
+                   err_span_level: float | None = None) -> Window:
     if LIVE:
         return Window(
             ts, service, fault,
@@ -237,4 +266,4 @@ def collect_window(service: str, fault: str, ts: float, rng: random.Random,
             traces=collect_traces_live(service),
             events=collect_events_live(service),
         )
-    return _synth(service, fault, ts, rng, is_origin)
+    return _synth(service, fault, ts, rng, is_origin, err_span_level)
