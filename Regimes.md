@@ -50,13 +50,20 @@ multiplier dictionary to the R0-native field values — they are not chained.
 - **logs:** `log_volume`, `warn_logs`, `request_logs`
 - **traces:** `trace_count`, `mean_span_ms`, `p99_span_ms`
 
-**Left on their native scale on purpose:** error-rate signals and the
-`originating-error-span` (the trace RCA feature). An error is an error regardless of
-how much traffic flows. This asymmetry is the mechanism behind a key result: because
-the *failure* signals don't drift while the *volume/latency* signals do,
-**trace-based localisation is comparatively drift-robust while metric-threshold
-detection is not** — which is why traces matter even more under drift (RQ1/RQ2) and
-why the online normaliser can absorb the drift it does see (RQ3).
+**Left on their native scale on purpose:** error-rate signals and the error-span
+count (the trace RCA feature). An error is an error regardless of how much traffic
+flows. This asymmetry is the mechanism behind a key result: because the *failure*
+signals don't drift while the *volume/latency* signals do, **trace-derived signals
+are comparatively drift-robust while metric-threshold detection is not** — which is
+why traces matter even more under drift (RQ1) and why the online normaliser can
+absorb the drift it does see (RQ3).
+
+> ⚠️ **This exemption is an input, not a finding.** It is largely *why* traces look
+> drift-robust, and the RQ1 trace magnitude is discounted accordingly. Whether real
+> error signals hold their scale across regimes is exactly what a live campaign
+> (`TF_LIVE=1`) would settle. Note also that the RQ2 localisation experiment runs on
+> a *separate* generator (`generate_rca_run`, errors propagating up the call path) —
+> see [`DemoRQ2.md`](DemoRQ2.md).
 
 ---
 

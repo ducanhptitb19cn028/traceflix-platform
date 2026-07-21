@@ -74,7 +74,7 @@ Sanity check (invariants binding the pipeline to the nine-service topology):
 pytest tests/ -q                         # 8 passed  (pip install pytest if needed)
 ```
 
-## A1. RQ1 + RQ2 — completeness and localisation (the stationary baseline)
+## A1. RQ1 + RQ4 — completeness and model family (the stationary baseline)
 
 ```bash
 ./scripts/run_offline.sh 200
@@ -85,7 +85,7 @@ What you'll see (synthetic, seed 42, nine-service mesh):
 
 ```
 RQ1  held-out F1:   C1 0.896   C2 0.915   C3 0.985   C4 0.986   (traces drive the jump)
-RQ2  top-1 RCA:     metrics+logs 0.77  ->  +traces 1.00   (top-2 0.90→1.0, top-3 0.95→1.0)
+RQ2  top-1 RCA:     metrics+logs 0.77  ->  +traces 1.00   (first attempt — see A1b)
 RQ4  GB 0.988 / RF 0.986 / XGB 0.984 F1; fusion 0.891 (hi-precision); LSTM 0.259 (weak)
 ```
 
@@ -96,17 +96,57 @@ RQ4  GB 0.988 / RF 0.986 / XGB 0.984 F1; fusion 0.891 (hi-precision); LSTM 0.259
   events/history (C3→C4) add almost nothing to detection. ⚠️ The **trace magnitude is
   discounted**: the generator both sharpens the trace signal and exempts it from drift,
   so its size is partly constructed. Direction credible, magnitude not claimed.
-- **RQ2 (localisation)** — ⚠️ **WITHDRAWN.** The reported lift (top-1 0.77 → 1.00) is
-  **circular**: the ranking feature `error_spans` is assigned in the generator from
-  `is_origin`, which *is* the ground-truth label. A perfect score is arithmetic, not
-  evidence. See [`DemoRQ2.md`](DemoRQ2.md). What survives is the C2 row — top-1 of 0.77,
-  not saturating even at top-3 — which shows the depth-four topology makes latency-based
-  attribution genuinely ambiguous.
+- **RQ2 line printed above — the circular first attempt.** This script still runs the
+  *original* localisation experiment, whose perfect 1.000 came from a ranking feature
+  the generator derived from the label. It is kept so the defect stays inspectable.
+  **The RQ2 answer comes from A1b**, on the rebuilt generator.
 - **RQ4 (model family)** — ensemble trees lead (GB 0.988, RF 0.986, XGB 0.984); their
   mutual differences are smaller than the seed spread, so no ordering is claimed. The
   **LSTM (0.259) is mis-specified, not a negative result** — it scores below the
   always-alarm floor because the interleaved per-service stream carries almost no
   temporal structure.
+
+## A1b. RQ2 — what traces contribute to localisation
+
+Detection says *something is wrong*; localisation says *which service*. The first
+attempt at this experiment was circular, so the generator was rebuilt: errors now
+**propagate up the call path** and attenuate per hop, every service on the path emits
+error spans, and the origin is identifiable only as the **root of the error tree** —
+which must be inferred from the topology. A `--backgrounds` knob (β) adds unrelated
+off-path incidents, so the mesh is not unrealistically silent.
+
+```bash
+python -m ml.experiments.rq2_localisation --seeds 42,43,44,45,46 --episodes 200
+```
+
+Top-1 accuracy vs the background-incident rate (mean of 5 seeds; random floor 0.111):
+
+```
+approach                                bg=0.0   bg=0.1   bg=0.25  bg=0.5
+Metrics+Logs (C2)                        0.387    0.359    0.337    0.340
+Metrics+Logs+Traces (C3)                 0.626    0.563    0.496    0.456
+Metrics+Logs (C2), graph-aware           0.446    0.391    0.274    0.207
+Metrics+Logs+Traces (C3), graph-aware    1.000    0.736    0.486    0.335
+```
+
+**Talking points**
+
+- **Traces contribute, and the contribution is robust — this is the answer to RQ2.**
+  +0.20 top-1 at bg = 0.1 (0.359 → 0.563), positive at every background level, against
+  seed spreads of 0.02–0.05. No metrics+logs arm passes 0.45. Direction earned;
+  magnitude bounded, since it moves with the generator's parameters.
+- **Nothing saturates.** Best realistic arm: top-1 0.736, top-3 0.948. Without traces
+  top-1 sits near 0.36 — about three times the guess floor on nine services. The
+  depth-four fan-in ambiguity is real.
+- **The 1.000 at bg = 0.0 is a boundary condition, not a result** — a mesh with a
+  single error path has a unique root by construction. One unrelated incident in ten
+  drops it to 0.736. Report bg ≥ 0.1.
+- **Structural reasoning is not free.** The graph-aware rule adds +0.11 at bg = 0.1
+  but *inverts* against flat ranking by bg = 0.5 (0.335 vs 0.456) — it rewards any
+  erroring service with clean dependencies, and a background incident is exactly
+  that. Whether the call graph helps or hurts depends on how noisy the mesh is.
+
+Full analysis, including the circular first attempt: [`DemoRQ2.md`](DemoRQ2.md).
 
 Every model in A1 is **trained once on a static split.** That assumption is what
 A2 breaks.
@@ -161,19 +201,20 @@ From `cost_compare.py` (C4, 25,920 future windows):
 ```
                                     offline_periodic     online_adaptive
 F1                                       0.926               0.976
-worst-case latency / window           ~508 ms (refit stall)  ~34 ms
-model size                              ~2.3 MB             ~16 KB
+train events over the stream          51 full refits      25,920 updates
+worst-case latency / window           ~937 ms (refit stall)  ~53 ms
+model size                              ~2.29 MB            ~15.7 KB
 labelled windows retained to train       2880                 0
-total CPU over the stream                1.0x (baseline)     ~4.6x
+total CPU over the stream                1.0x (baseline)     ~6.5x
 ```
 
 **State the trade-off honestly**
 
-- Online is **not cheaper in total CPU** — a little work every window, ~4.6× the
+- Online is **not cheaper in total CPU** — a little work every window, ~6.5× the
   aggregate of the periodic refits. That cost is real.
-- But it wins where it operationally counts: **~15× lower worst-case latency** (a
-  refit *blocks* the detector for ~half a second — exactly when a regime shifts and
-  detection matters most), a **~150× smaller model**, and **zero retained training
+- But it wins where it operationally counts: **~18× lower worst-case latency** (a
+  refit *blocks* the detector for nearly a second — exactly when a regime shifts and
+  detection matters most), a **~146× smaller model**, and **zero retained training
   data** (periodic must keep a 2880-window labelled buffer) — *and* higher accuracy
   once telemetry is rich.
 - Net: online converts a **bursty, stateful, blocking retrain pipeline** into a
@@ -359,7 +400,9 @@ offline generator mirrors, so the entire analysis runs unchanged on live data.
 | File | What it shows |
 |------|---------------|
 | `aiops/data/results/rq1_completeness.csv` | RQ1 detection vs C1–C4 (held-out reference) |
-| `aiops/data/results/rq2_localisation.csv` | RQ2 top-*k* RCA, traces excluded vs included |
+| `aiops/data/results/rq2_localisation_propagating.csv` | RQ2 top-*k* RCA on the propagating generator — 4 arms × 4 background rates × 5 seeds |
+| `aiops/data/results/rq2_propagating_summary.json` | RQ2 mean ± sd per arm + generator settings |
+| `aiops/data/results/rq2_localisation.csv` | RQ2 first attempt — circular, superseded; retained for inspection |
 | `aiops/data/results/rq4_model_family.csv` | RQ4 model-family comparison on C4 |
 | `aiops/data/results/rq3_online_vs_offline.csv` | RQ3 per-regime detection, all four learners |
 | `aiops/data/results/rq3_timeline.csv` | RQ3 rolling F1 over the drifting stream |
@@ -373,7 +416,7 @@ The repo-root **`Makefile`** automates the whole pipeline (run `make help` for a
 
 ```bash
 make setup           # install Python deps
-make experiments     # RQ1/RQ2/RQ4 + RQ3 + cost + figures  -> aiops/data/results/
+make experiments     # RQ1/RQ4 + RQ3 + cost + figures  -> aiops/data/results/
 make test            # aiops invariants (8) + service tests (35)
 # faster smoke run:  make quick      (EPISODES=60 DRIFT_EPISODES=120)
 # streaming / paper: make streaming  |  make paper
@@ -383,8 +426,9 @@ Equivalent without make:
 
 ```bash
 cd aiops && pip install -r requirements.txt
-bash ./scripts/run_offline.sh 200            # RQ1 + RQ2 + RQ4
+bash ./scripts/run_offline.sh 200            # RQ1 + RQ4 (+ RQ2's first attempt)
 bash ./scripts/run_online_offline.sh 320     # RQ3 detection + cost + figures
+python -m ml.experiments.rq2_localisation --seeds 42,43,44,45,46   # RQ2
 pytest tests/ -q                             # 8 passed
 ```
 

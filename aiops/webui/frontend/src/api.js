@@ -21,3 +21,11 @@ export const figureUrl = (name) => `/api/results/figures/${name}`;
 export const streamingStreamUrl = (p) =>
   `/api/streaming/stream?episodes=${p.episodes}` +
   `&max_windows=${p.maxWindows}&delay_ms=${p.delayMs}`;
+
+// The live pages attach to an always-on engine — no run parameters, no trigger.
+export const liveStreamUrl = (kind) => `/api/live/${kind}/stream`;
+
+export const liveControl = (kind, opts) => {
+  const q = Object.entries(opts).map(([k, v]) => `${k}=${v}`).join("&");
+  return getJSON(`/api/live/${kind}/control?${q}`);
+};

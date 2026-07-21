@@ -1,0 +1,109 @@
+# Ollama serving Qwen2.5-3B for the AIOps LLM detector, on LOCAL Kubernetes.
+#
+# Adapted from rancher/templates/llm.yaml for Docker Desktop / kind / minikube:
+#   * no nvidia.com/gpu limit  -> the Helm chart requests one, and a local cluster
+#     has no such resource, so that pod would sit Pending forever
+#   * no storageClassName      -> uses the cluster default (Docker Desktop ships
+#     "hostpath"); the chart expects Longhorn or an explicit class
+#   * memory sized for q4 CPU inference rather than a GPU node
+#
+# Apply into the same namespace as aiops so the Service name resolves as
+# http://ollama:11434 (which is what k8s/aiops.yaml now points OLLAMA_URL at):
+#
+#     kubectl apply -f aiops/k8s/ollama.yaml
+#     kubectl -n on-demand-observability get pods -l app=ollama -w
+#     kubectl -n on-demand-observability logs job/ollama-pull -f    # ~2 GB download
+#
+# Expect CPU inference to take seconds per window: this is a 3B model with no GPU.
+# Turn the Live LLM page's target rate down to 0.5/s and read the "actual /s" chip.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-models
+  namespace: on-demand-observability
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi        # qwen2.5:3b is ~2 GB; room for a second model/LoRA export
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: on-demand-observability
+  labels: {app: ollama}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}     # single RWO volume: never two pods at once
+  selector: {matchLabels: {app: ollama}}
+  template:
+    metadata: {labels: {app: ollama}}
+    spec:
+      containers:
+        - name: ollama
+          image: ollama/ollama:latest
+          ports:
+            - {name: http, containerPort: 11434}
+          env:
+            # Keep the model resident between calls. Without this Ollama unloads it
+            # after ~5 min idle and the next window pays a multi-second reload --
+            # which would show up as a latency spike in the page's own chart.
+            - {name: OLLAMA_KEEP_ALIVE, value: "30m"}
+            - {name: OLLAMA_HOST, value: "0.0.0.0:11434"}
+          volumeMounts:
+            - {name: models, mountPath: /root/.ollama}
+          resources:
+            # No CPU limit on purpose: CPU inference is the bottleneck, and a limit
+            # here becomes throttling that the dashboard would report as model
+            # latency. Memory covers the q4 weights (~2 GB) plus KV cache.
+            requests: {cpu: "1", memory: 3Gi}
+            limits:   {memory: 6Gi}
+          readinessProbe:
+            httpGet: {path: /, port: 11434}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /, port: 11434}
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: models
+          persistentVolumeClaim: {claimName: ollama-models}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: on-demand-observability
+  labels: {app: ollama}
+spec:
+  selector: {app: ollama}
+  ports:
+    - {name: http, port: 11434, targetPort: 11434}
+---
+# One-shot model pull. The Helm chart does this as a post-install hook; with plain
+# kubectl there are no hooks, so the Job simply retries until the Service answers.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ollama-pull
+  namespace: on-demand-observability
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: pull
+          image: ollama/ollama:latest
+          env:
+            - {name: OLLAMA_HOST, value: "http://ollama:11434"}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              for i in $(seq 1 60); do
+                if ollama pull qwen2.5:3b; then exit 0; fi
+                echo "ollama not ready yet ($i) - retrying in 5s"; sleep 5
+              done
+              echo "giving up waiting for ollama"; exit 1

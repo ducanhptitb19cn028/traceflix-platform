@@ -165,7 +165,7 @@ The original Online/Offline/Comparison pages are the offline experiment views.
 **▶ Run** the whole offline pipeline:
 
 ```bash
-make experiments      # RQ1/RQ2/RQ4  +  RQ3 (drift)  +  cost  +  figures
+make experiments      # RQ1/RQ4  +  RQ3 (drift)  +  cost  +  figures
 ```
 
 (equivalently `run_offline.sh 200` + `run_online_offline.sh 320`.) Results land in
@@ -180,24 +180,49 @@ held-out F1:   C1 0.896   C2 0.915   C3 0.985   C4 0.986
 > 🗣 Say: "Detection improves with every pillar, and **traces give the biggest
 > jump** (C2→C3). Events/history add almost nothing to *detection* — C3 ≈ C4."
 
-### RQ2 — traces make localisation possible on a deep mesh
+### RQ2 — traces help localisation on a deep mesh, but nothing is perfect
+
+`make experiments` still prints RQ2's **first attempt** (`top-1 0.77 → 1.00`). That
+one was circular — do not present it. The reported result comes from the rebuilt
+experiment:
+
+```bash
+python -m ml.experiments.rq2_localisation --seeds 42,43,44,45,46
+```
 
 ```
-top-1 RCA:   metrics+logs 0.77   →   +traces 1.00     (top-2 0.90→1.0, top-3 0.95→1.0)
+top-1 RCA (5 seeds; random floor 0.111)   bg=0.0   bg=0.1   bg=0.25  bg=0.5
+Metrics+Logs (C2)                          0.387    0.359    0.337    0.340
+Metrics+Logs+Traces (C3)                   0.626    0.563    0.496    0.456
+Metrics+Logs (C2), graph-aware             0.446    0.391    0.274    0.207
+Metrics+Logs+Traces (C3), graph-aware      1.000    0.736    0.486    0.335
 ```
 
-> ⚠️ **This result is WITHDRAWN — do not present it as a finding.** The C3 figure is
-> circular: `error_spans` is assigned in the generator from `is_origin`, which *is* the
-> ground-truth label the localiser must recover. The perfect 1.0 is arithmetic. See
-> [`DemoRQ2.md`](DemoRQ2.md).
+> 🗣 Say: "My first attempt gave a perfect 1.0 with traces, and a perfect score is a
+> defect report, not a triumph. It was **circular** — the generator emitted error spans
+> only at the fault origin, and the origin is the label I was trying to predict. So I
+> rebuilt the generator: errors now **propagate up the call path**, attenuating per hop,
+> so every service on the path emits spans and the origin is only identifiable as the
+> *root of the error tree* — which has to be inferred from the topology. I also added a
+> knob for unrelated background incidents, because a real mesh is never quiet.
 >
-> 🗣 Say instead: "On the nine-service mesh, multi-hop latency implicates four or five
-> ancestors, so top-*k* does **not** saturate without traces — top-1 is only 0.77 and even
-> top-3 reaches just 0.95. That much is real, and it's a property of the depth-four
-> topology. But the trace result next to it is **circular** — my generator emits error
-> spans only at the fault origin, and the origin is the label. So I withdraw it and make
-> **no claim** about what tracing contributes to localisation. Fixing that — propagating
-> error spans along the call path — is my first future-work item."
+> Re-run, **traces are worth +0.20 top-1** — 0.36 to 0.56 — and the lift holds at every
+> noise level, with no metrics-and-logs arm passing 0.45. **That is my answer to RQ2**,
+> and it agrees in direction with the multimodal RCA literature — but I reached it by a
+> controlled ablation rather than by swapping models. Nothing saturates: the best arm
+> reaches 0.74 top-1.
+>
+> Two things I did not expect. The 1.000 at zero background noise survives even though
+> the label no longer leaks — so it was never about tracing, it was a mesh with a single
+> error path. And the graph-aware rule *inverts* once the mesh is noisy: 0.335 against
+> the flat ranker's 0.456 at β = 0.5, because it rewards any erroring service with clean
+> dependencies, and a background incident is exactly that. Whether the call graph helps
+> or hurts depends on how noisy your mesh is.
+>
+> So: answered in direction, bounded in magnitude. The magnitudes belong to my
+> parameterisation, and a live campaign is what would turn the direction into a number."
+
+Full account, including the circular first attempt: [`DemoRQ2.md`](DemoRQ2.md).
 
 ### RQ3 — the headline: static detection collapses under drift
 
@@ -443,7 +468,8 @@ Knobs: `EPISODES` (200), `DRIFT_EPISODES` (320), `SEED` (42), `CONFIGS`,
 | File | Shows |
 |------|-------|
 | `aiops/data/results/rq1_completeness.csv` | RQ1 detection vs C1–C4 |
-| `aiops/data/results/rq2_localisation.csv` | RQ2 top-*k* RCA, traces excluded vs included |
+| `aiops/data/results/rq2_localisation_propagating.csv` | RQ2 top-*k* RCA — 4 arms × 4 background rates × 5 seeds (reported) |
+| `aiops/data/results/rq2_localisation.csv` | RQ2 first attempt — circular, kept for inspection |
 | `aiops/data/results/rq4_model_family.csv` | RQ4 model-family comparison (C4) |
 | `aiops/data/results/rq3_online_vs_offline.csv` | RQ3 per-regime detection, four learners |
 | `aiops/data/results/rq3_timeline.csv` | RQ3 rolling F1 over the drifting stream |

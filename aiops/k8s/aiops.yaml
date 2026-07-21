@@ -76,6 +76,13 @@ spec:
             - {name: TEMPO_URL,    value: "http://tempo:3200"}
             - {name: TF_NAMESPACE, value: "on-demand-observability"}
             - {name: TF_LIVE,      value: "1"}
+            # LLM detector -> the in-cluster Ollama (k8s/ollama.yaml). Without this
+            # the detector defaults to localhost:11434, which inside this pod is
+            # this container, so it would always fall back to the heuristic.
+            # Deploy ollama.yaml first, or the Live LLM page shows the fallback
+            # until it is up (it re-probes every 15s and switches over on its own).
+            - {name: OLLAMA_URL,   value: "http://ollama:11434"}
+            - {name: OLLAMA_MODEL, value: "qwen2.5:3b"}
           resources:
             requests: {cpu: 100m, memory: 512Mi}
             limits:   {memory: 3Gi}

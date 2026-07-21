@@ -11,6 +11,10 @@ GET  /api/results/comparison          offline-vs-online result tables (JSON)
 GET  /api/results/figures/{name}      a generated PNG figure
 GET  /api/streaming/info              Kafka topics + MELT pillars + LLM detector status
 GET  /api/streaming/stream            SSE: live event backbone (topics, MELT, LLM verdicts)
+GET  /api/live/ml/info                ML detector catalogue (availability, families)
+GET  /api/live/ml/stream              SSE: live ML anomaly detection, all families side by side
+GET  /api/live/llm/info               LLM detector status (model, mode, endpoint)
+GET  /api/live/llm/stream             SSE: live LLM anomaly detection, window by window
 
 Run:
     cd aiops
@@ -46,6 +50,8 @@ except ImportError:
 
 from ml.configs import CONFIGS                       # noqa: E402
 from ml.online_sim import run_simulation             # noqa: E402
+from streaming.live_detect import (                  # noqa: E402
+    get_engine, llm_info, ml_info)
 from streaming.webui_stream import (                 # noqa: E402
     backbone_info, stream_backbone)
 
@@ -101,6 +107,17 @@ EXPERIMENTS = {
 
 def _sse(payload: dict) -> str:
     return f"data: {json.dumps(payload)}\n\n"
+
+
+@app.on_event("startup")
+def _start_live_engines():
+    """Bring the always-on detectors up with the server.
+
+    The ML engine fits its frozen models once before it can score anything; doing
+    that at start-up means the live pages are ready when someone opens them
+    instead of making them watch a progress chip for half a minute."""
+    get_engine("ml")
+    get_engine("llm")
 
 
 @app.get("/api/health")
@@ -172,6 +189,81 @@ async def streaming_stream(request: Request, episodes: int = 40,
                 await asyncio.sleep(delay_ms / 1000)
 
     return StreamingResponse(gen(), media_type="text/event-stream")
+
+
+def _engine_sse(request: Request, kind: str) -> StreamingResponse:
+    """Attach a viewer to an always-on detection engine.
+
+    The engine scores windows on its own thread whether or not anyone is watching;
+    this only forwards each newly published snapshot. Several viewers can attach to
+    the same engine and see the same counters, and a page reload rejoins the stream
+    already in progress rather than restarting it."""
+    eng = get_engine(kind)
+
+    async def gen():
+        snap = eng.snapshot()
+        yield _sse({"type": "start", "history": eng.history(), **snap})
+        last = snap["seq"]
+        while True:
+            if await request.is_disconnected():
+                break
+            snap = eng.snapshot()
+            if snap["seq"] != last:
+                last = snap["seq"]
+                yield _sse({"type": "snapshot", **snap})
+            else:
+                yield ": keepalive\n\n"          # engine paused / still training
+            await asyncio.sleep(0.05)
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
+
+
+@app.get("/api/live/ml/info")
+def live_ml_info():
+    """Which ML detectors this backend can actually run (torch/xgboost present?)."""
+    return ml_info()
+
+
+@app.get("/api/live/ml/stream")
+def live_ml_stream(request: Request):
+    return _engine_sse(request, "ml")
+
+
+@app.get("/api/live/llm/info")
+def live_llm_info():
+    """LLM detector status — real Ollama model or the marked heuristic fallback."""
+    return llm_info()
+
+
+@app.get("/api/live/llm/stream")
+def live_llm_stream(request: Request):
+    return _engine_sse(request, "llm")
+
+
+@app.get("/api/live/{kind}/control")
+def live_control(kind: str, rate: float | None = None, paused: bool | None = None,
+                 reset: bool = False, config: str | None = None):
+    """Adjust a running engine: stream rate (windows/sec), pause, clear stats, or
+    (ML only) switch observability configuration.
+
+    Engine state is shared, so these affect every attached viewer -- deliberately:
+    there is one live detector, not one per browser tab."""
+    if kind not in ("ml", "llm"):
+        raise HTTPException(404, f"unknown engine {kind}")
+    eng = get_engine(kind)
+    if rate is not None:
+        eng.set_rate(rate)
+    if paused is not None:
+        eng.set_paused(paused)
+    if config is not None:
+        if not hasattr(eng, "set_config"):
+            raise HTTPException(400, f"{kind} engine has no configuration to switch")
+        if config not in CONFIGS:
+            raise HTTPException(400, f"unknown config {config}")
+        eng.set_config(config)      # applied on the engine's next loop (refit)
+    if reset:
+        eng.reset()
+    return eng.snapshot()
 
 
 @app.get("/api/offline/run")

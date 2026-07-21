@@ -6,8 +6,10 @@
 > run**. The authoritative results are Chapter 5 of the dissertation and the
 > [root README](../../README.md). Three corrections apply throughout:
 >
-> 1. **RQ2 is WITHDRAWN** (§3 below) — the localisation result is circular. The ranking
->    feature is derived from the ground-truth label.
+> 1. **The RQ2 numbers below are the circular first attempt** (§3) — the ranking feature
+>    was derived from the ground-truth label. The generator was rebuilt and the
+>    experiment re-run; the reported RQ2 result lives in
+>    `rq2_localisation_propagating.csv` and [`DemoRQ2.md`](../../DemoRQ2.md).
 > 2. **The RQ1 trace increment is discounted** — the generator both sharpens the trace
 >    signal and exempts it from drift (`_DRIFT_FIELDS` in [`../ml/drift.py`](../ml/drift.py)),
 >    so its magnitude is partly constructed rather than measured.
@@ -86,29 +88,46 @@ behaves once the stream drifts.
 
 ---
 
-## 3. RQ2 — Root-cause localisation (top-k accuracy) — ⚠️ WITHDRAWN
+## 3. RQ2 — Root-cause localisation (top-k accuracy)
 
-> **This result is withdrawn and must not be cited.** The C3 figure is **circular**: the
-> feature the localiser ranks on (`traces.error_spans`) is assigned in the generator by
-> the rule `(fault != "normal" and is_origin)`, and `is_origin` **is** the ground-truth
-> label the localiser is being asked to recover. The feature is the answer key, so a
-> perfect score is arithmetic rather than evidence. It measures the generator, not the
-> method. See [`DemoRQ2.md`](../../DemoRQ2.md) for the full analysis and the corrected
-> experiment, and §5.2 of the dissertation for the withdrawal.
+> **The first table below is RQ2's circular first attempt and must not be cited.** The
+> C3 figure is **circular**: the feature the localiser ranks on (`traces.error_spans`)
+> is assigned in the base generator by the rule `(fault != "normal" and is_origin)`,
+> and `is_origin` **is** the ground-truth label the localiser is being asked to
+> recover. The feature is the answer key, so a perfect score is arithmetic rather than
+> evidence.
+>
+> **The reported RQ2 result** comes from `ml/experiments/rq2_localisation.py` on the
+> propagating generator (`ml/dataset.py::generate_rca_run`), output
+> `rq2_localisation_propagating.csv` — the second table. Cite that. Full account in
+> [`DemoRQ2.md`](../../DemoRQ2.md) and §5.2 of the dissertation.
 
-Current numbers on the nine-service mesh (`rq2_localisation.csv`, *n* = 39 episodes):
+The superseded numbers (`rq2_localisation.csv`, *n* = 39 episodes, single seed):
 
 | Approach | top-1 | top-2 | top-3 |
 |--|--|--|--|
-| metrics + logs (C2) | 0.7692 | 0.8974 | 0.9487 |
+| metrics + logs (C2) | ~~0.7692~~ | ~~0.8974~~ | ~~0.9487~~ |
 | metrics + logs + traces (C3) | ~~1.0000~~ | ~~1.0000~~ | ~~1.0000~~ |
 
-**What survives:** only the C2 row, and only as a statement about the *topology*. Top-1
-is 0.769 and top-*k* does **not** saturate even at *k* = 3, because a fault at a leaf
-inflates latency in every ancestor on its path, so four or five services look almost
-equally guilty. That a depth-four call graph makes latency-based attribution genuinely
-ambiguous is real. **How much of that ambiguity real distributed traces would resolve is
-not measured here, and is not claimed.**
+**The reported result** (`rq2_localisation_propagating.csv`; errors propagate up the
+call path attenuating 0.6/hop; 5 seeds × ~120 fault episodes; random-guess floor
+0.111). `bg` is the per-episode probability of an unrelated off-path incident:
+
+| Approach | bg 0.0 | bg 0.1 | bg 0.25 | bg 0.5 |
+|--|--|--|--|--|
+| metrics + logs (C2), flat | 0.387 | 0.359 | 0.337 | 0.340 |
+| metrics + logs + traces (C3), flat | 0.626 | **0.563** | 0.496 | 0.456 |
+| metrics + logs (C2), graph-aware | 0.446 | 0.391 | 0.274 | 0.207 |
+| metrics + logs + traces (C3), graph-aware | *1.000* | **0.736** | 0.486 | 0.335 |
+
+**Reading — the answer to RQ2:** traces buy **+0.20 top-1** at bg = 0.1 and stay ahead
+at every noise level, with no metrics-and-logs arm passing 0.45. Nothing saturates —
+the best realistic arm reaches 0.736 top-1 (0.948 top-3), and without traces top-1
+sits near 0.36, about three times the guess floor: a depth-four call graph makes
+latency-based attribution genuinely ambiguous. The 1.000 at bg = 0.0 is a boundary
+condition (one error path ⇒ one root by construction), not a result, and the
+graph-aware rule *inverts* against flat ranking by bg = 0.5. Answered in direction;
+magnitudes remain generated, so only the ordering is claimed.
 
 ---
 
@@ -249,9 +268,11 @@ both raises accuracy and stabilises the adaptation process.
 telemetry richness, with the largest single increment at traces. That trace
 increment is **discounted** — the generator both sharpens the trace signal and
 exempts it from drift, so its magnitude is partly a modelling choice rather than a
-measurement. **RQ2 (localisation) is withdrawn**: its ranking feature is derived
-from the ground-truth label, so it measures the generator and not the method, and it
-provides no support for any claim about tracing (§3).
+measurement. **RQ2 (localisation) is answered on the rebuilt, propagating generator**:
+traces are worth about **+0.20 top-1** at a realistic background-error rate and lead
+at every level tested, with no arm saturating. The first attempt at the experiment was
+circular — its ranking feature was derived from the ground-truth label — and was
+rebuilt rather than reported (§3).
 
 What RQ1 measures is in any case a *stationary* ceiling. RQ3 shows what happens once
 the stream drifts — and that is where the study's actual finding lives.

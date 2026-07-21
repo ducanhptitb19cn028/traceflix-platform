@@ -24,11 +24,18 @@ below. Files are keyed by research question (RQ1–RQ4).
 > 1. `_DRIFT_FIELDS` (in `drift.py`) **excludes the error / error-span signals** from
 >    the drift transformation. This is largely why traces appear drift-robust in RQ1
 >    and RQ3. It is a modelling assumption — an **input**, not a finding.
-> 2. `error_spans` (in `telemetry.py`) is high **iff** `(fault != "normal" and
->    is_origin)`. `is_origin` **is** the ground-truth label RQ2 must recover, so the
->    RQ2 ranking feature is the answer key. **`rq2_localisation.csv` is a withdrawn
->    result** — it measures the generator, not the method. It is retained only so the
->    defect is inspectable.
+> 2. Two generators live in `ml/dataset.py`, and RQ2 depends on which one it runs on.
+>    In the **base** generator (`generate_run`, used by the detection RQs) `error_spans`
+>    is high **iff** `(fault != "normal" and is_origin)` — and `is_origin` **is** the
+>    ground-truth label a localiser must recover, so the RQ2 ranking feature was the
+>    answer key. **`rq2_localisation.csv` is therefore RQ2's circular first attempt**,
+>    superseded and retained only so the defect is inspectable. The **propagating**
+>    generator (`generate_rca_run`) is the rebuild: errors travel up the call path
+>    attenuating 0.6 per hop, so every service on the path emits spans and the origin
+>    must be inferred as the root of the error tree.
+>    `rq2_localisation_propagating.csv` is the **reported** RQ2 result. Its attenuation
+>    rate and background-error rate are **inputs** — the ordering transfers, the
+>    magnitudes do not.
 >
 > Judge these results by reading `telemetry.py` and `drift.py` **before** the models.
 
@@ -41,16 +48,36 @@ below. Files are keyed by research question (RQ1–RQ4).
 
 Produced by: `python -m ml.eval.export_observability --episodes 320 --out data/results`
 
-## RQ1, RQ2, RQ4 — completeness, localisation, model family (held-out reference)
+## RQ1, RQ4 — completeness and model family (held-out reference)
 
 | File | Description |
 |------|-------------|
 | `rq1_completeness.csv` | RQ1: detection metrics as observability grows C1→C4 (metrics → +logs → +traces → +events). The **trace increment is discounted** in the write-up — see the data-source note above. |
-| `rq2_localisation.csv` | RQ2: Top-k root-cause localisation, traces excluded vs included. ⚠️ **WITHDRAWN — circular.** The C3 rows (1.000 at every *k*) are an artefact: the ranking feature is derived from the label. Retained for inspection only; draw no conclusion from them. The C2 rows (*n* = 39 episodes) are not circular in the same way. |
 | `rq4_model_family.csv` | RQ4: model-family comparison (RF / GB / XGBoost / LSTM / fusion) under C4. The LSTM row is a **mis-specified comparison**, not a negative result — it scores below the always-alarm floor because the interleaved per-service stream carries almost no temporal structure. |
-| `summary.json` | Machine-readable headline numbers for RQ1, RQ2, RQ4. |
+| `rq2_localisation.csv` | RQ2's **circular first attempt**, superseded by the propagating run below. The C3 rows (1.000 at every *k*) are an artefact: the ranking feature is derived from the label. Retained for inspection only; draw no conclusion from them. Even the C2 rows are flattered — ancestors there inherit latency but almost no errors. |
+| `summary.json` | Machine-readable headline numbers for RQ1, RQ4 (and RQ2's first attempt). |
 
 Produced by: `bash ./scripts/run_offline.sh 200`
+
+## RQ2 — root-cause localisation on the propagating generator
+
+| File | Description |
+|------|-------------|
+| `rq2_localisation_propagating.csv` | Top-*k* accuracy per (background rate, seed, arm). Four arms crossed: signal (**C2** metrics+logs vs **C3** +traces) × ranking (**flat** vs **graph-aware** root-of-the-error-tree), over 5 seeds and 4 background-incident rates (0.0 / 0.1 / 0.25 / 0.5). |
+| `rq2_propagating_summary.json` | Mean ± sd per arm, plus generator settings (attenuation 0.6/hop, episodes, seeds) and the 1/9 = 0.111 random-guess floor. |
+
+**How to read it.** `background` is the per-episode probability that a service *off*
+the fault's call path errors on its own account — the realism knob. At `0.0` the mesh
+carries exactly one error path, so its root is unique **by construction**; the C3 +
+graph-aware 1.000 in that column is a boundary condition, not a result. Report
+`background ≥ 0.1`. Headline top-1 there: C2 0.359, **C3 0.563** (flat); C2 0.391,
+**C3 0.736** (graph-aware). Traces contribute a positive lift at every background
+rate — the answer to RQ2, in direction. Graph-awareness helps only while the mesh is
+quiet, and *inverts* against flat ranking by `background = 0.5` (0.335 vs 0.456)
+because it cannot distinguish a real root from a spurious one.
+
+Produced by:
+`python -m ml.experiments.rq2_localisation --seeds 42,43,44,45,46 --episodes 200`
 
 ## RQ3 — offline vs online detection under drift
 
@@ -113,7 +140,7 @@ Produced by:
 | File | Description |
 |------|-------------|
 | `figures/rq1_completeness.png` | RQ1 detection vs C1–C4. |
-| `figures/rq2_localisation.png` | RQ2 Top-k RCA, traces excluded vs included. |
+| `figures/rq2_localisation.png` | Top-k RCA from RQ2's **first attempt** — not the reported result. |
 | `figures/rq4_model_family.png` | RQ4 model-family comparison. |
 | `figures/rq3_online_vs_offline.png` | RQ3 F1 bars: static < periodic < online ≈ oracle. |
 | `figures/rq3_timeline.png` | RQ3 rolling F1 over the drifting stream (the sawtooth = periodic's drift-response gap). |

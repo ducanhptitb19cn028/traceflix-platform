@@ -77,19 +77,20 @@ the ordering does.**
 | Choice | Where | Consequence |
 |---|---|---|
 | The error / error-span signals are held **outside** the drift transformation (`_DRIFT_FIELDS`) | [`aiops/ml/drift.py`](aiops/ml/drift.py) | This is largely *why* traces look drift-robust. A defensible assumption — an error rate is more nearly scale-free than a latency percentile — but it is an **input**, not a discovery. RQ1's trace magnitude is discounted accordingly. |
-| `error_spans` is high **iff** `(fault != "normal" and is_origin)` | [`aiops/collectors/telemetry.py`](aiops/collectors/telemetry.py) | `is_origin` **is** the ground-truth label RQ2 must predict, so the ranking feature is the answer key. **RQ2 is withdrawn** — see below. |
+| In the **base** generator (`generate_run`, used for detection) `error_spans` is high **iff** `(fault != "normal" and is_origin)` | [`aiops/collectors/telemetry.py`](aiops/collectors/telemetry.py) | `is_origin` **is** the ground-truth label, so on this generator a localisation feature is the answer key. RQ2's circular first attempt ran here; it is superseded. Detection (RQ1/RQ3/RQ4) never ranks services, so it is unaffected. |
+| In the **propagating** generator (`generate_rca_run`, used for RQ2) errors attenuate 0.6 per hop up the call path | [`aiops/ml/dataset.py`](aiops/ml/dataset.py) | The rebuild: every service on the path emits error spans and the origin must be *inferred* as the root of the error tree. Attenuation rate and the background-error rate β are **inputs** — RQ2's magnitudes move with them, so RQ2 is answered in **direction** and bounded in magnitude. |
 
-The corrected experiments are the first items of future work: a **live campaign**
-through the `TF_LIVE=1` path, and a generator in which error spans **propagate**
-along the call path so the origin is identifiable only as the *root of the error
-tree*, and only noisily.
+The outstanding experiment is the first item of future work: a **live campaign**
+through the `TF_LIVE=1` path, which is what would test the generator's load-bearing
+assumption that the error signals do not drift, and locate a real mesh on RQ2's β
+sweep — the single measurement that would turn RQ2's direction into a magnitude.
 
 ### Research questions (each is runnable code)
 
 | RQ | Question | Where |
 |----|----------|-------|
 | **RQ1** | Does richer telemetry (metrics → +logs → +traces → +events, C1–C4) improve detection under non-stationarity? | `aiops/ml/experiments/run_experiment.py` |
-| **RQ2** | What does distributed tracing add to root-cause localisation on a deep call graph? ⚠️ **withdrawn — circular** | `aiops/ml/experiments/run_experiment.py` |
+| **RQ2** | What does distributed tracing add to root-cause localisation on a deep call graph? (rebuilt on the propagating generator after a circular first attempt) | `aiops/ml/experiments/rq2_localisation.py` |
 | **RQ3** | Does the *learning paradigm* matter under drift — static vs. periodic-retrain vs. online-adaptive? (+ operational cost) | `aiops/ml/experiments/online_vs_offline.py`, `cost_compare.py` |
 | **RQ3+** | Trivial floor, oracle threshold-recalibration control, and seed variance | `aiops/ml/experiments/baselines_and_seeds.py` |
 | **RQ4** | Which model family (RF / GB / XGBoost / LSTM / multimodal fusion) best exploits full MELT? | `aiops/ml/experiments/run_experiment.py` |
@@ -115,14 +116,38 @@ increment is discounted** — the generator both sharpens the trace signal and
 exempts it from drift, so its magnitude is partly constructed. Direction credible,
 magnitude not claimed as a measurement.
 
-**RQ2 — ⚠️ WITHDRAWN.** The reported result (top-1 localisation 0.769 → **1.000**
-with traces) is **circular**: the ranking feature `error_spans` is assigned by the
-generator from `is_origin`, which *is* the ground-truth label the localiser must
-recover. A perfect score at every *k* is arithmetic, not evidence. It measures the
-generator, not the method, and no conclusion about distributed tracing may be drawn
-from it. The files are retained so the defect is inspectable. What survives is the
-C2 row (0.769 top-1, not saturating even at top-3 on *n* = 39 episodes), which does
-show that a depth-four topology makes latency-based attribution genuinely ambiguous.
+**RQ2 — traces help localisation, but nothing is perfect** (top-1 accuracy, 5 seeds,
+~120 fault episodes each; random-guess floor **0.111**):
+
+| Ranking | Signal | quiet mesh (bg 0.0) | bg 0.1 | bg 0.25 | bg 0.5 |
+|---|---|:---:|:---:|:---:|:---:|
+| flat | C2 metrics+logs | 0.387 | 0.359 | 0.337 | 0.340 |
+| flat | C3 + traces | 0.626 | **0.563** | 0.496 | 0.456 |
+| graph-aware | C2 metrics+logs | 0.446 | 0.391 | 0.274 | 0.207 |
+| graph-aware | C3 + traces | *1.000* | **0.736** | 0.486 | 0.335 |
+
+**Traces contribute, and the contribution is robust** — +0.20 top-1 at a 10 %
+background-incident rate, positive at every rate against seed spreads of 0.02–0.05,
+and no metrics-and-logs arm passes 0.45. That is the answer to RQ2, reached by a
+controlled ablation rather than by varying the model. `bg` (β) is the per-episode
+probability that a service *off* the fault's call path errors on its own account —
+the realism knob. The *1.000* at bg = 0.0 is a **boundary condition, not a result**:
+a mesh with a single error path has a unique root by construction, and one unrelated
+incident in ten drops it to 0.736. And **structural reasoning is not free** —
+graph-awareness dominates on a quiet mesh but *inverts* against flat ranking by
+bg = 0.5 (0.335 vs 0.456), because it rewards any erroring service with clean
+dependencies and a background incident is exactly that. RQ2 is therefore **answered
+in direction and bounded in magnitude**: the magnitudes belong to the
+parameterisation, and β's production value is unknown.
+
+> **RQ2 took two attempts, and the first is on the record.** It reported top-1
+> 0.769 → **1.000** with traces and was **circular**: it ran on the *base* generator,
+> where `error_spans` is gated on `is_origin` — the ground-truth label the localiser
+> must recover — so the ranking feature was the answer key. The generator was rebuilt
+> (`generate_rca_run`: errors propagate up the call path, attenuating 0.6 per hop)
+> and the experiment re-run; the table above is that re-run. `rq2_localisation.csv`
+> is retained so the defect stays inspectable. Full account:
+> [`DemoRQ2.md`](DemoRQ2.md); §5.2 of the dissertation reports it the same way.
 
 **RQ3 — the learning paradigm is what matters under drift** (F1 on the drifted
 future stream, 25,920 windows):
@@ -202,7 +227,8 @@ runs unchanged offline or live. The topology lives in one file:
 | Mesh topology / configuration (single source of truth) | [`aiops/ml/configs.py`](aiops/ml/configs.py) |
 | Telemetry feature engineering + `Window` schema; live collectors | [`aiops/ml/`](aiops/ml/), [`aiops/collectors/telemetry.py`](aiops/collectors/) |
 | Fault injection (offline + live / Pumba) and ground-truth labelling | [`aiops/faults/`](aiops/faults/), [`deploy/virtfusion/inject-fault.sh`](deploy/virtfusion/) |
-| **Experiments** — RQ1 / RQ2 / RQ4 | [`aiops/ml/experiments/run_experiment.py`](aiops/ml/experiments/) |
+| **Experiments** — RQ1 / RQ4 | [`aiops/ml/experiments/run_experiment.py`](aiops/ml/experiments/) |
+| **Experiments** — RQ2 localisation on the propagating generator | [`aiops/ml/experiments/rq2_localisation.py`](aiops/ml/experiments/), [`aiops/ml/dataset.py`](aiops/ml/dataset.py) (`generate_rca_run`) |
 | **Experiments** — RQ3 online-vs-offline + cost | [`aiops/ml/experiments/online_vs_offline.py`](aiops/ml/experiments/), [`cost_compare.py`](aiops/ml/experiments/) |
 | **Experiments** — trivial floor, oracle recalibration control, seed variance | [`aiops/ml/experiments/baselines_and_seeds.py`](aiops/ml/experiments/) |
 | **⚠️ The data-generating process** — judge the results here first | [`aiops/collectors/telemetry.py`](aiops/collectors/telemetry.py) (`_synth`), [`aiops/ml/drift.py`](aiops/ml/drift.py) (`_DRIFT_FIELDS`, `REGIME_FACTORS`) |
@@ -220,7 +246,7 @@ targets). Requires Python 3 only — no cluster, no GPU.
 
 ```bash
 make setup          # install Python dependencies (aiops/requirements.txt)
-make experiments    # RQ1, RQ2, RQ4 + RQ3 online-vs-offline + cost + figures
+make experiments    # RQ1, RQ4 + RQ3 online-vs-offline + cost + figures
 make test           # invariant tests (8) + microservice tests (35)
 # faster smoke run:  make quick
 ```
@@ -229,9 +255,12 @@ Equivalent without `make`:
 
 ```bash
 cd aiops && pip install -r requirements.txt
-bash ./scripts/run_offline.sh 200          # RQ1 + RQ2 + RQ4
+bash ./scripts/run_offline.sh 200          # RQ1 + RQ4 (+ RQ2's first attempt)
 bash ./scripts/run_online_offline.sh 320   # RQ3 detection + cost + figures
 pytest tests/ -q                           # 8 passed
+
+# RQ2 — propagating generator, 4 arms x 4 background rates x 5 seeds
+python -m ml.experiments.rq2_localisation --seeds 42,43,44,45,46 --episodes 200
 
 # the supplementary controls (trivial floor, oracle recalibration, 5 seeds)
 python -m ml.experiments.baselines_and_seeds --seeds 42,43,44,45,46 --configs C1,C2,C3,C4
@@ -270,7 +299,8 @@ Outputs are written to (and a frozen copy is committed under)
 | File | Underpins |
 |------|-----------|
 | `rq1_completeness.csv` | Table 5.1 (detection vs C1–C4) |
-| `rq2_localisation.csv` | Table 5.2 (top-*k* RCA) — ⚠️ **withdrawn result**; retained so the defect is inspectable |
+| `rq2_localisation_propagating.csv`, `rq2_propagating_summary.json` | Table 5.2 (top-*k* RCA, propagating generator × background rate × 5 seeds) |
+| `rq2_localisation.csv` | RQ2's circular first attempt — superseded, retained so the defect is inspectable |
 | `rq3_online_vs_offline.csv` | Tables 5.3–5.5 (per-regime F1 by policy) |
 | `rq3_baselines.csv` | Table 5.7 (always-alarm floor + **oracle threshold-recalibration control**) |
 | `rq3_seeds.csv`, `rq3_seeds_summary.json` | Table 5.6 (seed variance over 5 runs) |

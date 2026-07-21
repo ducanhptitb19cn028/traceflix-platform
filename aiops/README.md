@@ -28,7 +28,10 @@ This layer **does not modify your services**. It sits beside them and:
 ## The research questions, as runnable code
 
 - **RQ1** `ml/experiments/run_experiment.py::completeness` — same model, configs C1→C4.
-- **RQ2** `…::localisation` — Top-k root-cause localisation, traces excluded vs included.
+- **RQ2** `ml/experiments/rq2_localisation.py` — Top-k root-cause localisation on the
+  **propagating** generator (`ml/dataset.py::generate_rca_run`), crossing signal
+  (C2 vs C3) with ranking rule (flat vs graph-aware). The older
+  `run_experiment.py::localisation` was a circular first attempt — see the note below.
 - **RQ3** `ml/experiments/online_vs_offline.py` — **does detection need to be
   *online*?** A frozen batch model (traditional "train a snapshot, ship it")
   versus an online self-adapting model on a **non-stationary** stream where the
@@ -50,16 +53,43 @@ Representative output (synthetic, seed 42, **9-service mesh** — see
 `docs/MESH_EXPANSION.md`):
 
 ```
-RQ1  C1 F1=0.906  C2 0.933  C3 0.988  C4 0.994     (completeness helps; traces drive the jump)
-RQ2  Top-1 RCA: metrics+logs 0.77  ->  +traces 1.00   (Top-3: 0.95 -> 1.00)
-RQ4  RF 0.994 / GB 0.991 / XGB 0.991 F1; fusion high-precision; LSTM needs torch
+RQ1  C1 F1=0.896  C2 0.915  C3 0.985  C4 0.986     (completeness helps; traces drive the jump)
+RQ2  Top-1 RCA: metrics+logs 0.77  ->  +traces 1.00   <- first attempt, see below
+RQ4  GB 0.988 / RF 0.986 / XGB 0.984 F1; fusion 0.891 (hi-precision); LSTM 0.259 (weak)
 ```
 
-> **Note on RQ2 scale.** On the deep 9-service graph a fault propagates latency up
-> every ancestor, so Top-1 without traces drops to ~0.77 while traces isolate the
-> origin at 1.00 — a wide, discriminating gap. (The earlier 3-service mesh
-> saturated, making only Top-1 informative; the deeper mesh makes both Top-1 and
-> Top-3 meaningful.)
+> **The RQ2 line above is RQ2's circular first attempt.** `run_offline.sh` runs the
+> localisation experiment on the *base* generator, where `error_spans` is gated on
+> `is_origin` — the ground-truth label the localiser must recover — so the ranking
+> feature is the answer key and a perfect 1.00 is arithmetic, not inference. The line
+> is still printed, and `rq2_localisation.csv` still written, only so the defect stays
+> inspectable. The reported RQ2 result is below.
+
+**RQ2, as reported.** `ml/dataset.py::generate_rca_run` propagates the fault's errors
+*up* the call path, attenuating 0.6 per hop, so every service on the path emits error
+spans and the origin is identifiable only as the **root of the error tree**;
+`--backgrounds` adds unrelated off-path incidents so the mesh is not unrealistically
+silent.
+
+```bash
+python -m ml.experiments.rq2_localisation --seeds 42,43,44,45,46 --episodes 200
+```
+
+```
+Top-1 (5 seeds; random floor 0.111)      bg=0.0   bg=0.1   bg=0.25  bg=0.5
+Metrics+Logs (C2)                         0.387    0.359    0.337    0.340
+Metrics+Logs+Traces (C3)                  0.626    0.563    0.496    0.456
+Metrics+Logs (C2), graph-aware            0.446    0.391    0.274    0.207
+Metrics+Logs+Traces (C3), graph-aware     1.000    0.736    0.486    0.335
+```
+
+**The answer to RQ2:** traces are worth **+0.20 top-1** at bg = 0.1 and stay positive
+at every noise level — earned by ablation, not by varying the model. Nothing
+saturates (best arm 0.736 top-1, 0.948 top-3). The 1.000 at bg = 0.0 is a boundary
+condition — a single error path has a unique root by construction — and the
+graph-aware rule *inverts* against flat ranking by bg = 0.5, because it cannot tell a
+real root from a spurious one. Answered in direction, bounded in magnitude. Full
+analysis: [`../DemoRQ2.md`](../DemoRQ2.md).
 
 ## RQ3 — why traditional (offline) anomaly detection is not enough
 
@@ -93,34 +123,38 @@ that **adapts from the incoming data pattern** — no offline re-fit:
 
 Representative output (synthetic drift, seed 42) — F1 on the *operational
 future* (regimes R1–R3), all models on identical features. `offline_periodic`
-refits every 500 windows on the last ~2880 (17 scheduled retrains):
+refits every 500 windows on the last ~2880 (51 scheduled retrains):
 
 ```
 config            offline_static   offline_periodic   online_adaptive   offline_full (oracle)
-C1 Metrics-Only       0.489             0.757              0.817               0.812
-C2 + Logs             0.492             0.778              0.835               0.834
-C3 + Traces           0.510             0.890              0.982               0.940
-C4 Full MELT          0.511             0.891              0.983               0.939
+C1 Metrics-Only       0.360             0.820              0.813               0.812
+C2 + Logs             0.361             0.832              0.827               0.817
+C3 + Traces           0.370             0.925              0.974               0.929
+C4 Full MELT          0.371             0.926              0.976               0.927
 ```
+
+Read against the **always-alarm floor of F1 = 0.292** (prevalence 0.171 — flag every
+window), measured in `ml/experiments/baselines_and_seeds.py`.
 
 Read-out for the dissertation:
 
-- The **static batch model collapses to F1 ≈ 0.5 under drift even with full
-  MELT** (precision ≈ 0.34 — it raises false alarms on the new normal). Richer
-  observability does **not** rescue it: the failure is the *learning paradigm*,
-  not signal availability.
-- **Scheduled retraining is not enough either.** `offline_periodic` recovers a
-  lot of the loss (0.49 → 0.76, 0.51 → 0.89) but still trails online by 6–9 F1
-  points and never reaches the oracle, because every regime shift opens a
-  **drift-response gap** until the next refresh — visible as the sawtooth in
-  `rq3_timeline.png` — and each refresh is a full batch re-fit. Faster cadence
-  shrinks the gap only by paying more compute; the online model removes it
-  structurally.
-- The **online adaptive model recovers to oracle level** (0.82 → 0.98) updating
-  *per sample*, with no batch re-fit and without seeing the future in batch — and
-  *exceeds* the all-regime oracle under C3/C4 because tracking the evolving
-  normal beats a single static split. The C2→C3 jump shows traces still help the
-  *adaptive* model just as they do in RQ1.
+- The **static batch model collapses to F1 ≈ 0.36 under drift even with full
+  MELT** (precision ≈ 0.22 — it raises false alarms on the new normal), barely
+  above the trivial floor. Richer observability does **not** rescue it: the
+  failure is the *learning paradigm*, not signal availability.
+- **And you cannot fix it by moving the threshold.** Granting the frozen model the
+  best cut-point obtainable *on the drifted stream itself* — an oracle no deployment
+  could achieve — recovers it only to 0.44–0.55. The boundary is the wrong **shape**,
+  not merely in the wrong **place**.
+- **Scheduled retraining recovers most of the gap** (0.36 → 0.82–0.93) but is
+  bursty: every regime shift opens a **drift-response gap** until the next
+  refresh — visible as the sawtooth in `rq3_timeline.png` — and each refresh is a
+  full batch re-fit that blocks the detector. Faster cadence shrinks the gap only
+  by paying more compute; the online model removes it structurally.
+- The **online adaptive model reaches or exceeds oracle level** updating *per
+  sample*, with no batch re-fit. Under **thin** telemetry (C1/C2) it is **tied**
+  with periodic (seed-variance runs put the difference inside noise); its advantage
+  is real only once traces are present (C3/C4: +0.05, ~9 σ over five seeds).
 - `offline_full` is an **unrealistic oracle** (trained on a random split across
   all regimes — you cannot train on the operational future); it is included only
   to prove the static model's decay is caused by **non-stationarity**, not by
@@ -135,24 +169,24 @@ processing latency** (inference + any training that fires on that window), the
 number of train events, model size, and the labelled buffer each must retain:
 
 ```
-C4, 8640 future windows           offline_periodic     online_adaptive
-F1                                      0.890               0.983
-train events                            17 full refits      8640 updates
-worst-case latency / window          ~450 ms (refit stall)  ~12 ms
-p99 latency / window                    0.34 ms             6.6 ms
-model size                              3.3 MB              16 KB
+C4, 25,920 future windows         offline_periodic     online_adaptive
+F1                                      0.926               0.976
+train events                            51 full refits      25,920 updates
+worst-case latency / window          ~937 ms (refit stall)  ~53 ms
+p99 latency / window                    0.25 ms             17.5 ms
+model size                              2.29 MB             15.7 KB
 labelled windows retained to train      2880                0
-total CPU over the stream               1.0x (baseline)     ~4.5x
+total CPU over the stream               1.0x (baseline)     ~6.5x
 ```
 
 The honest trade-off:
 
 - Online is **not cheaper in total CPU** — it does a little work *every* window
-  (a pool of linear `partial_fit` updates), ~4.5x the aggregate compute of 17
+  (a pool of linear `partial_fit` updates), ~6.5x the aggregate compute of 51
   RandomForest refits. That cost is real and worth stating.
-- But online wins on every dimension that matters operationally: **~38x lower
-  worst-case latency** (a full refit blocks the detector for ~450 ms; the online
-  update never exceeds ~12 ms, so detection stays real-time), a **~214x smaller
+- But online wins on every dimension that matters operationally: **~18x lower
+  worst-case latency** (a full refit blocks the detector for ~937 ms; the online
+  update never exceeds ~53 ms, so detection stays real-time), a **~146x smaller
   model**, **zero retained training data** (periodic must keep a 2880-window
   labelled buffer to refit — memory and data-governance cost), *and* higher F1.
 - Periodic's mean latency is lower because its work is bursty and rare — but

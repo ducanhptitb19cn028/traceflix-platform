@@ -282,9 +282,13 @@ kubectl -n traceflix port-forward svc/grafana 3000:3000    # http://localhost:30
 The dashboard's *Offline Mode* page runs these from the UI; or run them directly:
 
 ```bash
-# RQ1 (completeness) + RQ2 (localisation) + RQ4 (model family)
+# RQ1 (completeness) + RQ4 (model family)   [also prints RQ2's first attempt]
 kubectl -n traceflix exec deploy/aiops -- sh -c \
   'cd /opt/traceflix/aiops && python3 -m ml.experiments.run_experiment --episodes 200 --out data/results'
+
+# RQ2 (localisation) — the reported, propagating-generator experiment
+kubectl -n traceflix exec deploy/aiops -- sh -c \
+  'cd /opt/traceflix/aiops && python3 -m ml.experiments.rq2_localisation --seeds 42,43,44,45,46 --out data/results'
 
 # RQ3 — online vs offline under drift (the headline)
 kubectl -n traceflix exec deploy/aiops -- sh -c \
@@ -295,7 +299,9 @@ kubectl -n traceflix exec deploy/aiops -- sh -c \
   'cd /opt/traceflix/aiops && TF_KAFKA_BOOTSTRAP=kafka:9092 python3 -m streaming.run_pipeline --episodes 40'
 ```
 
-Expect RQ1 F1 ≈ 0.896→0.986, RQ2 top-1 0.77→1.00, RQ3 static ≈0.36 vs online ≈0.98.
+Expect RQ1 F1 ≈ 0.896→0.986, RQ2 top-1 ≈ 0.36 (C2) → 0.56 (C3) at `bg = 0.1`, RQ3
+static ≈ 0.36 vs online ≈ 0.98. (The `top-1 0.77 → 1.00` line printed by
+`run_experiment` is RQ2's circular first attempt — see [`DemoRQ2.md`](../DemoRQ2.md).)
 
 ---
 

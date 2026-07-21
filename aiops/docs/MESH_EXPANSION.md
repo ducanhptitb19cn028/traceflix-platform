@@ -24,19 +24,30 @@ gateway-service (entry) ─┬─▶ movie-service ─┬─▶ actor-service   
 
 ## Why it matters (RQ2)
 
-On the deep graph a fault propagates a **secondary latency symptom up every ancestor**
-on the call path (multi-hop, `ml/dataset.py::ancestors`), so many services look
-anomalous — but only the true origin carries **originating error spans**. That gap is
-exactly what trace-based RCA exploits. Measured (200 synthetic episodes, seed 42):
+On the deep graph a fault propagates **symptoms up every ancestor** on the call path
+(multi-hop, `ml/dataset.py::ancestors`), so many services look anomalous at once. How
+much of that ambiguity traces resolve is what RQ2 measures.
 
-| RCA features | Top-1 | Top-3 |
-|--------------|-------|-------|
-| metrics + logs (C2) | **0.77** | 0.95 |
-| + traces (C3)       | **1.00** | 1.00 |
+> **The RQ2 numbers this section used to quote (top-1 0.77 → 1.00) were a circular
+> first attempt.** They came from the base generator, where only the true origin
+> carries error spans — and "is the origin" *is* the label, so the ranking feature was
+> the answer key. The propagating generator (`ml/dataset.py::generate_rca_run`) is the
+> rebuild: errors travel up the path attenuating 0.6/hop, so every service on it emits
+> spans.
 
-The old 3-service mesh saturated (Top-2 → 1.0; only Top-1 discriminated). Now Top-1
-is a wide, meaningful gap and Top-3 is informative too — traces clearly drive
-localisation on a realistic graph.
+Measured on the propagating generator (5 seeds, ~120 fault episodes each, top-1;
+`bg` = per-episode probability of an unrelated off-path incident; random floor 0.111):
+
+| RCA features | bg 0.0 | bg 0.1 | bg 0.25 | bg 0.5 |
+|--------------|:---:|:---:|:---:|:---:|
+| metrics + logs (C2) | 0.387 | 0.359 | 0.337 | 0.340 |
+| + traces (C3) | 0.626 | **0.563** | 0.496 | 0.456 |
+| + traces (C3), graph-aware ranking | *1.000* | **0.736** | 0.486 | 0.335 |
+
+Traces drive localisation on a realistic graph — about **+0.20 top-1** at `bg = 0.1`,
+positive at every noise level, which is the answer to RQ2 — but nothing saturates, and
+the 1.000 at `bg = 0.0` is a boundary condition (one error path ⇒ one root), not a
+result. See [`../../DemoRQ2.md`](../../DemoRQ2.md).
 
 > **Paper note.** `paper/sn-article.tex` (RQ2 table + the "three-service topology"
 > caption) reports the *old* 3-service numbers. Re-run `run_experiment.py` and

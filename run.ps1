@@ -186,7 +186,8 @@ if ($SkipDeploy) {
     'observability\on-demand-observability.yaml',   # ns + otel/tempo/loki/prom/grafana + ALL 9 services + load-gens
     'aiops\k8s\load-generator-fixed.yaml',           # updated load generator
     'aiops\k8s\victoriametrics.yaml',                # metrics store (devops-agent ns)
-    'aiops\k8s\aiops.yaml'                            # AIOps engine + API (:8000), reads the 9 services' live telemetry
+    'aiops\k8s\aiops.yaml',                           # AIOps engine + API (:8000), reads the 9 services' live telemetry
+    'aiops\k8s\ollama.yaml'                           # qwen2.5:3b for the LLM detector, at http://ollama:11434 (OLLAMA_URL in aiops.yaml)
   )
   foreach ($m in $manifests) {
     $path = Join-Path $Root $m

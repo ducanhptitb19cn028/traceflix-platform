@@ -5,11 +5,15 @@ import OfflineMode from "./pages/OfflineMode.jsx";
 import ResultComparison from "./pages/ResultComparison.jsx";
 import PipelineComparison from "./pages/PipelineComparison.jsx";
 import Streaming from "./pages/Streaming.jsx";
+import LiveML from "./pages/LiveML.jsx";
+import LiveLLM from "./pages/LiveLLM.jsx";
 
 const links = [
   { to: "/", label: "Home", end: true },
   { to: "/online", label: "🟢 Online Mode" },
   { to: "/offline", label: "🔵 Offline Mode" },
+  { to: "/live/ml", label: "🧠 Live ML" },
+  { to: "/live/llm", label: "🤖 Live LLM" },
   { to: "/streaming", label: "🌊 Live Kafka + LLM" },
   { to: "/pipelines", label: "🔀 Pipelines" },
   { to: "/comparison", label: "📊 Result Comparison" },
@@ -38,6 +42,8 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/online" element={<OnlineMode />} />
           <Route path="/offline" element={<OfflineMode />} />
+          <Route path="/live/ml" element={<LiveML />} />
+          <Route path="/live/llm" element={<LiveLLM />} />
           <Route path="/streaming" element={<Streaming />} />
           <Route path="/pipelines" element={<PipelineComparison />} />
           <Route path="/comparison" element={<ResultComparison />} />

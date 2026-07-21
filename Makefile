@@ -17,7 +17,8 @@
 # ---- configuration ---------------------------------------------------------
 # (no inline comments after values - they would leak trailing whitespace)
 PY              ?= python
-EPISODES        ?= 200          # offline RQ1/RQ2/RQ4 (run_experiment)
+EPISODES        ?= 200          # offline RQ1/RQ4 (run_experiment) + RQ2
+RQ2_SEEDS       ?= 42,43,44,45,46 # RQ2 localisation seeds (rq2_localisation)
 DRIFT_EPISODES  ?= 320          # RQ3 drift stream (online_vs_offline, cost)
 STREAM_EPISODES ?= 20           # streaming backbone demo
 LIVE_EPISODES   ?= 30           # live fault-injection episodes
@@ -28,8 +29,10 @@ NS              ?= on-demand-observability # k8s namespace
 SVC             ?= catalog-service         # inject: target service
 FAULT           ?= cpu_saturation          # inject: fault type
 DUR             ?= 120                      # inject: duration (s)
+OLLAMA_PORT     ?= 11434         # ollama-forward: host port (detector default)
 # strip the trailing whitespace the aligned comments above introduce
 EPISODES        := $(strip $(EPISODES))
+RQ2_SEEDS       := $(strip $(RQ2_SEEDS))
 DRIFT_EPISODES  := $(strip $(DRIFT_EPISODES))
 STREAM_EPISODES := $(strip $(STREAM_EPISODES))
 LIVE_EPISODES   := $(strip $(LIVE_EPISODES))
@@ -38,6 +41,7 @@ NS              := $(strip $(NS))
 SVC             := $(strip $(SVC))
 FAULT           := $(strip $(FAULT))
 DUR             := $(strip $(DUR))
+OLLAMA_PORT     := $(strip $(OLLAMA_PORT))
 
 # Shell for .sh helper scripts. On Windows the `bash` first on PATH is normally
 # C:\Windows\System32\bash.exe (the WSL launcher); WSL can't see the Windows
@@ -88,9 +92,10 @@ DC_VM4 := deploy/virtfusion/vm4-gateway
 
 .DEFAULT_GOAL := help
 .PHONY: help all run run-platform run-experiments run-down aiops-up aiops-down setup setup-llm \
-        experiments repro quick rq124 rq3 cost plots figures \
+        experiments repro quick rq124 rq2 rq3 cost plots figures \
         streaming llm lora \
         webui webui-build \
+        ollama-up ollama-down ollama-logs ollama-forward \
         build-services compile-services images \
         test test-aiops test-services \
         deploy-up deploy-down mesh-up mesh-down telemetry-up telemetry-down \
@@ -107,10 +112,11 @@ help:
 	@echo ""
 	@echo "  RUN (win)    run  run-platform  run-experiments  run-down   (RUN_ARGS=...)"
 	@echo "  SETUP        setup  setup-llm"
-	@echo "  EXPERIMENTS  experiments  repro  quick  rq124  rq3  cost  plots  figures"
+	@echo "  EXPERIMENTS  experiments  repro  quick  rq124  rq2  rq3  cost  plots  figures"
 	@echo "  STREAM/LLM   streaming  llm  lora"
 	@echo "  WEBUI        webui  webui-build"
 	@echo "  AIOPS (k8s)  aiops-up  aiops-down"
+	@echo "  OLLAMA (k8s) ollama-up  ollama-down  ollama-logs  ollama-forward  (needs ~3Gi free)"
 	@echo "  JAVA         build-services  compile-services  images  test-services"
 	@echo "  TESTS        test  test-aiops  test-services"
 	@echo "  COMPOSE      deploy-up/down  mesh-up/down  telemetry-up/down"
@@ -148,7 +154,7 @@ setup-llm:
 	$(PY) -m pip install -r $(AIOPS)/llm/requirements-llm.txt
 
 # ---- experiments (aiops, offline) -----------------------------------------
-experiments: rq124 rq3 cost plots
+experiments: rq124 rq2 rq3 cost plots
 	@echo ""
 	@echo "[make] experiments complete -> $(RESULTS)/"
 
@@ -159,6 +165,11 @@ quick:
 
 rq124:
 	cd $(AIOPS) && $(PY) -m ml.experiments.run_experiment --episodes $(EPISODES) --seed $(SEED) --out $(OUT)
+
+# RQ2 (corrected): localisation on the propagating generator. The RQ2 rows emitted
+# by rq124 above are the WITHDRAWN original, kept only so the defect is inspectable.
+rq2:
+	cd $(AIOPS) && $(PY) -m ml.experiments.rq2_localisation --episodes $(EPISODES) --seeds $(RQ2_SEEDS) --out $(OUT)
 
 rq3:
 	cd $(AIOPS) && $(PY) -m ml.experiments.online_vs_offline --episodes $(DRIFT_EPISODES) --configs $(CONFIGS) --out $(OUT)
@@ -201,6 +212,40 @@ aiops-up:
 
 aiops-down:
 	kubectl delete -f $(AIOPS)/k8s/aiops.yaml --ignore-not-found
+
+# ---- Ollama (local k8s, opt-in) -------------------------------------------
+# Serves qwen2.5:3b for the AIOps LLM detector at http://ollama:11434, which is
+# what aiops.yaml points OLLAMA_URL at. Part of the k8s deployment (k8s-deploy
+# and run.ps1's manifest list); these targets are for a standalone re-apply,
+# the same way aiops-up/-down complement the full deploy.
+#
+# Sizing warning: the pod requests 3Gi and the qwen2.5:3b pull adds ~2Gi more.
+# On a memory-capped Docker Desktop / WSL2 VM that is enough to OOM the VM and
+# take the Docker engine -- and with it the whole cluster -- down. Check the
+# headroom before a deploy:
+#   wsl -d docker-desktop --exec free -m       # Windows
+#   docker run --rm alpine free -m             # otherwise
+ollama-up:
+	kubectl apply -f $(AIOPS)/k8s/ollama.yaml
+	kubectl -n $(NS) rollout status deploy/ollama --timeout=300s
+	@echo "[make] ollama up; the qwen2.5:3b pull (~2 GB) runs as job/ollama-pull -- watch it with 'make ollama-logs'"
+
+ollama-down:
+	kubectl delete -f $(AIOPS)/k8s/ollama.yaml --ignore-not-found
+
+# Follow the one-shot model pull. Empty output means the Job is not scheduled yet.
+ollama-logs:
+	kubectl -n $(NS) logs job/ollama-pull -f
+
+# Expose the in-cluster Ollama on the host, for a webui/detector run OUTSIDE the
+# cluster (make webui): there OLLAMA_URL defaults to http://localhost:$(OLLAMA_PORT),
+# and without this forward the detector reports its heuristic fallback instead.
+# Pods deployed in-cluster do NOT need this -- aiops.yaml already points them at
+# the Service DNS name. Blocks until interrupted; run it in its own terminal, and
+# re-run it after an ollama pod restart (the forward dies with the pod).
+ollama-forward:
+	@echo "[make] ollama -> http://localhost:$(OLLAMA_PORT)  (Ctrl-C to stop)"
+	kubectl -n $(NS) port-forward svc/ollama $(OLLAMA_PORT):11434
 
 # ---- Java services ---------------------------------------------------------
 build-services:
@@ -259,6 +304,7 @@ k8s-deploy:
 	kubectl apply -f observability/on-demand-observability.yaml
 	kubectl apply -f $(AIOPS)/k8s/victoriametrics.yaml
 	kubectl apply -f $(AIOPS)/k8s/load-generator-fixed.yaml
+	kubectl apply -f $(AIOPS)/k8s/ollama.yaml
 
 k8s-delete:
 	-kubectl delete namespace $(NS)

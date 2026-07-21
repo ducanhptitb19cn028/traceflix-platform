@@ -40,6 +40,19 @@ export default function Home() {
               background processes, stream their logs, and inspect produced outputs.</td>
           </tr>
           <tr>
+            <td>🧠 <b>Live ML</b></td>
+            <td>Watch anomaly detection happen window by window across the classical
+              model families — online SGD, RandomForest, GradientBoosting, XGBoost,
+              LSTM, multimodal fusion — all deciding on the same stream, with running
+              precision/recall/F1 and per-window cost.</td>
+          </tr>
+          <tr>
+            <td>🤖 <b>Live LLM</b></td>
+            <td>Watch the local LLM detector decide: the raw MELT signals it is handed,
+              the strict JSON verdict it returns, its per-call latency, and which
+              injected fault types it actually catches.</td>
+          </tr>
+          <tr>
             <td>📊 <b>Result Comparison</b></td>
             <td>Side-by-side offline-vs-online results: F1 by configuration, per-regime
               breakdown, the cost trade-off, and the generated figures.</td>
