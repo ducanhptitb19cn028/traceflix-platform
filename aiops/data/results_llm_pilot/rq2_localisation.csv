@@ -1,0 +1,5 @@
+approach,k,topk_accuracy
+metrics+logs (C2),1,0.8333333333333334
+metrics+logs (C2),2,1.0
+metrics+logs+traces (C3),1,1.0
+metrics+logs+traces (C3),2,1.0

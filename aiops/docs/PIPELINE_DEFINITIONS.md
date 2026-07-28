@@ -3,7 +3,8 @@
 Short, precise definitions of the two anomaly-detection pipelines in this repo,
 as they are actually implemented. For the full comparison and external sources
 see [`ONLINE_VS_OFFLINE.md`](ONLINE_VS_OFFLINE.md); for the end-to-end walkthrough
-see [`ONLINE_PIPELINE.md`](ONLINE_PIPELINE.md).
+see [`ONLINE_PIPELINE.md`](ONLINE_PIPELINE.md); for how the *labelled* telemetry
+below gets its ground truth see [`DATA_LABELLING.md`](DATA_LABELLING.md).
 
 ## Offline pipeline
 

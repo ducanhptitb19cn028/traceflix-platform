@@ -1,0 +1,40 @@
+{
+  "mode": "synthetic",
+  "episodes": 10,
+  "n_windows": 1080,
+  "services": [
+    "movie-service",
+    "actor-service",
+    "review-service"
+  ],
+  "note": "RQ numbers follow the paper; RQ3 (drift) is in online_vs_offline.py.",
+  "rq1_completeness_reference_f1": {
+    "C1": 0.8632,
+    "C2": 0.8387,
+    "C3": 0.9908,
+    "C4": 0.9907
+  },
+  "rq2_localisation": [
+    {
+      "approach": "metrics+logs (C2)",
+      "k": 1,
+      "topk_accuracy": 0.8333333333333334
+    },
+    {
+      "approach": "metrics+logs (C2)",
+      "k": 2,
+      "topk_accuracy": 1.0
+    },
+    {
+      "approach": "metrics+logs+traces (C3)",
+      "k": 1,
+      "topk_accuracy": 1.0
+    },
+    {
+      "approach": "metrics+logs+traces (C3)",
+      "k": 2,
+      "topk_accuracy": 1.0
+    }
+  ],
+  "rq4_best_model": "rf"
+}

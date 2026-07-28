@@ -59,6 +59,39 @@ Produced by: `python -m ml.eval.export_observability --episodes 320 --out data/r
 
 Produced by: `bash ./scripts/run_offline.sh 200`
 
+### RQ4 with the local-LLM detector — `../results_llm/`
+
+`rq4_model_family.csv` above has **five** families (RF / GB / XGBoost / LSTM /
+fusion). The local-LLM detector (`ml/models/llm_detector.py`, Qwen2.5-3B via
+Ollama) is a **sixth**, opt-in behind `ENABLE_LLM=1` because it needs Ollama
+reachable. Its output lands in a **separate directory**, `data/results_llm/`,
+and is *not* merged into this one: `run_experiment` rewrites `rq1`, `rq2`, `rq4`
+and `summary.json` wholesale, and the files here are the committed artefacts
+behind the paper's tables.
+
+```bash
+make ollama-forward                 # terminal 1 -- leave running
+curl -s http://localhost:11434/api/tags   # must list qwen2.5:3b
+make llm OUT=data/results_llm       # terminal 2 -- ~10 h on laptop CPU
+```
+
+Two failure modes are **silent**, so a run is not trustworthy until checked:
+
+1. **Ollama unreachable at start** → the detector falls back to a z-score
+   heuristic. Detect it in the model name: the row must read
+   `llm_qwen2.5:3b(llm)`, never `(heuristic)`.
+2. **Ollama lost mid-run** → `LLMDetector.mode` is fixed at `__init__` and never
+   re-checked, while a failed per-window request returns `{"anomaly": false}`
+   instead of raising. The row stays labelled `(llm)` while recall silently
+   collapses. Keep the port-forward up for the whole run, and treat a
+   near-zero recall as a transport fault rather than a finding.
+
+Comparability check before any number from here is quoted beside the
+five-family table: `rf`, `gb`, `xgb` and `multimodal_fusion` are deterministic
+at seed 42 and **must reproduce** `results/rq4_model_family.csv` to several
+decimals. `lstm` is stochastic and will not — which is also why the LSTM row is
+not reproducible run to run.
+
 ## RQ2 — root-cause localisation on the propagating generator
 
 | File | Description |

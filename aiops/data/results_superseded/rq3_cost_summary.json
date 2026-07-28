@@ -1,0 +1,47 @@
+{
+  "episodes": 320,
+  "periodic": {
+    "retrain_every": 500,
+    "train_window": 2880
+  },
+  "configs": [
+    "C1",
+    "C2",
+    "C3",
+    "C4"
+  ],
+  "ratios_periodic_vs_online": {
+    "C1": {
+      "f1_gain_online_minus_periodic": -0.0074,
+      "max_latency_ratio_periodic_over_online": 9.2,
+      "model_kb_ratio_periodic_over_online": 391.5,
+      "retained_windows_periodic": 2880,
+      "retained_windows_online": 0,
+      "total_cpu_ratio_online_over_periodic": 4.5
+    },
+    "C2": {
+      "f1_gain_online_minus_periodic": -0.0049,
+      "max_latency_ratio_periodic_over_online": 10.2,
+      "model_kb_ratio_periodic_over_online": 380.1,
+      "retained_windows_periodic": 2880,
+      "retained_windows_online": 0,
+      "total_cpu_ratio_online_over_periodic": 4.4
+    },
+    "C3": {
+      "f1_gain_online_minus_periodic": 0.049,
+      "max_latency_ratio_periodic_over_online": 12.1,
+      "model_kb_ratio_periodic_over_online": 129.3,
+      "retained_windows_periodic": 2880,
+      "retained_windows_online": 0,
+      "total_cpu_ratio_online_over_periodic": 4.8
+    },
+    "C4": {
+      "f1_gain_online_minus_periodic": 0.05,
+      "max_latency_ratio_periodic_over_online": 14.4,
+      "model_kb_ratio_periodic_over_online": 145.7,
+      "retained_windows_periodic": 2880,
+      "retained_windows_online": 0,
+      "total_cpu_ratio_online_over_periodic": 5.5
+    }
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "experiment": "RQ3_online_vs_offline",
+  "episodes": 200,
+  "n_windows": 21600,
+  "n_regimes": 4,
+  "regimes": [
+    "R0 baseline",
+    "R1 latency regression",
+    "R2 scale-out",
+    "R3 combined load"
+  ],
+  "configs": [
+    "C1",
+    "C2",
+    "C3",
+    "C4"
+  ],
+  "periodic": {
+    "retrain_every": 500,
+    "train_window": 2880
+  },
+  "headline_f1_future": {
+    "C1": {
+      "offline_static_f1": 0.3419,
+      "offline_periodic_f1": 0.7816,
+      "online_adaptive_f1": 0.8089,
+      "online_gain_over_static": 0.467,
+      "online_gain_over_periodic": 0.0273
+    },
+    "C2": {
+      "offline_static_f1": 0.3415,
+      "offline_periodic_f1": 0.7937,
+      "online_adaptive_f1": 0.8205,
+      "online_gain_over_static": 0.479,
+      "online_gain_over_periodic": 0.0268
+    },
+    "C3": {
+      "offline_static_f1": 0.3557,
+      "offline_periodic_f1": 0.8917,
+      "online_adaptive_f1": 0.9734,
+      "online_gain_over_static": 0.6177,
+      "online_gain_over_periodic": 0.0817
+    },
+    "C4": {
+      "offline_static_f1": 0.3586,
+      "offline_periodic_f1": 0.8939,
+      "online_adaptive_f1": 0.9755,
+      "online_gain_over_static": 0.6169,
+      "online_gain_over_periodic": 0.0816
+    }
+  },
+  "per_config": [
+    {
+      "config": "C1",
+      "n_features": 10,
+      "n_warm_R0": 5400,
+      "n_future": 16200,
+      "periodic_retrains": 32,
+      "adapt_events": 3,
+      "champion_params_final": {
+        "eta0": 0.01,
+        "alpha": 0.0001
+      }
+    },
+    {
+      "config": "C2",
+      "n_features": 14,
+      "n_warm_R0": 5400,
+      "n_future": 16200,
+      "periodic_retrains": 32,
+      "adapt_events": 2,
+      "champion_params_final": {
+        "eta0": 0.01,
+        "alpha": 0.0001
+      }
+    },
+    {
+      "config": "C3",
+      "n_features": 18,
+      "n_warm_R0": 5400,
+      "n_future": 16200,
+      "periodic_retrains": 32,
+      "adapt_events": 0,
+      "champion_params_final": {
+        "eta0": 0.01,
+        "alpha": 0.0001
+      }
+    },
+    {
+      "config": "C4",
+      "n_features": 23,
+      "n_warm_R0": 5400,
+      "n_future": 16200,
+      "periodic_retrains": 32,
+      "adapt_events": 0,
+      "champion_params_final": {
+        "eta0": 0.01,
+        "alpha": 0.0001
+      }
+    }
+  ]
+}

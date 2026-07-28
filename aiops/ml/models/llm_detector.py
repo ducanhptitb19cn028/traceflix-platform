@@ -28,6 +28,7 @@ import json
 import math
 import os
 import re
+import threading
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
@@ -123,6 +124,16 @@ class LLMDetector:
         self.mode = "llm" if ready else "heuristic"
         self.mode_reason = reason      # why, in words, for the dashboard + logs
         self.requires_llm = True
+        # Degradation counters. ``mode`` is decided ONCE here and never re-checked,
+        # while a failed per-window request returns a benign {"anomaly": false}
+        # rather than raising -- so losing Ollama mid-run would otherwise yield a
+        # row still labelled "(llm)" whose recall has silently collapsed. Count the
+        # failures and report them beside the mode so a degraded run is visible in
+        # the results rather than inferred from a suspicious number.
+        self.n_calls = 0
+        self.n_errors = 0
+        self.last_error = ""
+        self._counter_lock = threading.Lock()
 
     # -- training: cache scale + a few in-context exemplars ------------------
     def fit(self, X, y, feat_names: list[str] | None = None):
@@ -275,8 +286,18 @@ class LLMDetector:
             # report what it said, rather than a KeyError('message') that hides it
             if "message" not in payload:
                 raise RuntimeError(payload.get("error") or f"HTTP {r.status_code}")
-            return self._parse(payload["message"]["content"])
+            out = self._parse(payload["message"]["content"])
+            with self._counter_lock:
+                self.n_calls += 1
+            return out
         except Exception as e:
+            # Still return a benign verdict (callers expect a dict, not an
+            # exception), but record it: a run with n_errors > 0 is degraded and
+            # its metrics must not be reported as an LLM result.
+            with self._counter_lock:
+                self.n_calls += 1
+                self.n_errors += 1
+                self.last_error = str(e)[:200]
             return {"anomaly": False, "confidence": 0.5,
                     "explanation": f"llm error: {e}"}
 

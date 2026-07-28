@@ -36,7 +36,12 @@ This layer **does not modify your services**. It sits beside them and:
   *online*?** A frozen batch model (traditional "train a snapshot, ship it")
   versus an online self-adapting model on a **non-stationary** stream where the
   operating baseline drifts (deploys, autoscaling, data growth — `ml/drift.py`).
-- **RQ4** `…::model_family` — RF / GB / XGBoost / LSTM / multimodal fusion under C4.
+- **RQ4** `…::model_family` — RF / GB / XGBoost / LSTM / multimodal fusion under C4,
+  plus an opt-in sixth family: the local-LLM detector (Qwen2.5-3B over *raw*
+  signals, `ENABLE_LLM=1`, needs Ollama). Run it with `make llm`, which writes to
+  `data/results_llm/` so it cannot overwrite the committed artefacts; see
+  [`data/results/README.md`](data/results/README.md) for the two silent failure
+  modes that must be checked before quoting any number from it.
 
 ## Quick start — offline (no cluster)
 
@@ -55,7 +60,7 @@ Representative output (synthetic, seed 42, **9-service mesh** — see
 ```
 RQ1  C1 F1=0.896  C2 0.915  C3 0.985  C4 0.986     (completeness helps; traces drive the jump)
 RQ2  Top-1 RCA: metrics+logs 0.77  ->  +traces 1.00   <- first attempt, see below
-RQ4  GB 0.988 / RF 0.986 / XGB 0.984 F1; fusion 0.891 (hi-precision); LSTM 0.259 (weak)
+RQ4  GB 0.988 / RF 0.986 / XGB 0.984 F1; fusion 0.891 (hi-precision); LSTM 0.227 (weak)
 ```
 
 > **The RQ2 line above is RQ2's circular first attempt.** `run_offline.sh` runs the

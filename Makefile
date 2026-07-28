@@ -25,6 +25,7 @@ LIVE_EPISODES   ?= 30           # live fault-injection episodes
 CONFIGS         ?= C1,C2,C3,C4
 SEED            ?= 42
 OUT             ?= data/results # relative to aiops/
+LLM_OUT         ?= data/results_llm # 'llm' target: NEVER $(OUT), see the target
 NS              ?= on-demand-observability # k8s namespace
 SVC             ?= catalog-service         # inject: target service
 FAULT           ?= cpu_saturation          # inject: fault type
@@ -187,9 +188,34 @@ figures:
 streaming:
 	cd $(AIOPS) && $(PY) -m streaming.run_pipeline --episodes $(STREAM_EPISODES)
 
-# Requires Ollama serving qwen2.5:3b; without it the LLM row reports a heuristic.
+# RQ4 model-family comparison WITH the local-LLM detector as a sixth family.
+#
+# Preconditions, both of which fail silently if unmet:
+#   1. Ollama must serve qwen2.5:3b at localhost:$(OLLAMA_PORT) -- run
+#      'make ollama-forward' in another terminal FIRST and check it responds:
+#         curl -s http://localhost:$(OLLAMA_PORT)/api/tags
+#      With nothing bound, the detector falls back to the z-score heuristic and
+#      the row is labelled '(heuristic)' -- a wasted multi-hour run.
+#   2. The forward must stay up for the WHOLE run. LLMDetector.mode is fixed at
+#      __init__ and never re-checked, and a per-window request failure returns
+#      {"anomaly": false} rather than raising -- so a mid-run drop yields a row
+#      still labelled '(llm)' whose recall has silently collapsed.
+#
+# Writes to $(LLM_OUT), never $(OUT): run_experiment rewrites rq1/rq2/rq4 CSVs
+# and summary.json, and $(OUT) holds the committed artefacts behind the paper's
+# tables. Compare the two, then promote deliberately.
+#
+# Cost: CPU inference of a 3B model is ~5-6 s/window; the 200-episode test split
+# is ~6.5k windows, so budget ~10 h on a laptop. Use a GPU host if you have one.
+#
+# After the run, verify before using any number:
+#   grep llm $(AIOPS)/$(LLM_OUT)/rq4_model_family.csv   # must say (llm)
+#   diff <(cut -d, -f1-4 $(AIOPS)/$(OUT)/rq4_model_family.csv) \
+#        <(cut -d, -f1-4 $(AIOPS)/$(LLM_OUT)/rq4_model_family.csv)
+# rf/gb/xgb/multimodal_fusion are deterministic at seed 42 and must reproduce;
+# lstm is stochastic and will not.
 llm:
-	cd $(AIOPS) && ENABLE_LLM=1 $(PY) -m ml.experiments.run_experiment --episodes $(EPISODES) --out $(OUT)
+	cd $(AIOPS) && ENABLE_LLM=1 $(PY) -m ml.experiments.run_experiment --episodes $(EPISODES) --out $(LLM_OUT)
 
 lora:
 	cd $(AIOPS) && $(PY) -m llm.build_dataset --episodes 400 --out llm/data

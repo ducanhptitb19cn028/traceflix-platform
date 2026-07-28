@@ -87,11 +87,24 @@ def completeness(windows, model_kind="rf") -> pd.DataFrame:
         ["config", "name", "n_features", "precision", "recall", "f1", "auc_roc"]]
 
 
-def model_family(windows) -> pd.DataFrame:
-    """Paper RQ4 (answered last): model-family comparison on full MELT (C4)."""
+def model_family(windows, limit: int | None = None) -> pd.DataFrame:
+    """Paper RQ4 (answered last): model-family comparison on full MELT (C4).
+
+    ``limit`` evaluates on the first ``limit`` windows of the test split while
+    still training on the full training set. ``train_test_split`` shuffles and
+    stratifies, so that prefix is a random subsample rather than a biased slice.
+
+    Its purpose is uniformity: the local-LLM family costs ~5 s/window, so scoring
+    it on the whole split is a multi-hour job (``score_llm.py``). Passing the same
+    ``limit`` here evaluates every family on the SAME subset, which keeps the six
+    rows directly comparable -- preferable to reporting one row on a different
+    sample size from the other five.
+    """
     X, yb, _, feats = split_xy(build_features(windows, CONFIGS["C4"]))
     Xtr, Xte, ytr, yte = train_test_split(
         X, yb, test_size=0.3, random_state=0, stratify=yb)
+    if limit:
+        Xte, yte = Xte[:limit], yte[:limit]
 
     pillar_cols = {"metrics": [], "logs": [], "traces": [], "events": []}
     for i, n in enumerate(feats):
@@ -126,7 +139,16 @@ def model_family(windows) -> pd.DataFrame:
         llm = LLMDetector().fit(Xtr, ytr, feats)
         proba = llm.predict_proba(Xte)
         r = _metrics(yte, llm.predict(Xte), proba[:, 1])
-        r["model"] = f"llm_{llm.model}({llm.mode})"; rows.append(r)
+        # Report the failure count in the row name, not just the mode: mode is
+        # fixed at construction, so a mid-run loss of Ollama leaves it reading
+        # "llm" while the verdicts degrade to a constant "normal". Anything but
+        # err=0 means the row is NOT a clean LLM result.
+        tag = f"{llm.mode},err={llm.n_errors}/{llm.n_calls}"
+        r["model"] = f"llm_{llm.model}({tag})"; rows.append(r)
+        if llm.n_errors:
+            print(f"    [!] {llm.n_errors}/{llm.n_calls} LLM calls failed "
+                  f"-- DEGRADED, do not report as an LLM result. "
+                  f"last error: {llm.last_error}")
 
     return pd.DataFrame(rows)[["model", "precision", "recall", "f1", "auc_roc"]]
 
@@ -153,6 +175,10 @@ def main():
     ap.add_argument("--labels", default=None,
                     help="labels CSV for LIVE mode (from faults/run_episodes.py)")
     ap.add_argument("--out", default="data/results")
+    ap.add_argument("--limit", type=int, default=None,
+                    help="RQ4 only: evaluate every model family on the first N "
+                         "windows of the test split, matching score_llm.py's "
+                         "--limit so all six families share one evaluation set")
     args = ap.parse_args()
 
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
@@ -177,8 +203,9 @@ def main():
     r2.to_csv(out / "rq2_localisation.csv", index=False)
     print(r2.to_string(index=False))
 
-    print("\n[*] RQ4: model-family comparison (C4)")
-    r4 = model_family(windows)
+    print("\n[*] RQ4: model-family comparison (C4)"
+          + (f" -- test subsample n={args.limit}" if args.limit else ""))
+    r4 = model_family(windows, limit=args.limit)
     r4.to_csv(out / "rq4_model_family.csv", index=False)
     print(r4.to_string(index=False))
 
