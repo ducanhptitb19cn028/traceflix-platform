@@ -2,7 +2,7 @@
 
 **Decision:** replace the previous RQ1–RQ4 framing (completeness / algorithms / traces /
 online-vs-offline) with three *totally different* research questions, each supported by an
-experiment that Claude Code develops on the existing `aiops/` codebase, and ~23 verified
+experiment developed on the existing `aiops/` codebase, and ~23 verified
 2022–2026 references each (~70 total).
 
 **Reframed thesis.** The old thesis asked *"does observability matter for detecting failures?"*.
