@@ -1,0 +1,11 @@
+{
+  "episodes": 20,
+  "seed": 42,
+  "best_off_the_shelf_per_config": [
+    {
+      "config": "C1",
+      "model": "gaussian_nb",
+      "f1": 0.5147392290249433
+    }
+  ]
+}

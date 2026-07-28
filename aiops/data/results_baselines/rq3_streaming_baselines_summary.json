@@ -1,0 +1,26 @@
+{
+  "episodes": 320,
+  "seed": 42,
+  "best_off_the_shelf_per_config": [
+    {
+      "config": "C1",
+      "model": "gaussian_nb",
+      "f1": 0.6195422820970622
+    },
+    {
+      "config": "C2",
+      "model": "gaussian_nb",
+      "f1": 0.6391530890745183
+    },
+    {
+      "config": "C3",
+      "model": "gaussian_nb",
+      "f1": 0.8077816492450639
+    },
+    {
+      "config": "C4",
+      "model": "sgd_logistic",
+      "f1": 0.30600722673893405
+    }
+  ]
+}
