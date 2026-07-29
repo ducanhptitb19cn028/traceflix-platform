@@ -1,0 +1,10 @@
+{
+  "episodes": 60,
+  "seed": 42,
+  "delta_full_minus_no_drift": {
+    "C1": 0.0028
+  },
+  "delta_full_minus_no_drift_no_champion": {
+    "C1": 0.0297
+  }
+}

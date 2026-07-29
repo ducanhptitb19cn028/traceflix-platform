@@ -1,0 +1,42 @@
+{
+  "experiment": "RQ3_online_vs_offline",
+  "episodes": 60,
+  "n_windows": 6480,
+  "n_regimes": 4,
+  "regimes": [
+    "R0 baseline",
+    "R1 latency regression",
+    "R2 scale-out",
+    "R3 combined load"
+  ],
+  "configs": [
+    "C1"
+  ],
+  "periodic": {
+    "retrain_every": 500,
+    "train_window": 2880
+  },
+  "headline_f1_future": {
+    "C1": {
+      "offline_static_f1": 0.3209,
+      "offline_periodic_f1": 0.5746,
+      "online_adaptive_f1": 0.8405,
+      "online_gain_over_static": 0.5196,
+      "online_gain_over_periodic": 0.2659
+    }
+  },
+  "per_config": [
+    {
+      "config": "C1",
+      "n_features": 10,
+      "n_warm_R0": 1620,
+      "n_future": 4860,
+      "periodic_retrains": 9,
+      "adapt_events": 1,
+      "champion_params_final": {
+        "eta0": 0.1,
+        "alpha": 0.0001
+      }
+    }
+  ]
+}

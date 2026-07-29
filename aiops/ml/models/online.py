@@ -149,7 +149,15 @@ class OnlineModel:
 
     def __init__(self, n_features: int, decay: float = 0.02,
                  drift_window: int = 150, drift_delta: float = 0.12,
-                 seed: int = 42):
+                 seed: int = 42,
+                 use_champion: bool = True, use_drift: bool = True):
+        # ``use_champion`` / ``use_drift`` exist for the component ablation of
+        # ml/experiments/ablate_online.py: they switch off champion re-election
+        # and the drift-triggered normaliser boost respectively. Both default to
+        # True, so the detector's behaviour -- and every published RQ3 number --
+        # is unchanged unless an ablation explicitly asks otherwise.
+        self.use_champion = use_champion
+        self.use_drift = use_drift
         self.scaler = _EWStandardizer(n_features, decay)
         self.base_decay = decay
         self.candidates = [
@@ -201,10 +209,11 @@ class OnlineModel:
             self._boost -= 1
 
         # --- dynamic parameter optimisation: re-elect the champion ---
-        self.champion = int(np.argmax([c.score() for c in self.candidates]))
+        if self.use_champion:
+            self.champion = int(np.argmax([c.score() for c in self.candidates]))
 
         # --- drift response ---
-        if self.drift.update(int(pred != y)):
+        if self.use_drift and self.drift.update(int(pred != y)):
             self.adapt_events.append(self._t)
             self.drift.reset()
             self._boost = 60

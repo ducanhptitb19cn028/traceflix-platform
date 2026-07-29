@@ -35,6 +35,7 @@ from sklearn.linear_model import (PassiveAggressiveClassifier, Perceptron,
 from sklearn.metrics import (f1_score, precision_score, recall_score,
                              roc_auc_score)
 from sklearn.naive_bayes import GaussianNB
+from sklearn.preprocessing import StandardScaler
 
 from ..configs import CONFIGS
 from ..drift import generate_drifting_run
@@ -73,19 +74,34 @@ def _proba(clf, x):
     return float(clf.predict(x)[0])
 
 
-def prequential(name, X, y, n_warm):
-    """Test-then-train over the whole stream; score the post-warm-up tail."""
+def prequential(name, X, y, n_warm, scale: bool = False):
+    """Test-then-train over the whole stream; score the post-warm-up tail.
+
+    ``scale`` puts a running ``StandardScaler`` in front of the learner, updated
+    online like the classifier. Without it the comparison against our online
+    detector is confounded: that detector carries an EW normaliser, so an
+    unnormalised baseline measures the absence of feature scaling rather than
+    the absence of the champion pool and drift monitor. Any practitioner would
+    scale, so the scaled arm is the fair contrast and the raw arm shows what
+    scaling alone is worth.
+    """
     clf = _make(name)
+    scaler = StandardScaler() if scale else None
     classes = np.array([0, 1])
     preds = np.zeros(len(y), dtype=int)
     probas = np.zeros(len(y), dtype=float)
     started = False
     for i in range(len(y)):
         xi = X[i:i + 1]
+        if scaler is not None:
+            scaler.partial_fit(xi)          # update before transforming: the
+            xs = scaler.transform(xi)       # scaler sees each window once too
+        else:
+            xs = xi
         if started:
-            preds[i] = int(clf.predict(xi)[0])
-            probas[i] = _proba(clf, xi)
-        clf.partial_fit(xi, y[i:i + 1], classes=classes)
+            preds[i] = int(clf.predict(xs)[0])
+            probas[i] = _proba(clf, xs)
+        clf.partial_fit(xs, y[i:i + 1], classes=classes)
         started = True
     # A degenerate estimator can still emit NaN; treat that as "no opinion"
     # (0.5) rather than letting it propagate into the metrics, and report the
@@ -114,12 +130,15 @@ def main() -> None:
         reg = np.asarray(regimes)[:len(y)] if len(regimes) >= len(y) else None
         n_warm = int((reg == 0).sum()) if reg is not None else len(y) // 4
         print(f"[*] {cfg}: {len(y)} windows, R0 warm-up {n_warm}")
-        for name in ("passive_aggressive", "perceptron", "sgd_logistic",
-                     "gaussian_nb"):
-            p, pr, n_bad = prequential(name, X, y, n_warm)
+        arms = [(n, s) for n in ("passive_aggressive", "perceptron",
+                                 "sgd_logistic", "gaussian_nb")
+                for s in (False, True)]
+        for name, scale in arms:
+            p, pr, n_bad = prequential(name, X, y, n_warm, scale=scale)
+            label = f"{name}_scaled" if scale else name
             yte = y[n_warm:]
             rows.append({
-                "config": cfg, "model": name,
+                "config": cfg, "model": label, "scaled": bool(scale),
                 "precision": precision_score(yte, p, zero_division=0),
                 "recall": recall_score(yte, p, zero_division=0),
                 "f1": f1_score(yte, p, zero_division=0),
@@ -127,7 +146,7 @@ def main() -> None:
                 "n_future": int(len(yte)), "nan_scores": n_bad,
             })
             flag = f"  [!] {n_bad} NaN scores" if n_bad else ""
-            print(f"    {name:20} f1={rows[-1]['f1']:.4f}{flag}")
+            print(f"    {label:26} f1={rows[-1]['f1']:.4f}{flag}")
 
     res = pd.DataFrame(rows)
     res.to_csv(out / "rq3_streaming_baselines.csv", index=False)

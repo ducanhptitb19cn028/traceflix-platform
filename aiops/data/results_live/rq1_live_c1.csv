@@ -1,0 +1,2 @@
+source,config,model,precision,recall,f1,auc_roc,n_windows,n_test,prevalence,episodes,always_alarm_f1
+live,C1,rf,0.7,0.7,0.7,0.9672000000000001,450,135,0.07777777777777778,12,0.1443298969072165

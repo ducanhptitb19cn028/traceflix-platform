@@ -46,7 +46,7 @@ from sklearn.metrics import (f1_score, precision_score, recall_score,
                              roc_auc_score)
 from sklearn.model_selection import train_test_split
 
-from ..configs import CONFIGS
+from ..configs import CONFIGS, SERVICES
 from ..dataset import generate_run
 from ..features.build import build_features, split_xy
 from ..models.detectors import BaselineModel, MultimodalFusion, TemporalModel
@@ -216,10 +216,18 @@ def main():
         "mode": "live" if live else "synthetic",
         "episodes": args.episodes,
         "n_windows": len(windows),
-        "services": ["movie-service", "actor-service", "review-service"],
-        "note": "RQ numbers follow the paper; RQ3 (drift) is in online_vs_offline.py.",
+        "services": list(SERVICES),
+        "test_subsample": args.limit,
+        "note": "RQ1 and RQ4 follow the paper. RQ3 (drift) is in "
+                "online_vs_offline.py. The rq2 block below is NOT the paper's "
+                "RQ2 -- see its key.",
         "rq1_completeness_reference_f1": dict(zip(r1["config"], r1["f1"].round(4))),
-        "rq2_localisation": r2.to_dict(orient="records"),
+        # The base generator raises error spans only at the fault's origin, so a
+        # localiser reading that signal recovers the label it is meant to infer
+        # and scores ~1.0. The paper therefore reports RQ2 on the *propagating*
+        # generator (ml/experiments/rq2_localisation.py) instead. This block is
+        # retained for completeness and must not be quoted as the RQ2 result.
+        "rq2_localisation_base_generator_not_reported": r2.to_dict(orient="records"),
         "rq4_best_model": r4.sort_values("f1").iloc[-1]["model"],
     }
     (out / "summary.json").write_text(json.dumps(summary, indent=2))

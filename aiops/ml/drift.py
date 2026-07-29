@@ -32,6 +32,8 @@ from __future__ import annotations
 
 import random
 
+import numpy as np
+
 from .configs import FAULT_TYPES, SERVICES
 from .dataset import ancestors
 from collectors.telemetry import Window, collect_window
@@ -68,6 +70,39 @@ REGIME_NAMES = ["R0 baseline", "R1 latency regression", "R2 scale-out",
                 "R3 combined load"]
 
 
+def scaled_regime_factors(alpha: float) -> list[dict[str, float]]:
+    """``REGIME_FACTORS`` with every multiplier interpolated toward 1 (no drift).
+
+    The multipliers above were chosen to be of the same magnitude as the fault
+    signatures in ``collectors.telemetry._FAULT_SHIFT`` (R3 moves p99 latency by
+    2.2x, a latency_spike fault by 2.3x). A frozen detector must therefore fail
+    on them, which makes the reported collapse an artefact of that choice rather
+    than a measurement. Sweeping ``alpha`` turns the single point into a curve
+    and exposes where the failure actually begins.
+
+    Interpolation is on each multiplier's distance from 1, so the *shape* of a
+    regime -- which fields move, and in what proportion to each other -- is
+    preserved and only the amplitude varies. ``alpha=0`` removes drift entirely,
+    ``alpha=1`` reproduces the reported campaign, ``alpha>1`` extrapolates past
+    it. Labels never depend on alpha, so the fault schedule is identical across
+    the sweep.
+    """
+    return [{k: 1.0 + alpha * (v - 1.0) for k, v in reg.items()}
+            for reg in REGIME_FACTORS]
+
+
+def mean_amplitude(factors: dict[str, float]) -> float:
+    """Geometric mean multiplier of a regime, over the fields it moves.
+
+    Reported alongside each sweep point so the x-axis can be read as an
+    operating-point shift rather than an abstract scale factor.
+    """
+    vals = [v for v in factors.values() if v > 0]
+    if not vals:
+        return 1.0
+    return float(np.exp(np.mean(np.log(vals))))
+
+
 def apply_regime(w: Window, factors: dict[str, float]) -> Window:
     """Scale a window's operating-point fields in place; labels untouched."""
     for pillar, fields in _DRIFT_FIELDS.items():
@@ -84,6 +119,7 @@ def generate_drifting_run(
     normal_ratio: float = 0.45,
     n_regimes: int = 4,
     seed: int = 42,
+    factors: list[dict[str, float]] | None = None,
 ):
     """Time-ordered stream of windows whose normal operating point drifts across
     `n_regimes` operational regimes.
@@ -93,8 +129,9 @@ def generate_drifting_run(
     windows : list[Window]            -- in stream (time) order
     regimes : list[int]               -- regime index per window, aligned to `windows`
     """
-    if n_regimes > len(REGIME_FACTORS):
-        raise ValueError(f"n_regimes<= {len(REGIME_FACTORS)} supported")
+    table = REGIME_FACTORS if factors is None else factors
+    if n_regimes > len(table):
+        raise ValueError(f"n_regimes<= {len(table)} supported")
     rng = random.Random(seed)
     windows: list[Window] = []
     regimes: list[int] = []
@@ -104,7 +141,7 @@ def generate_drifting_run(
 
     for ei in range(n_episodes):
         regime = min(n_regimes - 1, int(ei / per))
-        factors = REGIME_FACTORS[regime]
+        reg_factors = table[regime]
 
         if rng.random() < normal_ratio:
             fault, root = "normal", None
@@ -125,7 +162,7 @@ def generate_drifting_run(
                 else:
                     svc_fault, is_origin = "normal", False
                 w = collect_window(svc, svc_fault, ts, rng, is_origin)
-                apply_regime(w, factors)
+                apply_regime(w, reg_factors)
                 windows.append(w)
                 regimes.append(regime)
 

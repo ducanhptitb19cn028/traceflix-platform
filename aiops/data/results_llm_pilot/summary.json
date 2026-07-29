@@ -3,18 +3,25 @@
   "episodes": 10,
   "n_windows": 1080,
   "services": [
+    "gateway-service",
     "movie-service",
     "actor-service",
-    "review-service"
+    "review-service",
+    "user-service",
+    "search-service",
+    "recommendation-service",
+    "auth-service",
+    "catalog-service"
   ],
-  "note": "RQ numbers follow the paper; RQ3 (drift) is in online_vs_offline.py.",
+  "note": "RQ1 and RQ4 follow the paper. RQ3 (drift) is in online_vs_offline.py. The rq2 block below is NOT the paper's RQ2 -- see its key.",
   "rq1_completeness_reference_f1": {
     "C1": 0.8632,
     "C2": 0.8387,
     "C3": 0.9908,
     "C4": 0.9907
   },
-  "rq2_localisation": [
+  "rq4_best_model": "rf",
+  "rq2_localisation_base_generator_not_reported": [
     {
       "approach": "metrics+logs (C2)",
       "k": 1,
@@ -35,6 +42,5 @@
       "k": 2,
       "topk_accuracy": 1.0
     }
-  ],
-  "rq4_best_model": "rf"
+  ]
 }

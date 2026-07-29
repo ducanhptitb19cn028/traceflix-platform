@@ -4,8 +4,8 @@
   "best_off_the_shelf_per_config": [
     {
       "config": "C1",
-      "model": "gaussian_nb",
-      "f1": 0.5147392290249433
+      "model": "passive_aggressive_scaled",
+      "f1": 0.7716535433070866
     }
   ]
 }

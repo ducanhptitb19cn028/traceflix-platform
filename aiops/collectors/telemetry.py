@@ -49,50 +49,59 @@ class Window:
 # ===========================================================================
 # LIVE collectors
 # ===========================================================================
-def _prom_instant(query: str, base: str = PROM_URL) -> float:
+def _prom_instant(query: str, base: str = PROM_URL,
+                  at: float | None = None) -> float:
+    """Instant PromQL. ``at`` evaluates the query at a past instant instead of
+    now, which is what lets a recorded fault-injection campaign be reconstructed
+    after the fact: without it every window of a past episode would be filled
+    with present-moment telemetry and silently mislabelled."""
     import httpx
 
     try:
-        r = httpx.get(f"{base}/api/v1/query", params={"query": query}, timeout=10)
+        params = {"query": query}
+        if at is not None:
+            params["time"] = f"{at:.3f}"
+        r = httpx.get(f"{base}/api/v1/query", params=params, timeout=10)
         res = r.json().get("data", {}).get("result", [])
         return float(res[0]["value"][1]) if res else 0.0
     except Exception:
         return 0.0
 
 
-def collect_metrics_live(service: str) -> dict:
+def collect_metrics_live(service: str, at: float | None = None) -> dict:
     """PromQL over OTel-agent metrics. `service_name` is the resource label the
     Prometheus exporter emits when resource_to_telemetry_conversion is on."""
     s = f'service_name="{service}"'
     w = "2m"
+    # NB: every query below must carry `at`. A partially time-parameterised
+    # window would mix past and present telemetry in one feature vector, which
+    # no downstream check would catch.
     return {
         # request throughput / errors from the HTTP server histogram count
         "req_rate": _prom_instant(
-            f"sum(rate(http_server_request_duration_seconds_count{{{s}}}[{w}]))"
-        ),
+            f"sum(rate(http_server_request_duration_seconds_count{{{s}}}[{w}]))",
+            at=at),
         "err_rate": _prom_instant(
             f'sum(rate(http_server_request_duration_seconds_count{{{s},'
-            f'http_response_status_code=~"5.."}}[{w}]))'
-        ),
+            f'http_response_status_code=~"5.."}}[{w}]))',
+            at=at),
         "p50_latency": _prom_instant(
             f"histogram_quantile(0.5, sum(rate("
-            f"http_server_request_duration_seconds_bucket{{{s}}}[{w}])) by (le))"
-        ),
+            f"http_server_request_duration_seconds_bucket{{{s}}}[{w}])) by (le))",
+            at=at),
         "p99_latency": _prom_instant(
             f"histogram_quantile(0.99, sum(rate("
-            f"http_server_request_duration_seconds_bucket{{{s}}}[{w}])) by (le))"
-        ),
+            f"http_server_request_duration_seconds_bucket{{{s}}}[{w}])) by (le))",
+            at=at),
         # JVM metrics from the agent
-        "cpu": _prom_instant(f"avg(jvm_cpu_recent_utilization_ratio{{{s}}})"),
-        "mem": _prom_instant(f"sum(jvm_memory_used_bytes{{{s}}})"),
+        "cpu": _prom_instant(f"avg(jvm_cpu_recent_utilization_ratio{{{s}}})", at=at),
+        "mem": _prom_instant(f"sum(jvm_memory_used_bytes{{{s}}})", at=at),
         "gc_pause": _prom_instant(
-            f"sum(rate(jvm_gc_duration_seconds_sum{{{s}}}[{w}]))"
-        ),
-        "threads": _prom_instant(f"avg(jvm_thread_count{{{s}}})"),
+            f"sum(rate(jvm_gc_duration_seconds_sum{{{s}}}[{w}]))", at=at),
+        "threads": _prom_instant(f"avg(jvm_thread_count{{{s}}})", at=at),
         # historical baseline (C4): mem over a long window from VictoriaMetrics
         "mem_baseline_1h": _prom_instant(
-            f"avg_over_time(jvm_memory_used_bytes{{{s}}}[1h])", base=VM_URL
-        ),
+            f"avg_over_time(jvm_memory_used_bytes{{{s}}}[1h])", base=VM_URL, at=at),
     }
 
 
@@ -259,9 +268,13 @@ def collect_window(service: str, fault: str, ts: float, rng: random.Random,
                    is_origin: bool = True,
                    err_span_level: float | None = None) -> Window:
     if LIVE:
+        # `ts` is the instant this window represents. Metrics are reconstructed
+        # at it; logs, traces and events are not yet time-parameterised, so a
+        # historical replay carries live C1 features and present-moment values
+        # elsewhere -- C2--C4 are therefore not valid for a past campaign.
         return Window(
             ts, service, fault,
-            metrics=collect_metrics_live(service),
+            metrics=collect_metrics_live(service, at=ts),
             logs=collect_logs_live(service),
             traces=collect_traces_live(service),
             events=collect_events_live(service),

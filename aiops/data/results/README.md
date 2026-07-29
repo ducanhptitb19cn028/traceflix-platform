@@ -92,6 +92,34 @@ at seed 42 and **must reproduce** `results/rq4_model_family.csv` to several
 decimals. `lstm` is stochastic and will not — which is also why the LSTM row is
 not reproducible run to run.
 
+### The paper's RQ4 table — `../results_uniform/` + `../results_llm/`
+
+**The paper's six-family RQ4 table is not `results/rq4_model_family.csv`.** That
+file scores five families on the **whole** 6,480-window test split, while the
+LLM costs ~9 s/window and was scored on 3,000 of them. Quoting one against the
+other would compare rows measured on different samples.
+
+The reported table instead uses the `--limit` mechanism (`model_family(...,
+limit=3000)`): `train_test_split` shuffles and stratifies, so the first 3,000
+windows of the split are a *random* subsample, and `score_llm.py` reproduces the
+identical split and prefix. All six families are therefore scored on **the same
+3,000 windows**.
+
+| Source | Rows it contributes |
+|--------|--------------------|
+| `../results_uniform/rq4_model_family.csv` | `rf`, `gb`, `xgb`, `lstm`, `multimodal_fusion` at `limit=3000` |
+| `../results_llm/rq4_llm_row.csv` | the `llm_qwen2.5:3b` row, same split, same prefix |
+
+The LLM row name encodes its own audit trail —
+`llm_qwen2.5:3b(llm,err=0/300,n=3000/6480)` — so `llm` (not `heuristic`) and
+`err=0` must both hold before the row is quoted. Because these are a different
+sample from `results/`, a family appearing in both directories differs in the
+third decimal; that is expected, not drift.
+
+Produced by: `python -m ml.experiments.run_experiment --limit 3000 --out
+data/results_uniform`, then `python -u -m ml.experiments.score_llm --episodes
+200 --seed 42`.
+
 ## RQ2 — root-cause localisation on the propagating generator
 
 | File | Description |
@@ -167,6 +195,37 @@ C3/C4 (+0.055, +0.057 — roughly nine standard deviations).
 
 Produced by:
 `python -m ml.experiments.baselines_and_seeds --seeds 42,43,44,45,46 --configs C1,C2,C3,C4`
+
+## RQ3 supplementary — the drift-magnitude sweep — `../results_drift_sweep/`
+
+| File | Description |
+|------|-------------|
+| `../results_drift_sweep/rq3_drift_sweep.csv` | Per (alpha, config): precision / recall / F1 / AUC for static, periodic and online, plus the resulting R3 amplitude and the online detector's adapt-event count. |
+| `../results_drift_sweep/rq3_drift_sweep_summary.json` | The always-alarm floor, and the largest alpha at which the frozen model still holds twice that floor. |
+
+**Why this exists — it answers the sharpest objection to RQ3.** `REGIME_FACTORS`
+in `ml/drift.py` moves p99 latency by 2.2× and CPU by 1.8×; `_FAULT_SHIFT` in
+`collectors/telemetry.py` moves p99 by 2.3× (`latency_spike`) and CPU by 2.4×
+(`cpu_saturation`). **The drift amplitude and the fault amplitude are the same
+size.** Under R3 the healthy operating point therefore lands on top of the fault
+signature the static model was fit to detect, so its collapse to F1 ≈ 0.36 is
+*entailed by that choice* rather than measured. One operating point cannot
+separate "drift defeats frozen detectors" from "we set the drift as large as the
+fault."
+
+`scaled_regime_factors(alpha)` interpolates every multiplier toward 1 —
+preserving which fields each regime moves and in what proportion, varying only
+how far. `alpha=0` is stationary, `alpha=1` reproduces the reported campaign,
+`alpha>1` extrapolates. **Labels are assigned before the regime factors are
+applied and the generator draws the same random numbers either way, so the fault
+schedule is byte-identical at every alpha**: the only thing that varies across
+the sweep is how far the healthy baseline has moved.
+
+Read the curve, not the endpoint. The endpoint is the number in the paper's
+tables; the curve is what licenses a claim about drift in general.
+
+Produced by:
+`python -u -m ml.experiments.drift_sweep --episodes 320 --seed 42 --configs C1,C4`
 
 ## Figures
 

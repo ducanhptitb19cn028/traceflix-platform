@@ -1,0 +1,26 @@
+{
+  "episodes": 320,
+  "seed": 42,
+  "best_off_the_shelf_per_config": [
+    {
+      "config": "C1",
+      "model": "sgd_logistic_scaled",
+      "f1": 0.7962732919254658
+    },
+    {
+      "config": "C2",
+      "model": "sgd_logistic_scaled",
+      "f1": 0.8154128440366972
+    },
+    {
+      "config": "C3",
+      "model": "passive_aggressive_scaled",
+      "f1": 0.9706083390293917
+    },
+    {
+      "config": "C4",
+      "model": "passive_aggressive_scaled",
+      "f1": 0.9703037888269428
+    }
+  ]
+}
