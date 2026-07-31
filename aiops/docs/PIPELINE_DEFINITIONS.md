@@ -57,6 +57,9 @@ four mechanisms:
 ## One-line contrast
 
 > **Offline** trains a snapshot and ships it (re-fit to adapt); **online** learns
-> continuously per window and never re-fits. On a non-stationary stream the
-> offline model decays (F1 ≈ 0.5) while the online model holds at oracle level
-> (F1 ≈ 0.98) — see [`ONLINE_PIPELINE.md`](ONLINE_PIPELINE.md).
+> continuously per window and never re-fits. On the drifted stream the frozen
+> offline model decays to **F1 ≈ 0.36** (against a trivial floor of 0.292) while
+> the online model holds at **≈ 0.97** once traces are present — but the two
+> adaptive policies are **tied** under thin telemetry, and on a *stationary*
+> stream the frozen model is the best of the three. See
+> [`ONLINE_PIPELINE.md`](ONLINE_PIPELINE.md).

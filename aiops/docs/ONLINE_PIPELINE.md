@@ -82,52 +82,103 @@ scored on the `R1–R3` future:
 
 ## The headline result
 
-F1 on the *operational future* (regimes R1–R3), all models on identical features:
+F1 on the *operational future* (regimes R1–R3, **25,920 windows**), all models on
+identical features, seed 42. Read against the **always-alarm floor of F1 = 0.292**
+(prevalence 0.171 — flag every window):
 
-| config | offline_static | offline_periodic | online_adaptive | offline_full (oracle) |
+| config | offline_static | offline_periodic | online_adaptive | offline_full (ref.) |
 |--------|:--:|:--:|:--:|:--:|
-| C1 Metrics-Only | 0.489 | 0.757 | 0.817 | 0.812 |
-| C2 + Logs | 0.492 | 0.778 | 0.835 | 0.834 |
-| C3 + Traces | 0.510 | 0.890 | 0.982 | 0.940 |
-| C4 Full MELT | 0.511 | 0.891 | 0.983 | 0.939 |
+| C1 Metrics-Only | 0.360 | 0.820 | 0.813 | 0.812 |
+| C2 + Logs | 0.361 | 0.832 | 0.827 | 0.817 |
+| C3 + Traces | 0.370 | 0.925 | **0.974** | 0.929 |
+| C4 Full MELT | 0.371 | 0.926 | **0.976** | 0.927 |
 
-- **Static batch collapses to F1 ≈ 0.5 under drift even with full MELT**
-  (precision ≈ 0.34 — false alarms on the new normal). Richer observability does
-  not rescue it: the failure is the *learning paradigm*, not signal.
-- **Scheduled retraining is not enough either.** `offline_periodic` recovers a
-  lot of the loss but still trails online by 6–9 F1 points and never reaches the
-  oracle — every regime shift opens a **drift-response gap** until the next
+- **Static batch collapses to F1 ≈ 0.36 under drift even with full MELT**
+  (precision ≈ 0.22 — it fires on the new normal), barely above the trivial
+  floor. Richer observability does not rescue it: the failure is the *learning
+  paradigm*, not signal availability.
+- **Scheduled retraining recovers most of the gap** (0.36 → 0.82–0.93) but is
+  bursty: every regime shift opens a **drift-response gap** until the next
   refresh (the sawtooth in `rq3_timeline.png`), and each refresh is a full batch
-  re-fit.
-- **Online recovers to oracle level** (0.82 → 0.98) updating per sample, and
-  *exceeds* the all-regime oracle under C3/C4 because tracking the evolving
-  normal beats a single static split.
+  re-fit that blocks the detector.
+- **Online leads only once telemetry is rich.** At **C1/C2 the two adaptive
+  policies are tied** — the −0.007/−0.005 gaps are smaller than the five-seed
+  spread of either. At C3/C4 online leads by ~0.05 (roughly nine standard
+  deviations) and *exceeds* the all-regime reference, because tracking the
+  evolving normal beats fitting one boundary across every regime.
+- **And you cannot fix the frozen model by moving the threshold.** An *oracle*
+  cut-point chosen on the drifted stream itself — knowing the test labels, which no
+  deployment can — recovers it only to 0.44–0.55. The boundary is the wrong
+  **shape**, not merely in the wrong **place**.
 
 ## Cost angle — `ml/experiments/cost_compare.py`
 
-Measures the honest trade-off (C4, 8640 future windows):
+Measures the honest trade-off (C4, 25,920 future windows):
 
 | | offline_periodic | online_adaptive |
 |--|:--:|:--:|
-| F1 | 0.890 | 0.983 |
-| train events | 17 full refits | 8640 updates |
-| worst-case latency / window | ~450 ms (refit stall) | ~12 ms |
-| p99 latency / window | 0.34 ms | 6.6 ms |
-| model size | 3.3 MB | 16 KB |
+| F1 | 0.9255 | 0.9755 |
+| train events | 51 full refits | 25,920 updates |
+| worst-case latency / window | 581.6 ms (refit stall) | 15.5 ms |
+| p99 latency / window | 0.14 ms | 8.5 ms |
+| model size | 2287.7 KB | 15.7 KB |
 | labelled windows retained | 2880 | 0 |
-| total CPU over the stream | 1.0× (baseline) | ~4.5× |
+| total CPU over the stream | 29.4 s (1.0×) | 129.7 s (~4.4×) |
 
-Online is **not cheaper in total CPU** (~4.5× the aggregate compute), but it
-wins on every dimension that matters operationally: ~38× lower worst-case
-latency, ~214× smaller model, zero retained training data, *and* higher F1. It
-converts a bursty, stateful, blocking retrain pipeline into a smooth,
-bounded-latency, stateless stream.
+Online is **not cheaper in total CPU** (4.1–4.8× the aggregate across C1–C4), but it
+wins on every dimension that matters operationally: **10–48× lower worst-case
+latency**, a **~120–390× smaller model**, zero retained training data, *and* higher
+F1 once traces are present. It converts a bursty, stateful, blocking retrain pipeline
+into a smooth, bounded-latency, stateless stream.
+
+> Wall-clock columns are properties of one workstation and a single pass; the
+> structural columns (refit count, footprint, retained windows) follow from the policy
+> and reproduce exactly. The argument rests on those and on the order-of-magnitude
+> tail gap, not on any particular millisecond.
+
+## What the machinery is actually worth
+
+The detector's own mechanisms were ablated rather than assumed
+(`ml/experiments/baseline_streaming.py`, `ablate_online.py`):
+
+- **Adaptive normalisation carries the policy.** Three canonical linear learners
+  (passive-aggressive, perceptron, plain SGD) reach F1 **0.302–0.308 unnormalised at
+  every configuration**; put a running standardiser in front of the *same* learner and
+  they reach **0.760–0.796 at C1** and **0.959–0.971 at C3**.
+- **The pool and the monitor are close to free.** Champion re-election is worth +0.013
+  (C1), +0.005 (C2), nothing at C3/C4; the drift monitor is worth nothing anywhere, so
+  its `adapt_events` are diagnostic rather than load-bearing.
+- The full detector's remaining margin over the best off-the-shelf scaled arm is
+  **+0.017 at C1 and +0.003 at C3** — the latter inside the seed spread. A standardised
+  incremental learner is a close substitute for the whole thing.
+
+## How far must the baseline move?
+
+The headline is measured at one drift amplitude, and that amplitude is comparable to
+the fault signatures themselves — so a frozen boundary *must* fail at it.
+`ml/experiments/drift_sweep.py` rescales every regime multiplier toward 1 with
+`scaled_regime_factors(α)`, holding the fault schedule byte-identical, and reports the
+curve: refitting begins to pay at a **1.15×** operating-point shift, the frozen model
+falls below twice the always-alarm floor between **1.29× and 1.49×**, and **below that
+band the frozen model is the best of the three** while the online detector is the
+worst. The reported campaign sits at 1.97×.
 
 ## Run it
 
 ```bash
-cd aiops
+# from the repo root
+make rq3 cost plots       # detection + cost + figures  (minutes)
+make controls             # = seeds + sweep + baselines + ablation  (hours)
+
+# or from aiops/, without make
 ./scripts/run_online_offline.sh 320   # -> rq3_*.csv, rq3_cost.csv, figures
+python -m ml.experiments.baselines_and_seeds --seeds 42,43,44,45,46 --configs C1,C2,C3,C4
+python -u -m ml.experiments.drift_sweep --episodes 320 --configs C1,C4 --out data/results_drift_sweep
+python -u -m ml.experiments.baseline_streaming --episodes 320 --out data/results_baselines_scaled
+python -u -m ml.experiments.ablate_online --episodes 320 --out data/results_ablation
 ```
 
-This runs `online_vs_offline` (detection) + `cost_compare` (cost) + `ml.eval.plots`.
+`run_online_offline.sh` runs `online_vs_offline` (detection) + `cost_compare` (cost) +
+`ml.eval.plots`. Each control writes to its **own** directory, so none of them can
+overwrite the committed artefacts in `data/results/`. Full result catalogue: [`../data/results/README.md`](../data/results/README.md);
+full analysis: [`RQ3_RESULTS_ONLINE_VS_OFFLINE.md`](RQ3_RESULTS_ONLINE_VS_OFFLINE.md).

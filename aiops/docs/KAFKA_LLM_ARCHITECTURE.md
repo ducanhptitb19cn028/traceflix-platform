@@ -137,9 +137,21 @@ can move to VM3 by repointing `TF_KAFKA_BOOTSTRAP` — no code change.
 - **RQ3 (online vs offline under drift):** unchanged numbers, but the streaming
   story is now backed by a real broker — a deployment-architecture paragraph, not
   a new result.
-- **RQ4 (model family):** **new rows** — `llm_qwen2.5_3b` (base) and
-  `llm_qwen2.5_3b_lora` (tuned) beside RF/GB/XGB/LSTM/fusion, same C4 split, same
-  `_metrics()`. This is the headline new result.
+- **RQ4 (model family):** **one new row** — `llm_qwen2.5:3b` beside
+  RF/GB/XGB/LSTM/fusion, same `_metrics()`. **It scored F1 0.440** (precision 0.372,
+  recall 0.540) on a served model with no failed call. Read that against the
+  always-alarm floor of 0.292 and the trees at ~0.98: **a working detector, not a
+  competitive one** — and not the headline result this section once billed it as.
+  Two corrections to earlier drafts of this doc:
+  - **There is no LoRA row.** `llm_qwen2.5_3b_lora` was planned (§8 step 4 below) and
+    never run; no committed artefact contains it. The "tuning lift" remains unmeasured.
+  - **It is not the same split as `results/`.** The LLM costs ~9 s/window, so the
+    reported table scores all six families on a shared **3,000-window subsample**
+    (`results_uniform/` + `results_llm/`). Quoting the LLM row against
+    `results/rq4_model_family.csv` compares different samples.
+- **Its security exposure is a claim of its own.** It is the only detector reading
+  *raw*, attacker-influenceable log and trace text, so it carries a prompt-injection
+  exposure the feature-based classifiers do not.
 - No change to RQ1/RQ2 inputs or claims.
 
 ## 8. Run order (scaffold, no Docker needed)
@@ -155,7 +167,9 @@ TF_KAFKA_BOOTSTRAP=localhost:9092 OLLAMA_URL=http://localhost:11434 \
   python -m streaming.run_pipeline --episodes 40
 
 # 3. LLM as an RQ4 model family (offline eval)
-python -m ml.experiments.run_experiment --episodes 200   # now includes llm rows when ENABLE_LLM=1
+#    ALWAYS pass --out: run_experiment rewrites rq1/rq2/rq4/summary.json wholesale,
+#    and data/results holds the committed artefacts behind the paper's tables.
+ENABLE_LLM=1 python -m ml.experiments.run_experiment --episodes 200 --out data/results_llm
 
 # 4. LoRA fine-tune (GPU)
 python -m llm.build_dataset --episodes 400 --out llm/data

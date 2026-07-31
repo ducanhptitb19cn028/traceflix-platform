@@ -43,6 +43,16 @@ This layer **does not modify your services**. It sits beside them and:
   [`data/results/README.md`](data/results/README.md) for the two silent failure
   modes that must be checked before quoting any number from it.
 
+Four **controls** sit underneath RQ3, each answering an objection the headline
+cannot answer by itself:
+
+| Control | Question it settles | Code |
+|---|---|---|
+| Floor, oracle re-threshold, seed variance | Is 0.36 bad? Can a threshold fix it? Is the ordering seed-luck? | `ml/experiments/baselines_and_seeds.py` |
+| **Drift-magnitude sweep** | Does drift break frozen detectors, or did we just set drift = fault size? | `ml/experiments/drift_sweep.py` |
+| **Streaming baselines + component ablation** | Which mechanism earns the online margin? | `ml/experiments/baseline_streaming.py`, `ablate_online.py` |
+| **Live replay** | Does any of this run on *measured* telemetry? | `ml/experiments/live_replay.py` |
+
 ## Quick start — offline (no cluster)
 
 The synthetic generator mirrors the live collector schema, so all three RQs
@@ -175,29 +185,41 @@ number of train events, model size, and the labelled buffer each must retain:
 
 ```
 C4, 25,920 future windows         offline_periodic     online_adaptive
-F1                                      0.926               0.976
+F1                                      0.9255              0.9755
 train events                            51 full refits      25,920 updates
-worst-case latency / window          ~937 ms (refit stall)  ~53 ms
-p99 latency / window                    0.25 ms             17.5 ms
-model size                              2.29 MB             15.7 KB
+worst-case latency / window             581.6 ms (stall)    15.5 ms
+p99 latency / window                    0.14 ms             8.5 ms
+model size                              2287.7 KB           15.7 KB
 labelled windows retained to train      2880                0
-total CPU over the stream               1.0x (baseline)     ~6.5x
+total CPU over the stream               29.4 s (1.0x)       129.7 s (~4.4x)
 ```
 
 The honest trade-off:
 
 - Online is **not cheaper in total CPU** — it does a little work *every* window
-  (a pool of linear `partial_fit` updates), ~6.5x the aggregate compute of 51
+  (a pool of linear `partial_fit` updates), 4.1–4.8x the aggregate compute of 51
   RandomForest refits. That cost is real and worth stating.
-- But online wins on every dimension that matters operationally: **~18x lower
-  worst-case latency** (a full refit blocks the detector for ~937 ms; the online
-  update never exceeds ~53 ms, so detection stays real-time), a **~146x smaller
-  model**, **zero retained training data** (periodic must keep a 2880-window
-  labelled buffer to refit — memory and data-governance cost), *and* higher F1.
+- But online wins on every dimension that matters operationally: **10–48x lower
+  worst-case latency** (a full refit blocks the detector for 580–880 ms; the
+  online update never exceeded 78 ms across five seeds, so detection stays
+  real-time), a **~120–390x smaller model** (≈15 KB against 2–6 MB), **zero
+  retained training data** (periodic must keep a 2880-window labelled buffer to
+  refit — memory and data-governance cost), *and* higher F1 once traces are present.
 - Periodic's mean latency is lower because its work is bursty and rare — but
   bursty is exactly the problem: the stalls land precisely when a regime shifts
   and detection matters most. Buying down the F1 gap with a faster cadence only
   multiplies those stalls and the compute.
+
+> The wall-clock columns are properties of this workstation and a single pass. The
+> **structural** columns — refit count, footprint, retained windows — follow from the
+> policy and reproduce exactly, and the cost argument rests on those plus the
+> order-of-magnitude tail gap, not on any particular millisecond.
+
+The table above is **seed 42** (`make cost`). Every *range* quoted in this section is a
+min–max over five seeds, which one seed cannot produce — `make cost-seeds` drives
+`cost_compare` across seeds and aggregates them into `data/results/rq3_cost_seeds.csv`
+(`make cost-seeds-agg` re-derives the summary from per-seed tables already on disk, in
+seconds). Quote ranges from there, not from the seed-42 table.
 
 So the cost comparison reframes the result: it is not "online is free", it is
 **online converts a bursty, stateful, blocking retrain pipeline into a smooth,
@@ -212,6 +234,116 @@ Reproduce everything (RQ3 detection + cost + figures) with one command:
 ```bash
 ./scripts/run_online_offline.sh 320            # -> rq3_*.csv, rq3_cost.csv, figures
 ```
+
+### How far must the baseline move? — the drift-magnitude sweep
+
+Everything above is measured at **one** drift amplitude, and that amplitude is
+comparable to the fault signatures themselves (`REGIME_FACTORS` moves p99 by 2.2x,
+`_FAULT_SHIFT` moves it by 2.3x). A boundary fitted on R0 *must* fail there, so the
+collapse is entailed by the parameterisation rather than measured. One operating
+point cannot separate "drift defeats frozen detectors" from "we set the drift as
+large as the fault".
+
+`scaled_regime_factors(alpha)` (`ml/drift.py`) rescales every multiplier toward 1,
+preserving which fields each regime moves and in what proportion, varying only how
+far. Labels are assigned before the factors are applied and the generator draws the
+same random numbers either way, so **the fault schedule is identical at every
+alpha** — the only thing that varies is how far the healthy baseline has moved.
+
+```bash
+make sweep                    # from the repo root; knobs: DRIFT_EPISODES= SWEEP_CONFIGS=
+# equivalently, from aiops/:
+python -u -m ml.experiments.drift_sweep --episodes 320 --seed 42 --configs C1,C4 \
+  --out data/results_drift_sweep
+```
+
+```
+       R3 shift   C1: static periodic online   C4: static periodic online
+a=0.00   1.00x       0.890    0.885    0.815      0.989    0.985    0.977
+a=0.15   1.15x       0.830    0.880    0.815      0.933    0.982    0.977
+a=0.30   1.29x       0.682    0.867    0.815      0.769    0.974    0.977
+a=0.50   1.49x       0.511    0.852    0.814      0.546    0.954    0.976
+a=1.00   1.97x       0.360    0.820    0.813      0.370    0.925    0.976   <- reported campaign
+a=1.30   2.26x       0.333    0.813    0.813      0.341    0.921    0.976
+```
+
+- **Adaptation is not free.** On a stationary stream the frozen model is the *best*
+  of the three and the online detector the worst (0.815 vs 0.890 at C1). Continual
+  updating is worth having because the stream drifts, not because it is continual.
+- **The failure is gradual.** Static F1 at C4 falls 0.989 → 0.370; by a 1.29x shift a
+  detector has lost a fifth of its F1 while still looking serviceable.
+- **The decision threshold is a number, not an assertion.** Refitting starts to pay
+  by a **1.15x** shift, and the frozen model drops below twice the always-alarm floor
+  between **1.29x and 1.49x**. The reported campaign sits at 1.97x — well beyond it.
+- **The two adaptive policies differ in kind.** Online F1 at C4 varies by 0.001 across
+  the whole sweep; periodic decays steadily (0.985 → 0.921), exposed to whatever
+  accumulates between refits. At C1 periodic leads or ties at *every* amplitude.
+
+`alpha=1` reproduces `rq3_online_vs_offline.csv` to four decimals — treat it as the
+sweep's regression check.
+
+### What the adaptive machinery is actually worth — baselines and ablation
+
+Two experiments build a ladder underneath the online detector, so its margin is
+attributed rather than assumed.
+
+```bash
+make baselines                # 1. off-the-shelf learners, raw and standardised
+make ablation                 # 2. the detector's own mechanisms, off in turn
+# equivalently, from aiops/:
+python -u -m ml.experiments.baseline_streaming --episodes 320 --seed 42 \
+  --out data/results_baselines_scaled
+python -u -m ml.experiments.ablate_online --episodes 320 --seed 42 \
+  --out data/results_ablation
+```
+
+**Normalisation carries the policy; the rest is close to free.** Three canonical
+linear learners (passive-aggressive, perceptron, plain SGD) scored prequentially on
+the identical stream reach **F1 0.302–0.308 unnormalised at every configuration** —
+barely above the floor, and flat in richness. Put a running `StandardScaler` in front
+of the *same* learner and they reach **0.760–0.796 at C1** and **0.959–0.971 at C3**,
+tracking completeness as the full detector does (plain SGD +0.170 from C1→C4 against
+the detector's +0.163).
+
+Against the best off-the-shelf scaled arm the full detector retains **+0.017 at C1**
+and **+0.003 at C3** — the latter inside the seed spread. The ablation splits that
+remainder: champion re-election is worth **+0.013 (C1)**, +0.005 (C2) and **nothing**
+at C3/C4; the drift monitor is worth **nothing anywhere** (−0.0014 at C1, 0.0000 at
+C3/C4), so its adapt events are diagnostic rather than load-bearing.
+
+The honest read-out: **a standardised incremental learner is a close substitute for
+the whole detector.** That does not weaken RQ3 — the clean, unconfounded contrast was
+always static-vs-periodic within one family — but it does bound what the detector's
+extra machinery may be credited with.
+
+### The live-replay pilot — the one measured result
+
+`ml/experiments/live_replay.py` joins the ground truth from `faults/run_episodes.py`
+to *historical* PromQL: `collect_metrics_live(service, at=ts)` evaluates each query at
+the instant its window represents, so a recorded campaign is reconstructed rather than
+filled with present-moment telemetry.
+
+```bash
+make live-replay              # PROM_URL= and LIVE_LABELS= override the defaults
+# equivalently, from aiops/:
+TF_LIVE=1 PROM_URL=http://localhost:9090 \
+  python -u -m ml.experiments.live_replay --labels data/labels_live.csv \
+  --out data/results_live
+```
+
+```
+source config model  P      R      F1     AUC    n_test  prevalence  floor
+live   C1     rf     0.700  0.700  0.700  0.967  135     0.078       0.144
+```
+
+Narrow on purpose, and the narrowness is the point: **C1 only** (the log, trace and
+event collectors are not time-parameterised, so C2–C4 would silently mix present
+values into a past window — this pilot therefore says *nothing* about the trace
+increment), **origin-only labelling** (ancestors degraded by the fault count as
+normal — conservative, it can only depress precision), and **twelve episodes**. It is
+evidence the pipeline works end to end on genuine telemetry; it is not evidence about
+any number in the paper. The full drifted live campaign remains the outstanding
+experiment.
 
 ## Quick start — live (against your cluster)
 

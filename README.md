@@ -22,8 +22,10 @@ Science · July 2026
 > - **Just want the results?** They are committed under
 >   [`aiops/data/results/`](aiops/data/results/) (CSV datasets + PNG figures) — see
 >   [Where the evidence lives](#where-the-evidence-lives).
-> - **Reproduce them:** [Reproduce everything](#reproduce-everything) regenerates
->   every number and figure in Chapter 5 with `make experiments`.
+> - **Reproduce them:** [Reproduce everything](#reproduce-everything). `make experiments`
+>   regenerates the RQ1/RQ2/RQ3/cost tables and the figures in minutes; `make controls`
+>   adds the four supplementary controls (floor + seeds, drift sweep, streaming
+>   baselines, component ablation) and takes hours. `make experiments-full` runs both.
 > - **Want the full guided tour?** [`DEMO.md`](DEMO.md) walks the whole project
 >   end-to-end across three self-contained tracks.
 > - Every claim in Chapter 5 maps to a file here — see the [evidence map](#repository-structure--evidence-map).
@@ -85,6 +87,16 @@ through the `TF_LIVE=1` path, which is what would test the generator's load-bear
 assumption that the error signals do not drift, and locate a real mesh on RQ2's β
 sweep — the single measurement that would turn RQ2's direction into a magnitude.
 
+**One measured result now exists, and it is deliberately small.**
+`aiops/ml/experiments/live_replay.py` reconstructs a recorded fault-injection campaign
+from historical PromQL — each query evaluated *at* the instant its window represents —
+and scores a RandomForest at C1 on it: **F1 0.700** (AUC 0.967) over 450 windows from
+12 episodes, against that campaign's own always-alarm floor of 0.144. It is **C1 only**
+(the log, trace and event collectors are not time-parameterised, so it says *nothing*
+about the contested trace increment), origin-only labelled, and far too short to carry
+a confidence interval. Treat it as proof the pipeline runs end-to-end on genuine
+telemetry — not as evidence about any number below.
+
 ### Research questions (each is runnable code)
 
 | RQ | Question | Where |
@@ -93,7 +105,10 @@ sweep — the single measurement that would turn RQ2's direction into a magnitud
 | **RQ2** | What does distributed tracing add to root-cause localisation on a deep call graph? (rebuilt on the propagating generator after a circular first attempt) | `aiops/ml/experiments/rq2_localisation.py` |
 | **RQ3** | Does the *learning paradigm* matter under drift — static vs. periodic-retrain vs. online-adaptive? (+ operational cost) | `aiops/ml/experiments/online_vs_offline.py`, `cost_compare.py` |
 | **RQ3+** | Trivial floor, oracle threshold-recalibration control, and seed variance | `aiops/ml/experiments/baselines_and_seeds.py` |
-| **RQ4** | Which model family (RF / GB / XGBoost / LSTM / multimodal fusion) best exploits full MELT? | `aiops/ml/experiments/run_experiment.py` |
+| **RQ3+** | *How far* must the baseline move before a frozen boundary must be refit? | `aiops/ml/experiments/drift_sweep.py` |
+| **RQ3+** | Which of the online detector's mechanisms earns its place? | `aiops/ml/experiments/baseline_streaming.py`, `ablate_online.py` |
+| **RQ1+** | Does any of it hold on *measured* telemetry? (C1 pilot) | `aiops/ml/experiments/live_replay.py` |
+| **RQ4** | Which model family (RF / GB / XGBoost / LSTM / fusion / local LLM) best exploits full MELT? | `aiops/ml/experiments/run_experiment.py`, `score_llm.py` |
 
 ## Headline results
 
@@ -193,13 +208,54 @@ training data (`rq3_cost.csv`).
 > features, same preprocessing, differing only in whether it refits — **0.36 frozen,
 > 0.92 refitted.**
 
+**How far must the baseline move?** (`rq3_drift_sweep.csv`) Every figure above is
+measured at *one* drift amplitude — and that amplitude was set comparably to the fault
+signatures themselves, so a frozen boundary is bound to fail at it. Rescaling every
+regime multiplier toward 1 (holding the fault schedule identical) turns the point into
+a curve:
+
+| R3 operating-point shift | 1.00× | 1.15× | 1.29× | 1.49× | 1.97× | 2.26× |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| static (C4) | **0.989** | 0.933 | 0.769 | 0.546 | 0.370 | 0.341 |
+| periodic (C4) | 0.985 | **0.982** | 0.974 | 0.954 | 0.925 | 0.921 |
+| online (C4) | 0.977 | 0.977 | **0.977** | **0.976** | **0.976** | **0.976** |
+
+Three things this bounds, in both directions. **Refitting starts to pay at a 1.15×
+shift**, and the frozen model stops discriminating (falls below twice the trivial
+floor) between **1.29× and 1.49×** — a number, not an assertion. **The failure is
+gradual**, not a cliff: by 1.29× a detector has lost a fifth of its F1 while still
+looking serviceable. And **on a stationary stream the frozen model is the *best* of the
+three** while the online detector is the worst (0.815 vs 0.890 at C1). Continual
+adaptation earns its cost because the baseline moves, not because it is continual.
+The reported campaign sits at 1.97×.
+
+**What the adaptive machinery is worth** (`rq3_streaming_baselines.csv`,
+`rq3_online_ablation.csv`) — measured rather than assumed. Three canonical incremental
+learners on the identical stream reach F1 **0.302–0.308 unnormalised at every
+configuration**; behind a running standardiser the *same* learners reach **0.760–0.796
+at C1** and **0.959–0.971 at C3**. **Adaptive normalisation is what carries the online
+policy.** The detector's remaining margin over the best off-the-shelf scaled arm is
++0.017 (C1) and +0.003 (C3, inside the seed spread); of its own mechanisms the champion
+pool is worth ≤ +0.013 and the drift monitor nothing anywhere. A standardised
+incremental learner is a close substitute for the whole detector — which bounds what
+the machinery may be credited with, and is why the load-bearing claim is the
+static-vs-periodic one above.
+
 **RQ4 — ensemble trees lead on full MELT (C4):** GB 0.988, RF 0.986, XGB 0.984
 (differences smaller than the seed spread — no ordering claimed); multimodal fusion
-0.891 (high-precision, low-recall). The **LSTM (0.259) is a mis-specified
-comparison, not a negative result**: it scores *below* the always-alarm floor,
-because the stream interleaves per-service windows and so carries almost no temporal
-structure for a sequential model to exploit. A per-service sequential representation
-was not evaluated. No claim is made about temporal models.
+0.891 (high-precision, low-recall). A sixth family, the **local-LLM detector**
+(Qwen2.5-3B reading *raw* signals rather than engineered features), reaches **0.440** —
+above the always-alarm floor, far below every tree: a working detector here, not a
+competitive one. The **LSTM (0.227) is a mis-specified comparison, not a negative
+result**: it scores *below* the always-alarm floor, because the stream interleaves
+per-service windows and so carries almost no temporal structure for a sequential model
+to exploit. A per-service sequential representation was not evaluated. No claim is made
+about temporal models.
+
+> The six-family table is scored on a common **3,000-window** subsample
+> (`results_uniform/` + `results_llm/`), because the LLM costs seconds per window; the
+> five-family numbers quoted above come from the full held-out split in `results/`. A
+> family appearing in both differs in the third decimal — expected, not drift.
 
 ## The nine-service mesh
 
@@ -231,6 +287,10 @@ runs unchanged offline or live. The topology lives in one file:
 | **Experiments** — RQ2 localisation on the propagating generator | [`aiops/ml/experiments/rq2_localisation.py`](aiops/ml/experiments/), [`aiops/ml/dataset.py`](aiops/ml/dataset.py) (`generate_rca_run`) |
 | **Experiments** — RQ3 online-vs-offline + cost | [`aiops/ml/experiments/online_vs_offline.py`](aiops/ml/experiments/), [`cost_compare.py`](aiops/ml/experiments/) |
 | **Experiments** — trivial floor, oracle recalibration control, seed variance | [`aiops/ml/experiments/baselines_and_seeds.py`](aiops/ml/experiments/) |
+| **Experiments** — operational cost, one seed and across five | [`aiops/ml/experiments/cost_compare.py`](aiops/ml/experiments/), [`cost_seeds.py`](aiops/ml/experiments/) |
+| **Experiments** — drift-magnitude sweep (how far the baseline must move) | [`aiops/ml/experiments/drift_sweep.py`](aiops/ml/experiments/), [`aiops/ml/drift.py`](aiops/ml/drift.py) (`scaled_regime_factors`) |
+| **Experiments** — streaming baselines + online-detector component ablation | [`aiops/ml/experiments/baseline_streaming.py`](aiops/ml/experiments/), [`ablate_online.py`](aiops/ml/experiments/) |
+| **Experiments** — live replay of a recorded campaign (the one measured result) | [`aiops/ml/experiments/live_replay.py`](aiops/ml/experiments/), [`aiops/data/labels_live.csv`](aiops/data/labels_live.csv) |
 | **⚠️ The data-generating process** — judge the results here first | [`aiops/collectors/telemetry.py`](aiops/collectors/telemetry.py) (`_synth`), [`aiops/ml/drift.py`](aiops/ml/drift.py) (`_DRIFT_FIELDS`, `REGIME_FACTORS`) |
 | **Data analysis** — result datasets (CSV) + figures (PNG) | [`aiops/data/results/`](aiops/data/results/) |
 | Streaming (Kafka backbone) + local-LLM (Qwen2.5-3B) detector | [`aiops/streaming/`](aiops/streaming/), [`aiops/llm/`](aiops/llm/) |
@@ -245,11 +305,38 @@ The repo-root **`Makefile`** automates the full pipeline (`make help` for all
 targets). Requires Python 3 only — no cluster, no GPU.
 
 ```bash
-make setup          # install Python dependencies (aiops/requirements.txt)
-make experiments    # RQ1, RQ4 + RQ3 online-vs-offline + cost + figures
-make test           # invariant tests (8) + microservice tests (35)
+make setup             # install Python dependencies (aiops/requirements.txt)
+make experiments       # = rq124 + rq2 + rq3 + cost + plots      (minutes)
+make controls          # = seeds + sweep + baselines + ablation  (hours)
+make experiments-full  # both, in order
+make test              # invariant tests (8) + microservice tests (35)
 # faster smoke run:  make quick
 ```
+
+The **controls** are separate from `make experiments` because they cost hours where
+`experiments` costs minutes — `sweep` alone regenerates the drift stream eight times
+per configuration. Run them individually when that is what you need:
+
+| Target | Regenerates | Writes to |
+|---|---|---|
+| `make seeds` | always-alarm floor, oracle re-threshold, five-seed variance | `data/results/rq3_{baselines,seeds}*` |
+| `make sweep` | the drift-magnitude curve | `data/results_drift_sweep/` |
+| `make baselines` | off-the-shelf incremental learners, raw vs standardised | `data/results_baselines_scaled/` |
+| `make ablation` | the detector with its own mechanisms switched off | `data/results_ablation/` |
+| `make live-replay` | the C1 live pilot (needs `TF_LIVE` + a reachable Prometheus) | `data/results_live/` |
+| `make cost-seeds` | the five-seed cost **ranges** (`cost_compare` once per seed) | `data/results/rq3_cost_seeds*`, `data/results_cost_seeds/` |
+| `make cost-seeds-agg` | re-derives those ranges from per-seed tables already on disk — seconds, fits nothing | `data/results/rq3_cost_seeds*` |
+
+Each control writes to its **own** directory, so none of them can overwrite the
+committed artefacts in `data/results/` by accident.
+
+> **Wall-clock does not reproduce, and is not claimed to.** `make cost-seeds` re-times
+> everything on your machine, so `tail_ratio` and `cpu_ratio` will not match the
+> committed numbers to the decimal — which is exactly why the write-up quotes an
+> order-of-magnitude tail gap rather than a millisecond. The structural columns (refit
+> count, retained windows, model size) do reproduce exactly, and `make cost-seeds-agg`
+> is fully deterministic: against the committed per-seed tables it reproduces
+> `rq3_cost_seeds.csv` and its summary **byte-for-byte**.
 
 Equivalent without `make`:
 
@@ -264,6 +351,11 @@ python -m ml.experiments.rq2_localisation --seeds 42,43,44,45,46 --episodes 200
 
 # the supplementary controls (trivial floor, oracle recalibration, 5 seeds)
 python -m ml.experiments.baselines_and_seeds --seeds 42,43,44,45,46 --configs C1,C2,C3,C4
+
+# RQ3 controls — how far the baseline must move, and what the machinery is worth
+python -u -m ml.experiments.drift_sweep        --episodes 320 --configs C1,C4 --out data/results_drift_sweep
+python -u -m ml.experiments.baseline_streaming --episodes 320 --out data/results_baselines_scaled
+python -u -m ml.experiments.ablate_online      --episodes 320 --out data/results_ablation
 ```
 
 > Windows PowerShell: run from `aiops/` (or set `$env:PYTHONPATH = (Resolve-Path .).Path`)
@@ -281,15 +373,28 @@ The live path is implemented. Bring the mesh up (see [`DEPLOYMENT.md`](DEPLOYMEN
 then:
 
 ```bash
+# collect live telemetry now, through PromQL/LogQL/TraceQL instead of generating it
 TF_LIVE=1 PROM_URL=http://localhost:9090 LOKI_URL=... TEMPO_URL=... \
   python -m ml.experiments.run_experiment
+
+# or replay a *recorded* campaign: historical PromQL joined to the injected labels
+TF_LIVE=1 PROM_URL=http://localhost:9090 \
+  python -u -m ml.experiments.live_replay --labels data/labels_live.csv \
+  --out data/results_live
 ```
 
-This collects genuine telemetry through PromQL/LogQL/TraceQL instead of generating
-it. **A full drifted campaign through this path is the study's principal outstanding
+The replay path exists because `run_experiment`'s live branch collects *present-moment*
+telemetry: without the `at` timestamp now threaded through `collect_metrics_live`, every
+window of a past episode would be filled with current values and silently mislabelled.
+Only the **metric** collector is time-parameterised, so replay is **C1 only** —
+attempting C2–C4 would mix present values into a past window with nothing downstream to
+catch it.
+
+**A full drifted campaign through this path is still the study's principal outstanding
 experiment** — it is what would test the generator's load-bearing assumption that the
 error signals do not drift, measure what distributed tracing actually contributes, and
-establish how much of the static model's collapse survives production noise.
+establish how much of the static model's collapse survives production noise. The
+12-episode C1 pilot above establishes feasibility, and nothing more.
 
 ## Where the evidence lives
 
@@ -304,9 +409,15 @@ Outputs are written to (and a frozen copy is committed under)
 | `rq3_online_vs_offline.csv` | Tables 5.3–5.5 (per-regime F1 by policy) |
 | `rq3_baselines.csv` | Table 5.7 (always-alarm floor + **oracle threshold-recalibration control**) |
 | `rq3_seeds.csv`, `rq3_seeds_summary.json` | Table 5.6 (seed variance over 5 runs) |
-| `rq3_cost.csv` | Table 5.8 (latency, model size, retained buffer, CPU) |
+| `rq3_cost.csv` | Table 5.8 (latency, model size, retained buffer, CPU) — **seed 42** |
+| `rq3_cost_seeds.csv`, `rq3_cost_seeds_summary.json` | the five-seed cost spread — the source of every cost **range** quoted above (580–880 ms, ≤78 ms, 10–48×, ~120–390×, 4.1–4.8×) |
 | `rq3_timeline.csv` | Figure 5.2 (rolling F1 over the drifting stream) |
 | `rq4_model_family.csv` | Table 5.9 (model-family comparison on C4) |
+| `../results_drift_sweep/rq3_drift_sweep.csv` | the drift-magnitude sweep — F1 against operating-point shift |
+| `../results_baselines_scaled/rq3_streaming_baselines.csv` | off-the-shelf incremental learners, raw vs standardised |
+| `../results_ablation/rq3_online_ablation.csv` | the online detector with its own mechanisms switched off |
+| `../results_live/rq1_live_c1.csv` | the live-replay pilot — the one result measured, not generated |
+| `../results_uniform/` + `../results_llm/` | the six-family RQ4 table, all scored on the same 3,000-window subsample |
 | `observability_melt.csv` | the generated MELT window dataset the analysis consumes |
 | `figures/*.png` | the Chapter 5 result figures |
 

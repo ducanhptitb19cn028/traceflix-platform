@@ -76,12 +76,15 @@ designed to induce both so that no single coping strategy suffices alone:
   "anomalous" (`P(y|x)`) does **not**. *Scale-out (R2)* is the canonical case: more
   replicas shift per-pod resource baselines, but a fault is still a fault. A **periodic
   refit on recent data** restores the boundary here, which is exactly why periodic
-  retraining narrowly edges the online model in the two R2 cells under thin telemetry
-  (C1/C2).
+  retraining narrowly edges the online model in the four thin-telemetry cells (C1/C2 ×
+  R2/R3) — the only cells it wins.
 - **Real (concept) drift** — `P(y|x)` itself changes: a latency level that *was*
   anomalous becomes the new normal. *Latency regression (R1)* is the canonical case,
-  and it is where the static model is hurt most (F1 ≈ 0.44, its lowest) because the
-  decision *boundary*, not merely the input scaling, is now wrong.
+  and it is where the static model is hurt most (F1 ≈ 0.30, its lowest, against
+  0.49–0.60 in the scale-out regime it can partly survive) because the decision
+  *boundary*, not merely the input scaling, is now wrong. The online model wins R1 at
+  **every** configuration: **the static deficit is widest exactly where drift is
+  conceptual rather than distributional.**
 - **R3** superimposes both. Only the online detector — whose exponentially-weighted
   normaliser re-centres every feature continuously while incremental fitting tracks the
   conceptual change — neutralises the virtual component *and* the real one together.
@@ -98,15 +101,16 @@ refit is maximally exposed (the sawtooth in `rq3_timeline`).
 
 - Episodes are split evenly across regimes: `regime = min(n_regimes-1, int(ei/per))`
   with `per = n_episodes / n_regimes` → **80 episodes per regime**.
-- Each window is emitted for all 3 services, so totals are:
+- Each window is emitted for all **9** services of the mesh, so totals are:
 
 | Quantity | Count |
 |----------|-------|
 | Episodes | 320 (80 per regime) |
-| Windows per episode | 12 × 3 services = 36 |
-| Total windows | **11,520** |
-| R0 warm-up windows | **2,880** |
-| R1–R3 future (scored) windows | **8,640** |
+| Windows per episode | 12 × 9 services = 108 |
+| Total windows | **34,560** |
+| R0 warm-up windows | **8,640** |
+| R1–R3 future (scored) windows | **25,920** |
+| Anomaly prevalence on the scored stream | 0.171 (→ always-alarm floor F1 = 0.292) |
 
 - Within an episode, ~45% of episodes are pure `normal`; the rest pick a fault and a
   root-cause service, and downstream callers exhibit secondary `latency_spike`
@@ -119,6 +123,44 @@ refit is maximally exposed (the sawtooth in `rq3_timeline`).
 
 ---
 
+## The amplitude is a free parameter — so it is swept
+
+`REGIME_FACTORS` moves p99 latency by 2.2× and CPU by 1.8× under R3. `_FAULT_SHIFT` in
+`collectors/telemetry.py` moves p99 by 2.3× for `latency_spike` and CPU by 2.4× for
+`cpu_saturation`. **The drift amplitude and the fault amplitude are the same size.**
+Under R3 the healthy operating point therefore lands on top of the fault signature the
+static model was fit to detect, so its collapse to F1 ≈ 0.36 is *entailed by that
+choice* rather than measured. One operating point cannot separate "drift defeats frozen
+detectors" from "we set the drift as large as the fault".
+
+`scaled_regime_factors(alpha)` (same module) answers it by turning the point into a
+curve. It interpolates every multiplier toward 1 —
+
+```python
+{k: 1.0 + alpha * (v - 1.0) for k, v in regime.items()}
+```
+
+— so *which* fields a regime moves and *in what proportion* is preserved, and only how
+far varies. `alpha=0` is a stationary stream, `alpha=1` reproduces the reported
+campaign, `alpha>1` extrapolates. **Labels are assigned before the factors are applied
+and the generator draws the same random numbers either way, so the fault schedule is
+byte-identical at every alpha** — the only thing that varies across the sweep is how far
+the healthy baseline has moved. `mean_amplitude()` reports the geometric-mean multiplier
+of R3, so the x-axis reads as an *operating-point shift* rather than an abstract scale.
+
+```bash
+python -u -m ml.experiments.drift_sweep --episodes 320 --configs C1,C4 \
+  --out data/results_drift_sweep
+```
+
+What the curve says (C4): refitting begins to pay at a **1.15×** shift, the frozen model
+falls below twice the always-alarm floor between **1.29× and 1.49×**, and the reported
+campaign sits at **1.97×**. Below that band the frozen model is the **best** of the
+three (0.989 at α = 0) and the online detector the **worst** — *adaptation is not free,
+and the regimes are not a demonstration that it always pays.* Full table:
+[`DemoRQ3.md`](DemoRQ3.md) Part C and
+[`aiops/docs/RQ3_RESULTS_ONLINE_VS_OFFLINE.md`](aiops/docs/RQ3_RESULTS_ONLINE_VS_OFFLINE.md) §8.
+
 ## Where the regimes show up downstream
 
 - **`rq3_online_vs_offline.csv`** — per-config, per-regime F1 for static / periodic /
@@ -126,6 +168,9 @@ refit is maximally exposed (the sawtooth in `rq3_timeline`).
   reveals the R2-scale-out exception.
 - **`rq3_timeline.csv`** — rolling F1 tagged by regime, showing the static collapse,
   the periodic sawtooth, and the online tracking line across `R0→R3`.
+- **`rq3_drift_sweep.csv`** (in `aiops/data/results_drift_sweep/`) — the same three
+  policies against the *rescaled* regime factors, plus the resulting R3 amplitude at
+  each sweep point.
 - **Paper:** `\S sec:method-regimes` (definitions), `\S sec:prob-drift` (virtual vs.
   real formalism), and the design figure `fig:design` (the `R0→R3` drift timeline).
 

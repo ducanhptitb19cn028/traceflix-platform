@@ -86,7 +86,7 @@ What you'll see (synthetic, seed 42, nine-service mesh):
 ```
 RQ1  held-out F1:   C1 0.896   C2 0.915   C3 0.985   C4 0.986   (traces drive the jump)
 RQ2  top-1 RCA:     metrics+logs 0.77  ->  +traces 1.00   (first attempt — see A1b)
-RQ4  GB 0.988 / RF 0.986 / XGB 0.984 F1; fusion 0.891 (hi-precision); LSTM 0.259 (weak)
+RQ4  GB 0.988 / RF 0.986 / XGB 0.984 F1; fusion 0.891 (hi-precision); LSTM 0.227 (weak)
 ```
 
 **Talking points**
@@ -102,9 +102,12 @@ RQ4  GB 0.988 / RF 0.986 / XGB 0.984 F1; fusion 0.891 (hi-precision); LSTM 0.259
   **The RQ2 answer comes from A1b**, on the rebuilt generator.
 - **RQ4 (model family)** — ensemble trees lead (GB 0.988, RF 0.986, XGB 0.984); their
   mutual differences are smaller than the seed spread, so no ordering is claimed. The
-  **LSTM (0.259) is mis-specified, not a negative result** — it scores below the
+  **LSTM (0.227) is mis-specified, not a negative result** — it scores below the
   always-alarm floor because the interleaved per-service stream carries almost no
-  temporal structure.
+  temporal structure. A sixth family, the local **LLM detector** (Qwen2.5-3B on *raw*
+  signals, `make llm`), reaches **0.440**: above the floor, far below every tree — a
+  working detector, not a competitive one. The six-family table is scored on a common
+  3,000-window subsample, since the LLM costs seconds per window.
 
 ## A1b. RQ2 — what traces contribute to localisation
 
@@ -200,27 +203,84 @@ From `cost_compare.py` (C4, 25,920 future windows):
 
 ```
                                     offline_periodic     online_adaptive
-F1                                       0.926               0.976
+F1                                       0.9255              0.9755
 train events over the stream          51 full refits      25,920 updates
-worst-case latency / window           ~937 ms (refit stall)  ~53 ms
-model size                              ~2.29 MB            ~15.7 KB
+worst-case latency / window            581.6 ms (stall)     15.5 ms
+p99 latency / window                     0.14 ms             8.5 ms
+model size                              2287.7 KB           15.7 KB
 labelled windows retained to train       2880                 0
-total CPU over the stream                1.0x (baseline)     ~6.5x
+total CPU over the stream               29.4 s (1.0x)      129.7 s (~4.4x)
 ```
 
 **State the trade-off honestly**
 
-- Online is **not cheaper in total CPU** — a little work every window, ~6.5× the
-  aggregate of the periodic refits. That cost is real.
-- But it wins where it operationally counts: **~18× lower worst-case latency** (a
-  refit *blocks* the detector for nearly a second — exactly when a regime shifts and
-  detection matters most), a **~146× smaller model**, and **zero retained training
-  data** (periodic must keep a 2880-window labelled buffer) — *and* higher accuracy
-  once telemetry is rich.
+- Online is **not cheaper in total CPU** — a little work every window, 4.1–4.8× the
+  aggregate of the periodic refits across C1–C4. That cost is real.
+- But it wins where it operationally counts: **10–48× lower worst-case latency** (a
+  refit *blocks* the detector for 580–880 ms — exactly when a regime shifts and
+  detection matters most; the online update never exceeded 78 ms over five seeds), a
+  **~120–390× smaller model** (≈15 KB vs 2–6 MB), and **zero retained training data**
+  (periodic must keep a 2880-window labelled buffer) — *and* higher accuracy once
+  telemetry is rich.
 - Net: online converts a **bursty, stateful, blocking retrain pipeline** into a
   **smooth, bounded-latency, stateless stream.**
+- Say the caveat out loud: the wall-clock columns belong to this workstation and one
+  pass. The **structural** columns — refit count, footprint, retained windows — follow
+  from the policy and reproduce exactly, and the argument rests on those.
 
 That is the empirical case that **operations matter.**
+
+## A4. The three controls that decide how much of A2 you may claim
+
+Run these before defending the RQ3 headline — each answers an objection the headline
+cannot answer by itself.
+
+```bash
+python -u -m ml.experiments.drift_sweep        --episodes 320 --configs C1,C4 --out data/results_drift_sweep
+python -u -m ml.experiments.baseline_streaming --episodes 320 --out data/results_baselines_scaled
+python -u -m ml.experiments.ablate_online      --episodes 320 --out data/results_ablation
+```
+
+**1. "You set the drift as large as the fault."** Correct — and the sweep says by how
+much that matters. Rescaling every regime multiplier toward 1 (fault schedule held
+identical) traces the curve: refitting starts to pay at a **1.15×** operating-point
+shift, the frozen model stops discriminating between **1.29× and 1.49×**, and the
+reported campaign sits at **1.97×**. Below that band the frozen model is the **best**
+of the three and the online detector the **worst** — adaptation is not free.
+
+**2. "The online margin is just the extra machinery."** Mostly it is the *normaliser*.
+Three off-the-shelf incremental learners reach F1 **0.302–0.308 unnormalised at every
+configuration**; behind a running standardiser the same learners reach **0.760–0.796
+(C1)** and **0.959–0.971 (C3)**. The full detector keeps only +0.017 (C1) and +0.003
+(C3, inside the seed spread) over the best of them.
+
+**3. "Which mechanism earns its place?"** The ablation: champion re-election is worth
++0.013 at C1, +0.005 at C2, **nothing** at C3/C4; the drift monitor **nothing
+anywhere**. Its adapt events are diagnostic, not load-bearing.
+
+The point of saying all three out loud: the claim that survives them is the narrow one
+— **within a single model family, refitting raises F1 from 0.36 to 0.92** — and that is
+the claim the dissertation rests on.
+
+## A5. The one measured result — live replay (optional, needs Prometheus)
+
+Everything above is generated. This is not:
+
+```bash
+TF_LIVE=1 PROM_URL=http://localhost:9090 \
+  python -u -m ml.experiments.live_replay --labels data/labels_live.csv --out data/results_live
+```
+
+```
+source config model  P      R      F1     AUC    n_test  prevalence  floor
+live   C1     rf     0.700  0.700  0.700  0.967  135     0.078       0.144
+```
+
+It replays a *recorded* fault-injection campaign against historical PromQL — each query
+evaluated at the instant its window represents. **C1 only** (the log/trace/event
+collectors are not time-parameterised, so it says nothing about the trace increment),
+origin-only labelled, twelve episodes. Show it as proof the pipeline runs end-to-end on
+genuine telemetry — never as a number to compare with A1 or A2.
 
 ---
 

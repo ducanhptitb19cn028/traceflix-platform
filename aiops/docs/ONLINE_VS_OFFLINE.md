@@ -17,10 +17,16 @@ external sources for every technique the online model is built on.
 | **In this repo** | `offline_static`, `offline_periodic`, `offline_full` (RandomForest) | `online_adaptive` (`OnlineModel`) |
 
 The RQ3 result: on a non-stationary stream, the frozen batch model collapses to
-**F1 ≈ 0.5** even with full MELT, scheduled retraining recovers to **~0.89** but
-lags at every regime shift, and the online model reaches **~0.98** at oracle
-level — updating per sample with zero retained data. See
-[`ONLINE_PIPELINE.md`](ONLINE_PIPELINE.md) for the full pipeline.
+**F1 ≈ 0.36** even with full MELT — barely above the 0.292 an *always-alarm*
+detector scores — scheduled retraining recovers to **0.82–0.93** but lags at
+every regime shift, and the online model reaches **0.974–0.976** once traces are
+present, updating per sample with zero retained data. Two qualifications belong
+with that sentence: under **thin** telemetry (C1/C2) online and periodic are
+**tied**, and on a **stationary** stream the frozen model is the *best* of the
+three. Continual adaptation earns its cost because the baseline moves, not
+because it is continual. See [`ONLINE_PIPELINE.md`](ONLINE_PIPELINE.md) for the
+full pipeline and [`RQ3_RESULTS_ONLINE_VS_OFFLINE.md`](RQ3_RESULTS_ONLINE_VS_OFFLINE.md)
+for the measured band in which each policy wins.
 
 ## Why offline breaks under drift
 

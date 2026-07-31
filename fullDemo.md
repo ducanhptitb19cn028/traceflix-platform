@@ -254,29 +254,54 @@ refits) and `rq3_online_vs_offline.png` (static < periodic < online ≈/> oracle
 
 ```
 Gradient Boosting 0.988   Random Forest 0.986   XGBoost 0.984   (ensemble trees lead, tied)
-Late fusion 0.891 (hi-precision, low recall)     LSTM 0.259 (weak on windowed repr.)
+Late fusion 0.891 (hi-precision, low recall)     LSTM 0.227 (mis-specified, below floor)
+Local LLM (Qwen2.5-3B, raw signals) 0.440        — above the 0.292 floor, far below trees
 ```
 
 > 🗣 Say: "Ensemble trees win on tabular MELT — *which is why the online detector
 > is a lightweight normalised linear model, not a tree*: the streaming setting
-> rewards a bounded, cheap per-window update, not raw batch accuracy."
+> rewards a bounded, cheap per-window update, not raw batch accuracy. The LSTM row
+> is a **mis-specification, not a negative result** — it sits below the always-alarm
+> floor because our stream interleaves per-service windows, so we claim *no* evidence
+> about temporal models."
 
 ### Cost — is online affordable? (be honest)
 
 ```
 C4, 25,920 future windows     offline_periodic     online_adaptive
-F1                                 0.926               0.976
-worst-case latency / window     ~508 ms (refit stall) ~34 ms
-model size                         ~2.3 MB            ~16 KB
+F1                                 0.9255              0.9755
+worst-case latency / window      581.6 ms (stall)     15.5 ms
+p99 latency / window               0.14 ms             8.5 ms
+model size                        2287.7 KB           15.7 KB
 labelled windows retained           2880                0
-total CPU                          1.0× (baseline)     ~4.6×
+total CPU                        29.4 s (1.0×)     129.7 s (~4.4×)
 ```
 
-> 🗣 Say: "Online is **not** cheaper in total CPU (~4.6×) — that cost is real. But
-> it wins where it counts: **~15× lower worst-case latency** (a refit *blocks* the
-> detector for half a second, exactly when a regime shifts), a **~150× smaller
-> model**, and **zero retained data**. Bursty/blocking → smooth/bounded. That is the
-> empirical case that **operations matter**."
+> 🗣 Say: "Online is **not** cheaper in total CPU (4.1–4.8× across C1–C4) — that cost
+> is real. But it wins where it counts: **10–48× lower worst-case latency** (a refit
+> *blocks* the detector for half a second, exactly when a regime shifts), a **~120–390×
+> smaller model**, and **zero retained data**. Bursty/blocking → smooth/bounded. And
+> the honest footnote: the wall-clock numbers are this machine's; the *structural*
+> ones — 51 refits vs 25,920 updates, 2880 retained windows vs 0 — reproduce exactly."
+
+### The three controls (say these before anyone asks)
+
+```
+1. Drift amplitude    refitting pays from a 1.15x baseline shift; the frozen model
+   (the sweep)        stops discriminating between 1.29x and 1.49x; the campaign
+                      sits at 1.97x. Below that band the FROZEN model is best and
+                      the online one worst -- adaptation is not free.
+2. Streaming          three off-the-shelf incremental learners: F1 0.302-0.308
+   baselines          unnormalised at every config; 0.760-0.796 (C1) and
+                      0.959-0.971 (C3) once standardised. Normalisation carries it.
+3. Component          champion pool worth +0.013 (C1), nothing past C2; drift
+   ablation           monitor worth nothing anywhere. Detector keeps +0.017 (C1),
+                      +0.003 (C3) over the best off-the-shelf arm.
+```
+
+> 🗣 Say: "We tried to break our own result three ways. What survives all three is the
+> narrow claim: **within one model family, refitting raises F1 from 0.36 to 0.92** —
+> same features, same stream, differing only in whether the boundary may move."
 
 ---
 

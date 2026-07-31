@@ -29,11 +29,13 @@ only as a ceiling. The headline result: under drift the *paradigm* — not the t
 Every learner is given the same starting knowledge and scored on the same future
 (`online_vs_offline.py:36-38, 150-155`):
 
-- **Train/warm region = `R0`** (the baseline regime, `n_warm = 2,880` windows). The
+- **Train/warm region = `R0`** (the baseline regime, `n_warm = 8,640` windows). The
   offline models are *fit* here; the online model is *warmed* here prequentially
   (test-then-train, **unscored**).
-- **Scored region = `R1–R3`** (the drifted future, `8,640` windows) — the operational
-  future no offline model ever trained on.
+- **Scored region = `R1–R3`** (the drifted future, `25,920` windows) — the operational
+  future no offline model ever trained on. Anomaly prevalence there is **0.171**, so an
+  *always-alarm* detector scores **F1 = 0.292**: the floor every number below is read
+  against.
 
 Because the warm-up is unscored and identical for all, any divergence on `R1–R3` is the
 paradigm's doing.
@@ -96,7 +98,7 @@ granularity.
 
 | Parameter | Value | Meaning |
 |-----------|-------|---------|
-| `--retrain-every` (`τ`) | 500 windows | Refresh cadence → ~17 refits over the future stream |
+| `--retrain-every` (`τ`) | 500 windows | Refresh cadence → **51 refits** over the 25,920-window future stream |
 | `--train-window` (`B`) | 2,880 windows | Sliding labelled buffer to refit on (≈ one regime) |
 
 **The trade-off it exposes.** It *does* track drift, but only **at its cadence**. Every
@@ -194,13 +196,55 @@ The accuracy comparison is only half the decision; the cost profiles are opposit
 
 | | `offline_periodic` | `online_adaptive` |
 |---|---|---|
-| Per-window **tail** latency | ~600 ms refit spikes (blocking, land at regime shifts) | bounded, ≤ ~37 ms |
-| Model footprint | 3–8 MB | ~15 KB |
+| Per-window **tail** latency | 580–880 ms refit spikes (blocking, land at regime shifts) | bounded, ≤ 78 ms over five seeds (15–60 ms at seed 42) |
+| Model footprint | 2–6 MB | ~15 KB |
 | Retained labelled windows | 2,880 (a governance liability) | **0** |
-| Total CPU over the stream | 1× (baseline) | ~4–6× (spent **smoothly**) |
+| Train events over the stream | 51 full refits | 25,920 incremental updates |
+| Total CPU over the stream | 1× (baseline) | 4.1–4.8× (spent **smoothly**) |
 
 Online's *only* disadvantage is higher aggregate CPU — but it never stalls the pipeline,
 and the stall is what matters behind a per-window SLA.
+
+> The wall-clock rows are properties of one workstation and a single pass. The
+> **structural** rows — refit count, footprint, retained windows — follow from the
+> policy and reproduce exactly, and the argument rests on those plus the
+> order-of-magnitude tail gap.
+
+---
+
+## How much of the online margin is the machinery? (measured, not assumed)
+
+The four mechanisms above are a design, and a design invites the question *which of
+them earns its place?* Two experiments answer it on the identical stream
+(`ml/experiments/baseline_streaming.py`, `ablate_online.py`).
+
+**Normalisation carries the policy.** Three canonical incremental learners
+(passive-aggressive, perceptron, plain SGD — mechanism 2 alone, no pool, no monitor)
+reach F1 **0.302–0.308 at *every* configuration** unnormalised: barely above the trivial
+floor, and completely unresponsive to telemetry richness. Put a running standardiser in
+front of the *same* learner — mechanism 1, in its plainest form — and they reach
+**0.760–0.796 at C1** and **0.959–0.971 at C3**, tracking completeness the way the full
+detector does (plain SGD +0.170 from C1→C4 against the detector's +0.163).
+
+**Mechanisms 3 and 4 do little measurable work.** Switching them off in turn:
+
+| Mechanism | C1 | C2 | C3 | C4 |
+|---|---|---|---|---|
+| 3. Champion re-election | +0.013 | +0.005 | −0.001 | −0.000 |
+| 4. Drift-triggered acceleration | −0.0014 | −0.0005 | 0.0000 | 0.0000 |
+
+The champion pool is worth at most +0.013 (C1) and nothing beyond C2; the drift monitor
+nothing anywhere, which makes its `adapt_events` a **diagnostic** — a readout of how
+hard the drift is to follow — rather than a load-bearing component. The full detector's
+whole remaining margin over the best off-the-shelf scaled arm is **+0.017 at C1** and
+**+0.003 at C3**, the latter inside the seed spread.
+
+**Read-out: a standardised incremental learner is a close substitute for the whole
+`OnlineModel`.** This does not weaken the study's claim, because the clean, unconfounded
+contrast was always `offline_static` vs `offline_periodic` — same family, same features,
+differing only in whether the boundary may move (**0.36 → 0.92**). But it does bound
+what the adaptive machinery may be credited with, and it is why the C3/C4 lead is
+attributed to *normalised incremental learning* rather than to the pool or the monitor.
 
 ---
 
@@ -213,14 +257,31 @@ and the stall is what matters behind a per-window SLA.
   line; `online_vs_offline.py:120-141`).
 - **`aiops/data/results/rq3_summary.json`** — headline future-stream F1, periodic refit
   count, online adapt-event count, final champion params.
+- **`aiops/data/results_baselines_scaled/rq3_streaming_baselines.csv`** — the
+  off-the-shelf incremental learners, raw and standardised.
+- **`aiops/data/results_ablation/rq3_online_ablation.csv`** — the `OnlineModel` with
+  `use_champion` / `use_drift` switched off (both default `True`, so no published RQ3
+  number is affected).
+- **`aiops/data/results_drift_sweep/rq3_drift_sweep.csv`** — all three policies against
+  drift amplitude, which is what bounds *when* each policy is the right one
+  (see [`Regimes.md`](Regimes.md)).
 - **Paper:** `\S sec:method-learners` (Table `tab:learners`, Algorithm `alg:online`),
   `\S sec:res-rq3` (results), and `DemoRQ3.md`.
 
 ---
 
-**Bottom line.** `offline_static` is the past (frozen, collapses under drift),
-`offline_periodic` is the usual compromise (tracks drift but lags, spikes, and hoards a
-buffer), and `online_adaptive` is the proposal (per-window adaptation via a running
-normaliser + incremental SGD + a self-selecting bandit + drift boost) — cheaper on every
-operational axis except steady-state CPU, and more accurate under drift. `offline_full`
-is the oracle that proves the static collapse is *drift*, not *capacity*.
+**Bottom line.** `offline_static` is the past (frozen, collapses to F1 ≈ 0.36 under
+drift — barely above a 0.292 floor, and an *oracle* re-threshold recovers it only to
+0.45–0.55), `offline_periodic` is the usual compromise (tracks drift but lags, spikes,
+and hoards a 2,880-window buffer), and `online_adaptive` is the proposal (per-window
+adaptation via a running normaliser + incremental SGD + a self-selecting bandit + drift
+boost) — cheaper on every operational axis except steady-state CPU. `offline_full` is
+the reference that proves the static collapse is *drift*, not *capacity*.
+
+Two qualifications belong in the same breath, because they are what the controls
+measured. **Online is not uniformly more accurate:** under thin telemetry (C1/C2) it is
+*tied* with periodic, and on a *stationary* stream it is the **worst** of the three
+while the frozen model is the best. **And its margin is mostly one mechanism:**
+normalisation, not the pool or the monitor. The claim that survives both is the narrow,
+unconfounded one — within a single Random-Forest family, refitting raises F1 from
+**0.36 to 0.92**.

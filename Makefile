@@ -19,13 +19,21 @@
 PY              ?= python
 EPISODES        ?= 200          # offline RQ1/RQ4 (run_experiment) + RQ2
 RQ2_SEEDS       ?= 42,43,44,45,46 # RQ2 localisation seeds (rq2_localisation)
+RQ3_SEEDS       ?= 42,43,44,45,46 # RQ3 seed variance (baselines_and_seeds)
 DRIFT_EPISODES  ?= 320          # RQ3 drift stream (online_vs_offline, cost)
 STREAM_EPISODES ?= 20           # streaming backbone demo
 LIVE_EPISODES   ?= 30           # live fault-injection episodes
 CONFIGS         ?= C1,C2,C3,C4
+SWEEP_CONFIGS   ?= C1,C4        # drift sweep: thinnest vs richest is the contrast
 SEED            ?= 42
 OUT             ?= data/results # relative to aiops/
 LLM_OUT         ?= data/results_llm # 'llm' target: NEVER $(OUT), see the target
+SWEEP_OUT       ?= data/results_drift_sweep     # control: drift-magnitude sweep
+BASELINES_OUT   ?= data/results_baselines_scaled # control: streaming baselines
+ABLATION_OUT    ?= data/results_ablation        # control: component ablation
+LIVE_OUT        ?= data/results_live            # control: live replay
+LIVE_LABELS     ?= data/labels_live.csv         # live replay: recorded campaign
+COST_SEEDS_OUT  ?= data/results_cost_seeds      # cost-seeds: per-seed cost tables
 NS              ?= on-demand-observability # k8s namespace
 SVC             ?= catalog-service         # inject: target service
 FAULT           ?= cpu_saturation          # inject: fault type
@@ -34,10 +42,18 @@ OLLAMA_PORT     ?= 11434         # ollama-forward: host port (detector default)
 # strip the trailing whitespace the aligned comments above introduce
 EPISODES        := $(strip $(EPISODES))
 RQ2_SEEDS       := $(strip $(RQ2_SEEDS))
+RQ3_SEEDS       := $(strip $(RQ3_SEEDS))
 DRIFT_EPISODES  := $(strip $(DRIFT_EPISODES))
 STREAM_EPISODES := $(strip $(STREAM_EPISODES))
 LIVE_EPISODES   := $(strip $(LIVE_EPISODES))
+SWEEP_CONFIGS   := $(strip $(SWEEP_CONFIGS))
 OUT             := $(strip $(OUT))
+SWEEP_OUT       := $(strip $(SWEEP_OUT))
+BASELINES_OUT   := $(strip $(BASELINES_OUT))
+ABLATION_OUT    := $(strip $(ABLATION_OUT))
+LIVE_OUT        := $(strip $(LIVE_OUT))
+LIVE_LABELS     := $(strip $(LIVE_LABELS))
+COST_SEEDS_OUT  := $(strip $(COST_SEEDS_OUT))
 NS              := $(strip $(NS))
 SVC             := $(strip $(SVC))
 FAULT           := $(strip $(FAULT))
@@ -93,7 +109,8 @@ DC_VM4 := deploy/virtfusion/vm4-gateway
 
 .DEFAULT_GOAL := help
 .PHONY: help all run run-platform run-experiments run-down aiops-up aiops-down setup setup-llm \
-        experiments repro quick rq124 rq2 rq3 cost plots figures \
+        experiments experiments-full repro quick rq124 rq2 rq3 cost plots figures \
+        controls seeds sweep baselines ablation live-replay cost-seeds cost-seeds-agg \
         streaming llm lora \
         webui webui-build \
         ollama-up ollama-down ollama-logs ollama-forward \
@@ -114,6 +131,9 @@ help:
 	@echo "  RUN (win)    run  run-platform  run-experiments  run-down   (RUN_ARGS=...)"
 	@echo "  SETUP        setup  setup-llm"
 	@echo "  EXPERIMENTS  experiments  repro  quick  rq124  rq2  rq3  cost  plots  figures"
+	@echo "  RQ3 CONTROLS controls  seeds  sweep  baselines  ablation   (experiments-full = both)"
+	@echo "               cost-seeds  cost-seeds-agg   (five-seed cost ranges; -agg re-reads only)"
+	@echo "               live-replay   (needs TF_LIVE + a reachable Prometheus)"
 	@echo "  STREAM/LLM   streaming  llm  lora"
 	@echo "  WEBUI        webui  webui-build"
 	@echo "  AIOPS (k8s)  aiops-up  aiops-down"
@@ -183,6 +203,97 @@ plots:
 
 figures:
 	$(PY) paper/make_figures.py
+
+# ---- RQ3 controls ----------------------------------------------------------
+# The four experiments that bound how much of the RQ3 headline may be claimed.
+# They are NOT part of `experiments`: `sweep` alone regenerates the drift stream
+# eight times per config, so the set costs hours where `experiments` costs
+# minutes. Run them deliberately -- `make experiments-full` does both in order.
+#
+# Each writes to its OWN directory, never $(OUT). `results/` holds the committed
+# artefacts behind the paper's tables, and none of these targets should be able
+# to overwrite them by accident. `seeds` is the exception and is safe: it writes
+# rq3_baselines/rq3_seeds only, which no other target produces.
+controls: seeds sweep baselines ablation
+	@echo ""
+	@echo "[make] RQ3 controls complete:"
+	@echo "         floor + seed variance -> $(AIOPS)/$(OUT)/rq3_{baselines,seeds}*"
+	@echo "         drift sweep           -> $(AIOPS)/$(SWEEP_OUT)/"
+	@echo "         streaming baselines   -> $(AIOPS)/$(BASELINES_OUT)/"
+	@echo "         component ablation    -> $(AIOPS)/$(ABLATION_OUT)/"
+
+experiments-full: experiments controls
+
+# Trivial always-alarm floor, the ORACLE threshold-recalibration control, and
+# five-seed variance. Note: baselines_and_seeds hardcodes n_episodes=320, so
+# EPISODES/DRIFT_EPISODES do NOT apply here -- a shorter run needs a code change.
+seeds:
+	cd $(AIOPS) && $(PY) -u -m ml.experiments.baselines_and_seeds --seeds $(RQ3_SEEDS) --configs $(CONFIGS) --out $(OUT)
+
+# Drift-magnitude sweep: rescales every regime multiplier toward 1 so the single
+# reported operating point becomes a curve. Answers "we set the drift as large as
+# the fault" with a measurement -- and shows the frozen model winning below a
+# ~1.15x baseline shift. Slowest control by far; it regenerates the stream per
+# alpha (8 by default) per config, and checkpoints the CSV as it goes.
+sweep:
+	cd $(AIOPS) && $(PY) -u -m ml.experiments.drift_sweep --episodes $(DRIFT_EPISODES) --seed $(SEED) --configs $(SWEEP_CONFIGS) --out $(SWEEP_OUT)
+
+# Off-the-shelf incremental learners on the identical stream, each scored twice:
+# raw, and behind a running StandardScaler. The scaled arm is the fair contrast
+# (our detector carries an EW normaliser); the raw arm shows what scaling alone
+# is worth. Read with `ablation` this gives the whole ladder.
+baselines:
+	cd $(AIOPS) && $(PY) -u -m ml.experiments.baseline_streaming --episodes $(DRIFT_EPISODES) --seed $(SEED) --configs $(CONFIGS) --out $(BASELINES_OUT)
+
+# The online detector with its own mechanisms switched off in turn (champion
+# pool, drift monitor). Both flags default to True in OnlineModel, so no
+# published RQ3 number moves unless an ablation explicitly asks otherwise.
+ablation:
+	cd $(AIOPS) && $(PY) -u -m ml.experiments.ablate_online --episodes $(DRIFT_EPISODES) --seed $(SEED) --configs $(CONFIGS) --out $(ABLATION_OUT)
+
+# Five-seed cost profile: the min-max RANGES the write-up quotes (580-880 ms
+# periodic spikes, an online tail never above 78 ms, 10-48x tail, ~120-390x
+# footprint, 4.1-4.8x CPU). `cost` profiles ONE seed and cannot produce any of
+# them. This is cost_compare once per seed, so it is the most expensive target
+# here -- budget hours.
+#
+# Reuses cost_compare.run_config, so a per-seed row IS the row `make cost`
+# reports for that seed. Writes the aggregate to $(OUT) and each seed's full
+# table to $(COST_SEEDS_OUT), which the aggregate discards columns from.
+#
+# Structural columns (train events, retained windows, model size) reproduce
+# exactly; the wall-clock ones -- and so tail_ratio and cpu_ratio -- are
+# properties of the machine and will NOT match the committed numbers to the
+# decimal. That is why the write-up quotes an order of magnitude, not a
+# millisecond.
+cost-seeds:
+	cd $(AIOPS) && $(PY) -u -m ml.experiments.cost_seeds --seeds $(RQ3_SEEDS) --configs $(CONFIGS) --episodes $(DRIFT_EPISODES) --out $(OUT) --per-seed-out $(COST_SEEDS_OUT)
+
+# Re-derive the aggregate + summary from per-seed tables that already exist in
+# $(COST_SEEDS_OUT). Seconds, not hours: it re-reads CSVs, fits nothing.
+cost-seeds-agg:
+	cd $(AIOPS) && $(PY) -m ml.experiments.cost_seeds --seeds $(RQ3_SEEDS) --from-dir $(COST_SEEDS_OUT) --out $(OUT)
+
+# Replay a RECORDED fault-injection campaign against historical PromQL: each
+# query is evaluated at the instant its window represents, so this scores
+# MEASURED telemetry rather than the generator. The only such result in the repo.
+#
+# Preconditions:
+#   1. TF_LIVE=1 (set below) and a reachable Prometheus holding the campaign's
+#      retention window -- otherwise every window collects zeros and the run is
+#      a silent no-op rather than an error.
+#   2. $(LIVE_LABELS) must be the ground truth for THAT campaign; the join is by
+#      timestamp, so labels from a different run mislabel every window.
+#
+# Scope is C1 only, on purpose: collect_metrics_live takes an `at` timestamp but
+# the Loki/Tempo/k8s-event collectors do not, so C2-C4 would mix present-moment
+# values into a past window with nothing downstream to catch it. Collection is
+# checkpointed to live_windows_cache.jsonl -- an interrupted replay resumes.
+live-replay:
+	cd $(AIOPS) && TF_LIVE=1 \
+	  PROM_URL=$${PROM_URL:-http://localhost:9090} \
+	  VM_URL=$${VM_URL:-http://localhost:8428} \
+	  $(PY) -u -m ml.experiments.live_replay --labels $(LIVE_LABELS) --out $(LIVE_OUT)
 
 # ---- streaming / LLM -------------------------------------------------------
 streaming:

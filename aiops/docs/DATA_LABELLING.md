@@ -30,10 +30,41 @@ and `service`. The live labels CSV schema is `fault, root_cause, start_ts, end_t
   (e.g. `latency_spike → review-service`, `cpu_saturation → actor-service`).
 
 For each episode it records **exact start/end timestamps**, the **fault type** and
-the **targeted root-cause service** to `data/labels.csv`. That CSV is later
-**joined by timestamp** onto telemetry windows pulled by the live collectors
-(`collectors/telemetry.py` with `TF_LIVE=1`, over Prometheus/Loki/Tempo): a window
-whose `ts` falls inside an episode interval inherits that episode's `fault`.
+the **targeted root-cause service** to `data/labels.csv` (or `data/labels_live.csv`
+for the compose-mesh campaign). That CSV is later **joined by timestamp** onto
+telemetry windows pulled by the live collectors (`collectors/telemetry.py` with
+`TF_LIVE=1`, over Prometheus/Loki/Tempo): a window whose `ts` falls inside an episode
+interval inherits that episode's `fault`.
+
+### Replaying a *past* campaign — the timestamp the join depends on
+
+Joining by timestamp is only half the problem. The label says *when* a window should
+have been anomalous; the collector must then return the telemetry from **that
+instant**, not from now. `collect_metrics_live(service, at=ts)` exists for exactly
+that: it passes `time=` to the Prometheus instant query so a recorded campaign can be
+reconstructed after the fact.
+
+> ⚠️ **Every query in a window must carry `at`, or none of them.** A partially
+> time-parameterised window mixes past and present telemetry into one feature vector,
+> and **no downstream check would catch it** — the row looks well-formed, the label
+> looks right, and the result is quietly wrong. This is why replay is restricted to
+> **C1**: only the metric collector takes `at`. The Loki, Tempo and Kubernetes-event
+> collectors are not time-parameterised, so C2–C4 are not attempted on a past campaign.
+
+### The replay labelling rule differs from the synthetic one — deliberately
+
+`ml/experiments/live_replay.py` labels a window anomalous **iff its service is the
+injected root cause** for that interval. The synthetic *affected set* is wider: it also
+contains the origin's ancestors, which inherit a secondary `latency_spike` as the fault
+propagates up the call path.
+
+So the same physical situation is labelled differently in the two paths, and the
+difference is **one-directional**: an ancestor genuinely degraded by the fault is
+labelled *normal* in replay, so if the detector flags it that counts as a false
+positive. The convention can therefore only **depress** apparent precision, never
+inflate it. That is the conservative direction, which is why it is acceptable for a
+feasibility measurement — and why the replay F1 (0.700 at C1) must not be compared
+directly against a synthetic C1 number scored under the wider rule.
 
 ## Synthetic path — offline generator
 
