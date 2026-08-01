@@ -18,7 +18,7 @@ const STAGES = [
     match: [/retrain/i, /fit/i, /periodic/i] },
   { n: 5, icon: "🧪", title: "Batch evaluate", sub: "score future / all-regime → P · R · F1 · RCA",
     match: [/precision/i, /recall/i, /\bf1\b/i, /auc/i] },
-  { n: 6, icon: "📤", title: "Write outputs", sub: "CSV + figures → data/results",
+  { n: 6, icon: "📤", title: "Write outputs", sub: "CSV + figures →",
     match: [/results\s*->/i, /->\s*data\/results/i, /\.csv/i, /\.xlsx/i] },
 ];
 
@@ -34,7 +34,7 @@ function activeStage(lines, running, done) {
   return idx;
 }
 
-function Stage({ s, state }) {
+function Stage({ s, state, out }) {
   // state: "pending" | "active" | "done"
   return (
     <div className={"stage" + (state === "active" ? " active alert" : "")}>
@@ -43,7 +43,7 @@ function Stage({ s, state }) {
         <span className="stage-icon">{s.icon}</span>
         <span className="stage-title">{s.title}</span>
       </div>
-      <div className="stage-sub">{s.sub}</div>
+      <div className="stage-sub">{s.sub}{s.n === 6 ? ` ${out}` : ""}</div>
       <div className={"chip " + (state === "active" ? "chip-amber"
         : state === "done" ? "chip-green" : "chip-muted")}>
         {state === "active" ? "⏳ running" : state === "done" ? "done" : "queued"}
@@ -54,7 +54,7 @@ function Stage({ s, state }) {
 
 const Arrow = ({ on }) => <div className={"flow-arrow" + (on ? " on" : "")}>→</div>;
 
-export default function OfflinePipeline({ lines = [], running, done, result }) {
+export default function OfflinePipeline({ lines = [], running, done, result, out = "data/results" }) {
   const active = activeStage(lines, running, done);
   const stateOf = (i) =>
     active < 0 ? "pending" : i < active ? "done" : i === active ? "active" : "pending";
@@ -65,7 +65,7 @@ export default function OfflinePipeline({ lines = [], running, done, result }) {
         const i = STAGES.indexOf(s);
         return (
           <Fragment key={s.n}>
-            <Stage s={s} state={stateOf(i)} />
+            <Stage s={s} state={stateOf(i)} out={out} />
             {j < group.length - 1 && <Arrow on={active > i} />}
           </Fragment>
         );

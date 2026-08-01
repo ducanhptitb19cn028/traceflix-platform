@@ -77,10 +77,16 @@ Open **http://localhost:8000**.
 | Page | What it does |
 |------|--------------|
 | 🟢 **Online Mode** | Opens an SSE stream (`/api/online/stream`) that drives `ml/online_sim.py` (the `OnlineModel` over the drifting stream) window-by-window. Live: rolling-F1 chart (online vs static vs periodic), KPI cards, champion η₀/α, and a pipeline panel showing online's continuous `partial_fit` vs periodic's blocking batch-refit flashes. |
-| 🔵 **Offline Mode** | Sends a command (`/api/offline/run`) that subprocesses an `ml.experiments`/`ml.eval` module and streams its stdout live into a terminal view; lists produced outputs on completion. |
+| 🔵 **Offline Mode** | Sends a command (`/api/offline/run`) that subprocesses an `ml.experiments`/`ml.eval` module and streams its stdout live into a terminal view; lists produced outputs on completion. The picker is grouped into **Reported campaign** / **RQ3 controls** / **Exports** and is driven entirely by the backend registry — which flags an experiment takes, where it writes, roughly what it costs, and any caveat — so nothing is duplicated in the page. |
 | 🧠 **Live ML** | Always-on anomaly detection across the classical families (online SGD, RF, GB, XGBoost, LSTM, multimodal fusion) on one endless stream. No run to trigger: the engine starts with the backend and the page attaches to it. Per-detector verdict cards, rolling-F1 chart, running precision/recall/F1 scoreboard with per-window cost, and a colour-coded feed of who called what. |
 | 🤖 **Live LLM** | Always-on LLM detection: the raw MELT signals handed to the model, the strict JSON it returns, per-call latency (last/mean/p95), running F1 + confusion counts, and accuracy per injected fault type. |
-| 📊 **Result Comparison** | Reads `/api/results/comparison`; tabs for F1-by-config (table + bar chart), rolling-F1 timeline, per-regime, cost, and the generated PNG figures. |
+| 📊 **Result Comparison** | Reads `/api/results/{comparison,rq2,controls}`; eight tabs — **Headline** (F1 by config against the always-alarm floor + rolling-F1 timeline), **Per-regime**, **Controls** (trivial floor, oracle re-threshold, five-seed variance, off-the-shelf streaming learners raw vs scaled, component ablation), **Drift sweep**, **Cost** (five-seed ranges, then the single-seed table), **RQ2 localisation** (propagating generator, per background rate), **Live pilot** (the measured replay), and **Figures**. |
+
+Every generated tab carries the provenance caveat, and each claim sits beside the
+control that bounds it: the floor next to the headline bars, the seed spread next
+to the online-vs-periodic delta, the sweep next to the drift collapse. The
+`rq2_localisation.png` figure is labelled **withdrawn** where it appears, because
+it plots RQ2's circular first attempt.
 
 ## API endpoints
 
@@ -88,10 +94,12 @@ Open **http://localhost:8000**.
 |--------|------|---------|
 | GET | `/api/health` | liveness |
 | GET | `/api/configs` | observability configs C1–C4 |
-| GET | `/api/experiments` | runnable offline experiments |
+| GET | `/api/experiments` | runnable experiments + their group, flags, output dir and cost |
 | GET | `/api/online/stream` | **SSE** realtime simulation snapshots |
-| GET | `/api/offline/run` | **SSE** experiment run, streamed stdout |
-| GET | `/api/results/comparison` | comparison tables (JSON) |
+| GET | `/api/offline/run` | **SSE** experiment run, streamed stdout (`key`, `episodes`, `configs`, `seeds`) |
+| GET | `/api/results/comparison` | headline tables, the floor, five-seed cost ranges (JSON) |
+| GET | `/api/results/rq2` | RQ2 top-*k* on the propagating generator, averaged over seeds |
+| GET | `/api/results/controls` | the RQ3 controls, each with its own `available` flag |
 | GET | `/api/results/figures/{name}` | a generated PNG |
 | GET | `/api/live/{ml,llm}/info` | detector catalogue / LLM status |
 | GET | `/api/live/{ml,llm}/stream` | **SSE** attach to the always-on engine |
@@ -99,6 +107,13 @@ Open **http://localhost:8000**.
 
 The Online Mode runs in-process (no Kubernetes needed); the drift stream mirrors
 the live `Window` schema.
+
+`/api/results/controls` never 404s. Each block reports its own availability
+instead, so a control that has not been run renders as "not run" with the command
+that produces it, rather than taking the page down — several of them cost hours
+and are legitimately absent on a fresh checkout. Each control is read from its own
+directory (`results_drift_sweep/`, `results_baselines_scaled/`, `results_ablation/`,
+`results_live/`); the superseded `results_baselines/` is deliberately not read.
 
 ## Live pages — the always-on detection engines
 

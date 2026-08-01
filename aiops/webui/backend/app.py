@@ -8,6 +8,8 @@ GET  /api/online/stream               SSE: realtime online-vs-offline simulation
 GET  /api/experiments                 list runnable offline experiments
 GET  /api/offline/run                 SSE: run an experiment, stream stdout lines
 GET  /api/results/comparison          offline-vs-online result tables (JSON)
+GET  /api/results/rq2                 RQ2 localisation on the propagating generator
+GET  /api/results/controls            the RQ3 controls that bound the headline claim
 GET  /api/results/figures/{name}      a generated PNG figure
 GET  /api/streaming/info              Kafka topics + MELT pillars + LLM detector status
 GET  /api/streaming/stream            SSE: live event backbone (topics, MELT, LLM verdicts)
@@ -24,6 +26,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -55,54 +58,206 @@ from streaming.live_detect import (                  # noqa: E402
 from streaming.webui_stream import (                 # noqa: E402
     backbone_info, stream_backbone)
 
-RESULTS = AIOPS / "data" / "results"
+DATA = AIOPS / "data"
+RESULTS = DATA / "results"
 FIGURES = RESULTS / "figures"
 FRONTEND_DIST = AIOPS / "webui" / "frontend" / "dist"
+
+# The RQ3 controls each write to their OWN directory, never data/results — see
+# data/results/README.md. results/ holds the committed artefacts behind the
+# paper's tables, and no control run should be able to overwrite them by
+# accident. results_baselines/ (unscaled-only) is superseded by
+# results_baselines_scaled/ and is deliberately not read here.
+SWEEP_DIR = DATA / "results_drift_sweep"
+BASELINES_DIR = DATA / "results_baselines_scaled"
+ABLATION_DIR = DATA / "results_ablation"
+LIVE_DIR = DATA / "results_live"
 
 app = FastAPI(title="TraceFlix-AIOps API")
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
 )
 
-# experiment registry: key -> (python -m module, arg builder, output files)
+# Experiment registry. One entry per runnable module, mirroring the Makefile
+# targets so a run started here is the same run `make <target>` performs.
+#
+#   group    which section of the Offline Mode picker it belongs to
+#   args     argv builder; takes the parameter dict, returns a list of strings
+#   params   which controls the page should render ("episodes"/"configs"/"seeds")
+#   out      directory the module writes to, relative to aiops/
+#   outputs  filenames inside `out`, checked for existence when the run finishes
+#   cost     rough wall-clock, so nobody starts an hours-long job by accident
+#   env      extra environment the module needs (live replay only)
 EXPERIMENTS = {
-    "rq123": {
-        "label": "RQ1/RQ2/RQ4 — completeness, localisation, model family",
+    # ---- reported campaign ------------------------------------------------
+    "rq14": {
+        "group": "Reported campaign",
+        "label": "RQ1/RQ4 — completeness and model family",
         "module": "ml.experiments.run_experiment",
-        "args": lambda ep, cfgs: ["--episodes", str(ep), "--out", "data/results"],
-        "outputs": ["rq1_completeness.csv", "rq2_localisation.csv", "rq4_model_family.csv"],
+        "args": lambda p: ["--episodes", str(p["episodes"]), "--out", "data/results"],
+        "params": ["episodes"],
+        "out": "data/results",
+        "outputs": ["rq1_completeness.csv", "rq4_model_family.csv", "summary.json"],
+        "cost": "minutes",
+        "note": "Also rewrites rq2_localisation.csv — RQ2's withdrawn first attempt. "
+                "The reported RQ2 result comes from the separate rq2 run below.",
     },
-    "rq4": {
+    "rq2": {
+        "group": "Reported campaign",
+        "label": "RQ2 — localisation on the propagating generator",
+        "module": "ml.experiments.rq2_localisation",
+        "args": lambda p: ["--episodes", str(p["episodes"]), "--seeds", p["seeds"],
+                           "--out", "data/results"],
+        "params": ["episodes", "seeds"],
+        "out": "data/results",
+        "outputs": ["rq2_localisation_propagating.csv", "rq2_propagating_summary.json"],
+        "cost": "minutes",
+        "note": "The RQ2 rebuild: errors propagate up the call path, so the origin must "
+                "be inferred rather than read off the ranking feature.",
+    },
+    "rq3": {
+        "group": "Reported campaign",
         "label": "RQ3 — static vs periodic vs online detection under drift",
         "module": "ml.experiments.online_vs_offline",
-        "args": lambda ep, cfgs: ["--episodes", str(ep), "--configs", cfgs, "--out", "data/results"],
-        "outputs": ["rq3_online_vs_offline.csv", "rq3_timeline.csv"],
+        "args": lambda p: ["--episodes", str(p["episodes"]), "--configs", p["configs"],
+                           "--out", "data/results"],
+        "params": ["episodes", "configs"],
+        "out": "data/results",
+        "outputs": ["rq3_online_vs_offline.csv", "rq3_timeline.csv", "rq3_summary.json"],
+        "cost": "minutes",
     },
     "cost": {
-        "label": "RQ3 — cost comparison (drift)",
+        "group": "Reported campaign",
+        "label": "RQ3 — cost comparison, single seed",
         "module": "ml.experiments.cost_compare",
-        "args": lambda ep, cfgs: ["--episodes", str(ep), "--configs", cfgs, "--out", "data/results"],
-        "outputs": ["rq3_cost.csv"],
+        "args": lambda p: ["--episodes", str(p["episodes"]), "--configs", p["configs"],
+                           "--out", "data/results"],
+        "params": ["episodes", "configs"],
+        "out": "data/results",
+        "outputs": ["rq3_cost.csv", "rq3_cost_summary.json"],
+        "cost": "minutes",
+        "note": "Seed 42 only. The cost RANGES in the write-up come from cost-seeds-agg.",
     },
+    # ---- RQ3 controls ------------------------------------------------------
+    "seeds": {
+        "group": "RQ3 controls",
+        "label": "Controls — always-alarm floor, oracle re-threshold, seed variance",
+        "module": "ml.experiments.baselines_and_seeds",
+        "args": lambda p: ["--seeds", p["seeds"], "--configs", p["configs"],
+                           "--out", "data/results"],
+        "params": ["seeds", "configs"],
+        "out": "data/results",
+        "outputs": ["rq3_baselines.csv", "rq3_seeds.csv", "rq3_seeds_summary.json"],
+        "cost": "tens of minutes",
+        "note": "Episodes are hardcoded at 320 in this module — the slider does not apply.",
+    },
+    "baselines": {
+        "group": "RQ3 controls",
+        "label": "Controls — off-the-shelf streaming learners (raw vs scaled)",
+        "module": "ml.experiments.baseline_streaming",
+        "args": lambda p: ["--episodes", str(p["episodes"]), "--seed", "42",
+                           "--configs", p["configs"], "--out", "data/results_baselines_scaled"],
+        "params": ["episodes", "configs"],
+        "out": "data/results_baselines_scaled",
+        "outputs": ["rq3_streaming_baselines.csv", "rq3_streaming_baselines_summary.json"],
+        "cost": "tens of minutes",
+        "note": "The scaled arm is the fair contrast — our detector carries its own "
+                "normaliser. The raw arm shows what normalisation alone is worth.",
+    },
+    "ablation": {
+        "group": "RQ3 controls",
+        "label": "Controls — online detector ablation (champion pool, drift monitor)",
+        "module": "ml.experiments.ablate_online",
+        "args": lambda p: ["--episodes", str(p["episodes"]), "--seed", "42",
+                           "--configs", p["configs"], "--out", "data/results_ablation"],
+        "params": ["episodes", "configs"],
+        "out": "data/results_ablation",
+        "outputs": ["rq3_online_ablation.csv", "rq3_online_ablation_summary.json"],
+        "cost": "tens of minutes",
+    },
+    "sweep": {
+        "group": "RQ3 controls",
+        "label": "Controls — drift-magnitude sweep (alpha)",
+        "module": "ml.experiments.drift_sweep",
+        "args": lambda p: ["--episodes", str(p["episodes"]), "--seed", "42",
+                           "--configs", p["configs"], "--out", "data/results_drift_sweep"],
+        "params": ["episodes", "configs"],
+        "out": "data/results_drift_sweep",
+        "outputs": ["rq3_drift_sweep.csv", "rq3_drift_sweep_summary.json"],
+        "cost": "hours",
+        "note": "Regenerates the whole stream once per alpha per config (8 alphas by "
+                "default). Checkpoints the CSV as it goes. Two configs is already slow.",
+    },
+    "cost-seeds-agg": {
+        "group": "RQ3 controls",
+        "label": "Controls — re-aggregate the five-seed cost ranges",
+        "module": "ml.experiments.cost_seeds",
+        "args": lambda p: ["--seeds", p["seeds"], "--from-dir", "data/results_cost_seeds",
+                           "--out", "data/results"],
+        "params": ["seeds"],
+        "out": "data/results",
+        "outputs": ["rq3_cost_seeds.csv", "rq3_cost_seeds_summary.json"],
+        "cost": "seconds",
+        "note": "Re-reads the per-seed tables in data/results_cost_seeds/ and fits "
+                "nothing. Profiling the seeds from scratch (make cost-seeds) takes "
+                "hours and its wall-clock columns will not reproduce anyway.",
+    },
+    "live-replay": {
+        "group": "RQ3 controls",
+        "label": "Live — replay a recorded campaign against historical PromQL",
+        "module": "ml.experiments.live_replay",
+        "args": lambda p: ["--labels", "data/labels_live.csv", "--out", "data/results_live"],
+        "params": [],
+        "out": "data/results_live",
+        "outputs": ["rq1_live_c1.csv", "rq1_live_c1_summary.json"],
+        "cost": "minutes",
+        "env": {"TF_LIVE": "1", "PROM_URL": os.environ.get("PROM_URL", "http://localhost:9090")},
+        "note": "Needs a reachable Prometheus still holding the campaign's retention "
+                "window. Without one every window collects zeros and the run is a "
+                "silent no-op rather than an error. C1 only — the log, trace and event "
+                "collectors take no timestamp.",
+    },
+    # ---- exports -----------------------------------------------------------
     "excel": {
+        "group": "Exports",
         "label": "Export → comparison workbook (Excel)",
         "module": "ml.eval.to_excel",
-        "args": lambda ep, cfgs: ["data/results"],
+        "args": lambda p: ["data/results"],
+        "params": [],
+        "out": "data/results",
         "outputs": ["rq3_offline_vs_online_comparison.xlsx"],
+        "cost": "seconds",
     },
     "observability": {
+        "group": "Exports",
         "label": "Export → observability MELT data (Excel/CSV)",
         "module": "ml.eval.export_observability",
-        "args": lambda ep, cfgs: ["--episodes", str(ep), "--out", "data/results"],
+        "args": lambda p: ["--episodes", str(p["episodes"]), "--out", "data/results"],
+        "params": ["episodes"],
+        "out": "data/results",
         "outputs": ["observability_data.xlsx", "observability_melt.csv"],
+        "cost": "minutes",
     },
     "plots": {
+        "group": "Exports",
         "label": "Plots → regenerate figures",
         "module": "ml.eval.plots",
-        "args": lambda ep, cfgs: ["data/results"],
+        "args": lambda p: ["data/results"],
+        "params": [],
+        "out": "data/results",
         "outputs": [],
+        "cost": "seconds",
     },
 }
+
+# Placeholders the frontend substitutes into the command preview, so the preview
+# is generated by the same arg builder that runs the job rather than by a second
+# copy of the argument list that can drift out of step with it.
+_PREVIEW_PARAMS = {"episodes": "{episodes}", "configs": "{configs}", "seeds": "{seeds}"}
+
+
+def _preview(spec: dict) -> str:
+    return "python -m " + spec["module"] + " " + " ".join(spec["args"](_PREVIEW_PARAMS))
 
 
 def _sse(payload: dict) -> str:
@@ -133,7 +288,14 @@ def configs():
 
 @app.get("/api/experiments")
 def experiments():
-    return [{"key": k, "label": v["label"], "module": v["module"]}
+    """The runnable catalogue, with enough metadata for the page to render the
+    right controls and the right warnings without hardcoding a second copy of
+    which experiment takes which flag."""
+    return [{"key": k, "label": v["label"], "module": v["module"],
+             "group": v["group"], "params": v["params"], "out": v["out"],
+             "outputs": v["outputs"], "cost": v["cost"],
+             "note": v.get("note"), "env": v.get("env"),
+             "preview": _preview(v)}
             for k, v in EXPERIMENTS.items()]
 
 
@@ -268,17 +430,24 @@ def live_control(kind: str, rate: float | None = None, paused: bool | None = Non
 
 @app.get("/api/offline/run")
 async def offline_run(request: Request, key: str, episodes: int = 200,
-                      configs: str = "C1,C2,C3,C4"):
+                      configs: str = "C1,C2,C3,C4", seeds: str = "42,43,44,45,46"):
     if key not in EXPERIMENTS:
         raise HTTPException(400, f"unknown experiment {key}")
     spec = EXPERIMENTS[key]
-    argv = [sys.executable, "-u", "-m", spec["module"], *spec["args"](episodes, configs)]
+    args = spec["args"]({"episodes": episodes, "configs": configs, "seeds": seeds})
+    argv = [sys.executable, "-u", "-m", spec["module"], *args]
+    out_dir = AIOPS / spec["out"]
+
+    # live_replay needs TF_LIVE=1 and a PROM_URL; without them it silently
+    # collects zeros rather than failing, so the environment is part of the
+    # experiment definition and not left to whatever the server inherited.
+    env = {**os.environ, **spec.get("env", {})}
 
     async def gen():
-        yield _sse({"type": "start", "cmd": "python -m " + spec["module"] + " "
-                    + " ".join(spec["args"](episodes, configs))})
+        yield _sse({"type": "start",
+                    "cmd": "python -m " + spec["module"] + " " + " ".join(args)})
         proc = await asyncio.create_subprocess_exec(
-            *argv, cwd=str(AIOPS), stdout=asyncio.subprocess.PIPE,
+            *argv, cwd=str(AIOPS), env=env, stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT)
         while True:
             if await request.is_disconnected():
@@ -289,15 +458,30 @@ async def offline_run(request: Request, key: str, episodes: int = 200,
                 break
             yield _sse({"type": "log", "line": line.decode(errors="replace").rstrip()})
         code = await proc.wait()
-        outputs = [o for o in spec["outputs"] if (RESULTS / o).exists()]
-        yield _sse({"type": "done", "code": code, "outputs": outputs})
+        outputs = [o for o in spec["outputs"] if (out_dir / o).exists()]
+        yield _sse({"type": "done", "code": code, "outputs": outputs,
+                    "out": spec["out"]})
 
     return StreamingResponse(gen(), media_type="text/event-stream")
 
 
-def _df(name: str):
-    p = RESULTS / name
+def _df(name: str, base: Path = RESULTS):
+    p = base / name
     return pd.read_csv(p) if p.exists() else None
+
+
+def _json_file(name: str, base: Path = RESULTS):
+    p = base / name
+    return json.loads(p.read_text()) if p.exists() else None
+
+
+def _recs(d):
+    """DataFrame -> JSON records, NaN-safe.
+
+    to_json emits `null` for NaN where a plain to_dict would emit a float the
+    JSON encoder then rejects. The Gaussian-NB baseline rows carry NaNs, so this
+    is load-bearing rather than defensive."""
+    return [] if d is None else json.loads(d.round(4).to_json(orient="records"))
 
 
 @app.get("/api/results/comparison")
@@ -322,15 +506,105 @@ def comparison():
     cost = _df("rq3_cost.csv")
     figs = sorted(p.name for p in FIGURES.glob("*.png")) if FIGURES.exists() else []
 
-    def recs(d):
-        return [] if d is None else json.loads(d.round(4).to_json(orient="records"))
+    # The always-alarm floor belongs beside the headline bars, not two tabs away:
+    # "static collapses to 0.36" only means something against the score of a
+    # detector that flags every window and reads nothing.
+    base = _df("rq3_baselines.csv")
+    floor = round(float(base.always_alarm_f1.mean()), 4) if base is not None else None
 
     return {
-        "f1_by_config": recs(f1_by_config),
-        "per_regime": recs(per_regime),
-        "timeline": recs(tl),
-        "cost": recs(cost),
+        "f1_by_config": _recs(f1_by_config),
+        "per_regime": _recs(per_regime),
+        "timeline": _recs(tl),
+        "cost": _recs(cost),
+        "cost_seeds": _recs(_df("rq3_cost_seeds.csv")),
+        "cost_seeds_summary": _json_file("rq3_cost_seeds_summary.json"),
+        "summary": _json_file("rq3_summary.json"),
+        "floor": floor,
         "figures": figs,
+    }
+
+
+@app.get("/api/results/rq2")
+def rq2():
+    """RQ2 localisation on the propagating generator — the reported result.
+
+    Seeds are averaged here rather than in the browser: the raw file is
+    (backgrounds x seeds x arms x k) and only its mean per arm is ever read.
+    `withdrawn_present` reports whether the superseded circular run is still on
+    disk, so the page can label the figure that plots it."""
+    df = _df("rq2_localisation_propagating.csv")
+    if df is None:
+        return {"available": False,
+                "withdrawn_present": (RESULTS / "rq2_localisation.csv").exists()}
+
+    df = df.copy()
+    df["arm"] = df.config + df.graph_aware.map({True: " + graph-aware", False: ""})
+    topk = (df.groupby(["background", "arm", "k"], as_index=False)
+              .agg(topk_accuracy=("topk_accuracy", "mean"),
+                   sd=("topk_accuracy", "std"))
+              .round(4))
+    return {
+        "available": True,
+        "topk": _recs(topk),
+        "arms": sorted(df.arm.unique().tolist()),
+        "backgrounds": sorted(df.background.unique().tolist()),
+        "summary": _json_file("rq2_propagating_summary.json"),
+        "withdrawn_present": (RESULTS / "rq2_localisation.csv").exists(),
+    }
+
+
+@app.get("/api/results/controls")
+def controls():
+    """The controls that bound how much of the RQ3 headline may be claimed.
+
+    Each block reports its own availability instead of the endpoint 404-ing, so
+    a page can show which controls have been run and which have not — several
+    of these cost hours and will legitimately be missing on a fresh checkout."""
+    base = _df("rq3_baselines.csv")
+    seeds = _df("rq3_seeds.csv")
+    ablation = _df("rq3_online_ablation.csv", ABLATION_DIR)
+    streaming = _df("rq3_streaming_baselines.csv", BASELINES_DIR)
+    sweep = _df("rq3_drift_sweep.csv", SWEEP_DIR)
+    live = _df("rq1_live_c1.csv", LIVE_DIR)
+
+    floor_by_config = None if base is None else (
+        base.groupby("config", as_index=False)
+            .agg(prevalence=("prevalence", "mean"),
+                 always_alarm_f1=("always_alarm_f1", "mean"),
+                 static_frozen_f1=("static_frozen_f1", "mean"),
+                 static_auc=("static_auc", "mean"),
+                 static_recalibrated_f1=("static_recalibrated_f1", "mean")))
+
+    return {
+        "floor_recalibration": {
+            "available": base is not None,
+            "rows": _recs(floor_by_config),
+            "per_seed": _recs(base),
+        },
+        "seed_variance": {
+            "available": seeds is not None,
+            "summary": _json_file("rq3_seeds_summary.json"),
+        },
+        "ablation": {
+            "available": ablation is not None,
+            "rows": _recs(ablation),
+            "summary": _json_file("rq3_online_ablation_summary.json", ABLATION_DIR),
+        },
+        "streaming_baselines": {
+            "available": streaming is not None,
+            "rows": _recs(streaming),
+            "summary": _json_file("rq3_streaming_baselines_summary.json", BASELINES_DIR),
+        },
+        "drift_sweep": {
+            "available": sweep is not None,
+            "rows": _recs(sweep),
+            "summary": _json_file("rq3_drift_sweep_summary.json", SWEEP_DIR),
+        },
+        "live_pilot": {
+            "available": live is not None,
+            "summary": _json_file("rq1_live_c1_summary.json", LIVE_DIR),
+        },
     }
 
 

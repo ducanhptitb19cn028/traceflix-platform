@@ -14,7 +14,7 @@ export const onlineStreamUrl = (p) =>
 
 export const offlineRunUrl = (p) =>
   `/api/offline/run?key=${p.key}&episodes=${p.episodes}` +
-  `&configs=${encodeURIComponent(p.configs)}`;
+  `&configs=${encodeURIComponent(p.configs)}&seeds=${encodeURIComponent(p.seeds)}`;
 
 export const figureUrl = (name) => `/api/results/figures/${name}`;
 
