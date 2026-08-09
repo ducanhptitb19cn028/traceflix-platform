@@ -450,3 +450,8 @@ Outputs are written to (and a frozen copy is committed under)
 
 Ngoc Duc Anh Nguyen — MSc Advanced Computer Science, Leeds Beckett University.
 Supervised by Dr Satish Kumar. All third-party tooling is open-source.
+
+## Licence
+
+Released under the MIT Licence — see [`LICENSE`](LICENSE). Third-party
+dependencies remain under their own licences.
