@@ -127,3 +127,5 @@ tmp/
 temp/
 .claude/
 node_modules/
+# local run logs from services/run-local.sh
+services/.run-logs/

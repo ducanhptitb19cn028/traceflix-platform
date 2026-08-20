@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   TraceFlix reads as a programme listing, not a poster wall. catalog-service
+   stores name, genre, year and rating and no artwork, so the page is built as
+   a catalogue: one film given editorial weight, the rest as ranked lists.
+
+   One accent, #2F6DB5, taken from clsInfra in the study's projectreport.sty so
+   the screen stays coherent with the report figures. Used for the rank marker
+   and interactive text, nothing else. Red is reserved for a failed request.
+
+   One corner radius: 3px, on the few controls that need one. Everything else
+   is separated by rules and space rather than boxes.
+--------------------------------------------------------------------------- */
+
+@theme {
+  --color-paper: #ffffff;
+  --color-tint: #f5f6f8;
+  --color-rule: #e4e6ea;
+  --color-rule-strong: #c9ccd3;
+
+  --color-ink: #14171c;
+  --color-ink-soft: #3d444f;
+  --color-ink-muted: #5b6472;
+
+  --color-accent: #2f6db5;
+  --color-fault: #b3261e;
+
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "IBM Plex Serif", ui-serif, Georgia, serif;
+
+  --radius-control: 3px;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

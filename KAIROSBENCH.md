@@ -7,6 +7,13 @@ measurement campaign here produces, how to run one, and what is known to be
 wrong with the result if you read it carelessly. The shared protocol lives in
 the harness, in `kairosbench/docs/campaign.md`; nothing here repeats it.
 
+Two experiments run against this application, each documented in full:
+
+- [experiment 3 — the interactive detection matrix](../kairosbench/docs/experiment-interactive-detection-matrix.md):
+  the control row group, and the only one injected with Chaos Mesh.
+- [experiment 5 — request-class characterisation](../kairosbench/docs/experiment-request-class-characterisation.md):
+  topology and telemetry volume for the browse class.
+
     $env:TF_LIVE = "1"                        # PowerShell; the gate is enforced
     python scripts/kb_campaign.py --check     # preconditions
     python scripts/kb_campaign.py             # the interactive matrix, ~2 h
