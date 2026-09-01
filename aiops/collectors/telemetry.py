@@ -63,7 +63,17 @@ def _prom_instant(query: str, base: str = PROM_URL,
             params["time"] = f"{at:.3f}"
         r = httpx.get(f"{base}/api/v1/query", params=params, timeout=10)
         res = r.json().get("data", {}).get("result", [])
-        return float(res[0]["value"][1]) if res else 0.0
+        v = float(res[0]["value"][1]) if res else 0.0
+        # A quantile over a bucket rate of zero is NaN, and Prometheus returns it
+        # as the literal "NaN" -- a successful parse, so the except below never
+        # sees it. It reaches the feature matrix, where GradientBoosting refuses
+        # it outright and the tree models silently treat it as a category of its
+        # own. It means the service served no requests in the window, which is
+        # the same fact as the empty result already mapped to 0.0 above, so it
+        # maps there too. Insidious rather than merely noisy if left in: a
+        # starved service is exactly the one under fault, so the NaN correlates
+        # with the label and flatters whatever model tolerates it.
+        return 0.0 if v != v else v
     except Exception:
         return 0.0
 

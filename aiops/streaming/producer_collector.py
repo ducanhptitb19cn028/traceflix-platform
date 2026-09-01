@@ -1,9 +1,10 @@
 """
 Producer: telemetry windows -> tf.telemetry.windows.
 
-Source mirrors the rest of the project:
-  * default    -> synthetic generate_run() (no cluster)
-  * TF_LIVE=1  -> live collect_window() against Prometheus/Loki/Tempo
+Source is generate_run(), which is synthetic whatever TF_LIVE says: it invents
+the fault it labels each window with, so there is no live telemetry that
+corresponds to that label (see the import note in ml.dataset). Replaying a real
+injected campaign against the deployed stack is ml.experiments.live_replay.
 
 Run standalone:
     python -m streaming.producer_collector --episodes 40

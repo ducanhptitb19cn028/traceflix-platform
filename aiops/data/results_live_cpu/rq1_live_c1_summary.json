@@ -1,0 +1,14 @@
+{
+  "source": "live",
+  "config": "C1",
+  "model": "rf",
+  "precision": 1.0,
+  "recall": 0.6666666666666666,
+  "f1": 0.8,
+  "auc_roc": 1.0,
+  "n_windows": 81,
+  "n_test": 25,
+  "prevalence": 0.1111111111111111,
+  "episodes": 1,
+  "always_alarm_f1": 0.19999999999999998
+}

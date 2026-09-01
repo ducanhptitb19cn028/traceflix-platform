@@ -80,6 +80,7 @@ Open **http://localhost:8000**.
 | 🔵 **Offline Mode** | Sends a command (`/api/offline/run`) that subprocesses an `ml.experiments`/`ml.eval` module and streams its stdout live into a terminal view; lists produced outputs on completion. The picker is grouped into **Reported campaign** / **RQ3 controls** / **Exports** and is driven entirely by the backend registry — which flags an experiment takes, where it writes, roughly what it costs, and any caveat — so nothing is duplicated in the page. |
 | 🧠 **Live ML** | Always-on anomaly detection across the classical families (online SGD, RF, GB, XGBoost, LSTM, multimodal fusion) on one endless stream. No run to trigger: the engine starts with the backend and the page attaches to it. Per-detector verdict cards, rolling-F1 chart, running precision/recall/F1 scoreboard with per-window cost, and a colour-coded feed of who called what. |
 | 🤖 **Live LLM** | Always-on LLM detection: the raw MELT signals handed to the model, the strict JSON it returns, per-call latency (last/mean/p95), running F1 + confusion counts, and accuracy per injected fault type. |
+| 🔭 **MELT** | The telemetry itself rather than any verdict on it: the four pillars (Metrics / Events / Logs / Traces) of every window, as the collectors returned them and before `build_features` narrows them to what a configuration may see. A source selector switches between the deployed cluster (real PromQL/LogQL/TraceQL, Chaos Mesh truth) and the generator, and says which is on screen; a mesh sweep shows all nine services at the latest instant; per-service charts follow each pillar over time; a raw table names the query behind every number. No detector runs on this page. |
 | 📊 **Result Comparison** | Reads `/api/results/{comparison,rq2,controls}`; eight tabs — **Headline** (F1 by config against the always-alarm floor + rolling-F1 timeline), **Per-regime**, **Controls** (trivial floor, oracle re-threshold, five-seed variance, off-the-shelf streaming learners raw vs scaled, component ablation), **Drift sweep**, **Cost** (five-seed ranges, then the single-seed table), **RQ2 localisation** (propagating generator, per background rate), **Live pilot** (the measured replay), and **Figures**. |
 
 Every generated tab carries the provenance caveat, and each claim sits beside the
@@ -104,6 +105,8 @@ it plots RQ2's circular first attempt.
 | GET | `/api/live/{ml,llm}/info` | detector catalogue / LLM status |
 | GET | `/api/live/{ml,llm}/stream` | **SSE** attach to the always-on engine |
 | GET | `/api/live/{ml,llm}/control` | `rate=`, `paused=`, `reset=`, `config=` (ML only) |
+| GET | `/api/melt/info` | MELT pillar catalogue + which engine feeds the page (`kind=`) |
+| GET | `/api/melt/windows` | recent raw MELT windows, the MELT page's backfill (`kind=`, `service=`, `limit=`) |
 
 The Online Mode runs in-process (no Kubernetes needed); the drift stream mirrors
 the live `Window` schema.

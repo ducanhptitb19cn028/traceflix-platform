@@ -11,7 +11,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { portForPath } from './routes.js';
+import { portForPath, serviceForPath } from './routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -23,6 +23,27 @@ function arg(name, fallback) {
 const PORT = Number(arg('port', 5173));
 const HOST = arg('host', '127.0.0.1');
 const ROOT = path.join(__dirname, 'dist');
+
+/*
+ * Where the nine services live.
+ *
+ * Default ("local") is the run-local.sh layout: nine ports on the loopback.
+ * TF_UPSTREAM=cluster switches to Kubernetes addressing -- the Service DNS name
+ * that owns the prefix, all on one port -- which is what the in-cluster
+ * Deployment sets. Anything else would need the pod to reach nine loopback
+ * ports that, inside a pod, are this container.
+ */
+const UPSTREAM = process.env.TF_UPSTREAM === 'cluster' ? 'cluster' : 'local';
+const SERVICE_PORT = Number(process.env.TF_SERVICE_PORT || 8080);
+
+function upstreamForPath(pathname) {
+  if (UPSTREAM === 'cluster') {
+    const name = serviceForPath(pathname);
+    return name === null ? null : { hostname: name, port: SERVICE_PORT };
+  }
+  const port = portForPath(pathname);
+  return port === null ? null : { hostname: '127.0.0.1', port };
+}
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -71,15 +92,15 @@ function serveStatic(req, res) {
   });
 }
 
-function proxy(req, res, port) {
+function proxy(req, res, { hostname, port }) {
   const started = process.hrtime.bigint();
   const upstream = http.request(
     {
-      hostname: '127.0.0.1',
+      hostname,
       port,
       path: req.url,
       method: req.method,
-      headers: { ...req.headers, host: `127.0.0.1:${port}` },
+      headers: { ...req.headers, host: `${hostname}:${port}` },
     },
     (up) => {
       const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
@@ -93,7 +114,7 @@ function proxy(req, res, port) {
   );
   upstream.on('error', (e) => {
     res.writeHead(502, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ error: 'service unreachable', port, detail: e.message }));
+    res.end(JSON.stringify({ error: 'service unreachable', upstream: `${hostname}:${port}`, detail: e.message }));
   });
   req.pipe(upstream);
 }
@@ -102,17 +123,22 @@ http
   .createServer((req, res) => {
     const pathname = req.url.split('?')[0];
     if (pathname.startsWith('/api/')) {
-      const port = portForPath(pathname);
-      if (port === null) {
+      const upstream = upstreamForPath(pathname);
+      if (upstream === null) {
         res.writeHead(404, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ error: 'no service owns this path', path: pathname }));
         return;
       }
-      proxy(req, res, port);
+      proxy(req, res, upstream);
       return;
     }
     serveStatic(req, res);
   })
   .listen(PORT, HOST, () => {
     console.log(`TraceFlix frontend  http://${HOST}:${PORT}`);
+    console.log(
+      UPSTREAM === 'cluster'
+        ? `  /api/* -> Service DNS names on :${SERVICE_PORT}`
+        : '  /api/* -> 127.0.0.1, per-service ports (see routes.js)'
+    );
   });

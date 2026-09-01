@@ -1,0 +1,62 @@
+# TraceFlix web client, in-cluster.
+#
+# Serves the built SPA and proxies /api/* to the nine services by Service DNS
+# name (TF_UPSTREAM=cluster; the prefix -> service table is routes.js). The
+# browser therefore sees ONE origin and never needs to reach a service itself,
+# which is what makes a single port-forward enough:
+#
+#   make frontend-forward   ->   http://localhost:5173
+#
+# The image is local and never pulled, the same as the nine services: build it
+# and load it into every kind node store first (make frontend-image).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: on-demand-observability
+  labels: {app: frontend, tier: mesh}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: frontend}}
+  template:
+    metadata:
+      labels: {app: frontend, tier: mesh}
+    spec:
+      containers:
+        - name: frontend
+          image: traceflix/frontend:1.0.0
+          imagePullPolicy: Never
+          ports:
+            - {name: http, containerPort: 5173}
+          env:
+            # Address the mesh by Service DNS name on :8080 rather than by the
+            # nine loopback ports run-local.sh uses -- inside this pod the
+            # loopback is this container, so the local map would 502 on every
+            # call. See the TF_UPSTREAM note in server.js.
+            - {name: TF_UPSTREAM,     value: "cluster"}
+            - {name: TF_SERVICE_PORT, value: "8080"}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits:   {memory: 256Mi}
+          # / always answers once dist/ is present, and answers 500 if the image
+          # was built without it, so this catches a broken build as well as a
+          # slow start.
+          readinessProbe:
+            httpGet: {path: /, port: 5173}
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /, port: 5173}
+            initialDelaySeconds: 10
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: on-demand-observability
+  labels: {app: frontend, tier: mesh}
+spec:
+  selector: {app: frontend}
+  ports:
+    - {name: http, port: 5173, targetPort: 5173}

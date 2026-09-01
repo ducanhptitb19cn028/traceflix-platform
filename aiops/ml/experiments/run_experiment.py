@@ -25,14 +25,14 @@ its (reordered) research questions:
 Outputs (one CSV per question, named by the paper's RQ number):
   rq1_completeness.csv, rq2_localisation.csv, rq4_model_family.csv
 
-Data source is automatic:
-  * default      -> synthetic generator (no cluster needed)
-  * TF_LIVE=1    -> live PromQL/LogQL/TraceQL via collectors, joined to the
-                    labels CSV from faults/run_episodes.py (pass --labels).
+Data source is the synthetic generator, always. TF_LIVE and --labels are accepted
+but the join of collected windows to a labels CSV was never implemented (see the
+note in main()), so this module has no live mode however it is invoked. To score
+the deployed stack against a campaign faults/inject.py or faults/run_episodes.py
+recorded, use ml.experiments.live_replay, which does implement that join.
 
 Run:
     python -m ml.experiments.run_experiment --episodes 200 --out data/results
-    TF_LIVE=1 python -m ml.experiments.run_experiment --labels data/labels.csv
 """
 from __future__ import annotations
 
@@ -182,13 +182,18 @@ def main():
     args = ap.parse_args()
 
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
-    live = os.getenv("TF_LIVE", "0") == "1"
-    print(f"[*] mode = {'LIVE' if live else 'SYNTHETIC'}")
+    # The join of collected windows to the labels CSV was never written, so this
+    # run is synthetic whatever TF_LIVE says. Say so rather than printing
+    # "mode = LIVE" over a generated stream -- generate_run invents the fault it
+    # labels each window with, and no live telemetry corresponds to that label.
+    print("[*] mode = SYNTHETIC (generated stream)")
+    if os.getenv("TF_LIVE", "0") == "1" or args.labels:
+        print("    NOTE: TF_LIVE/--labels do not apply here -- the live join is "
+              "unimplemented. Scoring the deployed stack against a recorded "
+              "campaign is ml.experiments.live_replay.")
 
-    # In LIVE mode a real join of collector windows to the labels CSV would go
-    # here; the synthetic generator below produces the same Window schema so the
-    # analysis code path is identical. (Kept explicit so the live wiring is one
-    # function away.)
+    # If that join is ever written it goes here; the synthetic generator below
+    # produces the same Window schema, so the analysis code path is identical.
     print(f"[*] Generating {args.episodes} episodes ...")
     windows, rca_episodes = generate_run(n_episodes=args.episodes, seed=args.seed)
     print(f"    {len(windows)} windows, {len(rca_episodes)} fault episodes")
@@ -213,7 +218,7 @@ def main():
           "online_vs_offline.py, not this script.")
 
     summary = {
-        "mode": "live" if live else "synthetic",
+        "mode": "synthetic",       # unconditional: see the note in main() above
         "episodes": args.episodes,
         "n_windows": len(windows),
         "services": list(SERVICES),

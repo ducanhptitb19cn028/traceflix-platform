@@ -382,3 +382,8 @@ done
 See `docs/INTEGRATION.md` for the full data flow, metric-name mapping, and the
 fault-to-service injection plan, and
 [`docs/ONLINE_PIPELINE.md`](docs/ONLINE_PIPELINE.md) for the RQ3 online pipeline.
+To exercise detection against the deployed cluster — inject a fault and watch the
+🛰 Live Cluster page score it —
+[`docs/LIVE_DETECTION_SCENARIOS.md`](docs/LIVE_DETECTION_SCENARIOS.md) has the
+scenarios, the preconditions that must be green first, and the symptom→cause table
+for the ways it silently reports nothing.

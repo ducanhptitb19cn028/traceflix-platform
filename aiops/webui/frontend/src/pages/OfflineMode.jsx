@@ -15,6 +15,7 @@ export default function OfflineMode() {
   const [experiments, setExperiments] = useState([]);
   const [params, setParams] = useState({
     key: "rq3", episodes: 200, configs: "C1,C2,C3,C4", seeds: "42,43,44,45,46",
+    labels: "data/labels_live.csv", out: "data/results_live",
   });
   const [log, setLog] = useState([]);
   const [running, setRunning] = useState(false);
@@ -57,8 +58,20 @@ export default function OfflineMode() {
   const current = experiments.find((x) => x.key === params.key);
   // Which controls to render comes from the experiment itself, not from a list
   // of keys kept in step by hand -- baselines_and_seeds takes --seeds but no
-  // --episodes, live_replay takes neither.
+  // --episodes, live_replay takes neither but does take a labels file and an
+  // out directory no other experiment exposes.
   const takes = (p) => current?.params?.includes(p) ?? false;
+  // The backend hands back placeholders so one arg builder serves both the
+  // preview and the run; filling them in is all this does.
+  const subst = (s) => (s ?? "")
+    .replace("{episodes}", params.episodes)
+    .replace("{configs}", params.configs)
+    .replace("{seeds}", params.seeds)
+    .replace("{labels}", params.labels)
+    .replace("{out}", params.out);
+  // Where the run will actually write — the registry's `out` is only the default
+  // for the experiments that let the caller choose.
+  const outDir = takes("out") ? params.out : (current?.out ?? "data/results");
   const groups = [...new Set(experiments.map((x) => x.group))];
   const costChip = current && COST_CHIP[current.cost];
 
@@ -98,6 +111,16 @@ export default function OfflineMode() {
             <input type="text" value={params.seeds} onChange={up("seeds")} disabled={running} />
           </label>
         )}
+        {takes("labels") && (
+          <label>Labels (ground truth, relative to aiops/)
+            <input type="text" value={params.labels} onChange={up("labels")} disabled={running} />
+          </label>
+        )}
+        {takes("out") && (
+          <label>Out directory (one per campaign)
+            <input type="text" value={params.out} onChange={up("out")} disabled={running} />
+          </label>
+        )}
         {!running
           ? <button className="btn primary" onClick={run}>▶ Run command</button>
           : <button className="btn danger" onClick={stop}>■ Stop</button>}
@@ -105,14 +128,9 @@ export default function OfflineMode() {
 
       {current && (
         <>
-          <div className="cmd">
-            {current.preview
-              .replace("{episodes}", params.episodes)
-              .replace("{configs}", params.configs)
-              .replace("{seeds}", params.seeds)}
-          </div>
+          <div className="cmd">{subst(current.preview)}</div>
           <div style={{ marginBottom: 12 }}>
-            <span className="chip chip-blue">writes to {current.out}/</span>
+            <span className="chip chip-blue">writes to {outDir}/</span>
             <span className={"chip " + (costChip || "chip-muted")}>≈ {current.cost}</span>
             {current.env && Object.entries(current.env).map(([k, v]) => (
               <span key={k} className="chip chip-muted">{k}={v}</span>
@@ -124,7 +142,7 @@ export default function OfflineMode() {
 
       <h3>Offline ML pipeline — bursty batch process</h3>
       <OfflinePipeline lines={log} running={running} done={!!result} result={result}
-        out={current?.out ?? "data/results"} />
+        out={outDir} />
 
       <div className="terminal">
         {log.length === 0 && !running &&

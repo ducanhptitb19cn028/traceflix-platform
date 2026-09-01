@@ -36,7 +36,10 @@ import numpy as np
 
 from .configs import FAULT_TYPES, SERVICES
 from .dataset import ancestors
-from collectors.telemetry import Window, collect_window
+# `_synth`, not `collect_window` -- see the note on the same import in
+# ml.dataset. This generator invents both the fault and the operational regime,
+# so no live telemetry corresponds to the labels it produces.
+from collectors.telemetry import Window, _synth
 
 # Which telemetry fields drift with operations. Error/originating-error signals
 # are deliberately excluded -- they encode *failure*, not *operating point*.
@@ -161,7 +164,7 @@ def generate_drifting_run(
                     svc_fault, is_origin = "latency_spike", False
                 else:
                     svc_fault, is_origin = "normal", False
-                w = collect_window(svc, svc_fault, ts, rng, is_origin)
+                w = _synth(svc, svc_fault, ts, rng, is_origin)
                 apply_regime(w, reg_factors)
                 windows.append(w)
                 regimes.append(regime)

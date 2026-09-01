@@ -39,6 +39,10 @@ SVC             ?= catalog-service         # inject: target service
 FAULT           ?= cpu_saturation          # inject: fault type
 DUR             ?= 120                      # inject: duration (s)
 OLLAMA_PORT     ?= 11434         # ollama-forward: host port (detector default)
+OLLAMA_MODEL    ?= qwen2.5:3b    # ollama-forward-bg: model the detector needs pulled
+WEBUI_PORT      ?= 8000          # webui / webui-forward: host port
+FRONTEND_PORT   ?= 5173          # frontend-forward: host port
+GRAFANA_PORT    ?= 3000          # grafana-forward: host port
 # strip the trailing whitespace the aligned comments above introduce
 EPISODES        := $(strip $(EPISODES))
 RQ2_SEEDS       := $(strip $(RQ2_SEEDS))
@@ -59,6 +63,11 @@ SVC             := $(strip $(SVC))
 FAULT           := $(strip $(FAULT))
 DUR             := $(strip $(DUR))
 OLLAMA_PORT     := $(strip $(OLLAMA_PORT))
+OLLAMA_MODEL    := $(strip $(OLLAMA_MODEL))
+WEBUI_PORT      := $(strip $(WEBUI_PORT))
+FRONTEND_PORT   := $(strip $(FRONTEND_PORT))
+GRAFANA_PORT    := $(strip $(GRAFANA_PORT))
+FRONTEND_IMG    := traceflix/frontend:1.0.0
 
 # Shell for .sh helper scripts. On Windows the `bash` first on PATH is normally
 # C:\Windows\System32\bash.exe (the WSL launcher); WSL can't see the Windows
@@ -112,14 +121,17 @@ DC_VM4 := deploy/virtfusion/vm4-gateway
         experiments experiments-full repro quick rq124 rq2 rq3 cost plots figures \
         controls seeds sweep baselines ablation live-replay cost-seeds cost-seeds-agg \
         streaming llm lora \
-        webui webui-build \
-        ollama-up ollama-down ollama-logs ollama-forward \
+        webui webui-build webui-forward \
+        frontend-image frontend-up frontend-down frontend-forward \
+        ollama-up ollama-down ollama-logs ollama-forward ollama-forward-bg ollama-forward-stop \
+        grafana-forward grafana-forward-bg grafana-forward-stop \
         build-services compile-services images \
         test test-aiops test-services \
         deploy-up deploy-down mesh-up mesh-down telemetry-up telemetry-down \
         kafka-llm-up kafka-llm-down gateway-up gateway-down \
         bootstrap k8s-deploy k8s-delete chaos-install status \
-        live live-episodes inject \
+        k8s-clean k8s-clean-images k8s-purge \
+        live live-episodes inject inject-compose \
         paper paper-pages paper-clean \
         paper_IEEE paper_IEEE-pages paper_IEEE-clean dissertation \
         clean clean-results clean-all
@@ -135,15 +147,22 @@ help:
 	@echo "               cost-seeds  cost-seeds-agg   (five-seed cost ranges; -agg re-reads only)"
 	@echo "               live-replay   (needs TF_LIVE + a reachable Prometheus)"
 	@echo "  STREAM/LLM   streaming  llm  lora"
-	@echo "  WEBUI        webui  webui-build"
+	@echo "  WEBUI        webui  webui-build  webui-forward  (forward = the in-cluster one;"
+	@echo "                                                   webui auto-forwards ollama)"
+	@echo "  FRONTEND     frontend-image  frontend-up  frontend-down  frontend-forward"
 	@echo "  AIOPS (k8s)  aiops-up  aiops-down"
-	@echo "  OLLAMA (k8s) ollama-up  ollama-down  ollama-logs  ollama-forward  (needs ~3Gi free)"
+	@echo "  OLLAMA (k8s) ollama-up  ollama-down  ollama-logs  (needs ~3Gi free)"
+	@echo "               ollama-forward  ollama-forward-bg  ollama-forward-stop  (-bg = detached)"
+	@echo "  GRAFANA      grafana-forward  grafana-forward-bg  grafana-forward-stop"
+	@echo "                              (Grafana UI on localhost:$(GRAFANA_PORT), admin/admin)"
 	@echo "  JAVA         build-services  compile-services  images  test-services"
 	@echo "  TESTS        test  test-aiops  test-services"
 	@echo "  COMPOSE      deploy-up/down  mesh-up/down  telemetry-up/down"
 	@echo "               kafka-llm-up/down  gateway-up/down"
 	@echo "  KUBERNETES   bootstrap  k8s-deploy  k8s-delete  chaos-install  status"
-	@echo "  FAULTS/LIVE  live  live-episodes  inject  (SVC= FAULT= DUR=)"
+	@echo "  K8S CLEAN    k8s-clean  k8s-clean-images  k8s-purge  (purge = both; destructive)"
+	@echo "  FAULTS/LIVE  live-episodes  inject  inject-compose  (SVC= FAULT= DUR=)"
+	@echo "               live-replay scores the result; 'live' is DEPRECATED (never was live)"
 	@echo "  PAPER/DOCS   paper  paper-pages  paper-clean  dissertation"
 	@echo "  CLEAN        clean  clean-results  clean-all"
 	@echo ""
@@ -289,7 +308,18 @@ cost-seeds-agg:
 # the Loki/Tempo/k8s-event collectors do not, so C2-C4 would mix present-moment
 # values into a past window with nothing downstream to catch it. Collection is
 # checkpointed to live_windows_cache.jsonl -- an interrupted replay resumes.
+#   3. One out directory per campaign. build_live_windows resumes from
+#      live_windows_cache.jsonl and returns EVERY window that cache holds, so a
+#      second campaign pointed at an existing directory is scored against the
+#      union of both -- silently, and the run still looks clean. results_live/
+#      belongs to labels_live.csv; the check below keeps it that way.
 live-replay:
+	@if [ "$(LIVE_OUT)" = "data/results_live" ] && \
+	    [ "$(LIVE_LABELS)" != "data/labels_live.csv" ]; then \
+	  echo "[make] data/results_live is reserved for data/labels_live.csv --"; \
+	  echo "       give this campaign its own LIVE_OUT, e.g. LIVE_OUT=data/results_live_mine"; \
+	  exit 1; \
+	fi
 	cd $(AIOPS) && TF_LIVE=1 \
 	  PROM_URL=$${PROM_URL:-http://localhost:9090} \
 	  VM_URL=$${VM_URL:-http://localhost:8428} \
@@ -302,9 +332,12 @@ streaming:
 # RQ4 model-family comparison WITH the local-LLM detector as a sixth family.
 #
 # Preconditions, both of which fail silently if unmet:
-#   1. Ollama must serve qwen2.5:3b at localhost:$(OLLAMA_PORT) -- run
-#      'make ollama-forward' in another terminal FIRST and check it responds:
+#   1. Ollama must serve $(OLLAMA_MODEL) at localhost:$(OLLAMA_PORT) -- run
+#      'make ollama-forward' in another terminal FIRST (or 'make ollama-forward-bg'
+#      here, which also checks the model is pulled) and confirm it responds:
 #         curl -s http://localhost:$(OLLAMA_PORT)/api/tags
+#      This target deliberately does NOT depend on -bg: a multi-hour run should
+#      not start behind a forward nobody watched come up.
 #      With nothing bound, the detector falls back to the z-score heuristic and
 #      the row is labelled '(heuristic)' -- a wasted multi-hour run.
 #   2. The forward must stay up for the WHOLE run. LLMDetector.mode is fixed at
@@ -333,11 +366,57 @@ lora:
 	cd $(AIOPS) && $(PY) -m llm.train_lora --data llm/data --out llm/adapters/qwen2.5-3b-traceflix
 
 # ---- webui -----------------------------------------------------------------
-webui:
-	cd $(AIOPS) && $(PY) -m uvicorn webui.backend.app:app --port 8000
+# Run the dashboard LOCALLY from source (hot source, no image rebuild). Needs the
+# SPA built first (webui-build).
+#
+# The LLM path is handled for you: this copy runs OUTSIDE the cluster, where
+# OLLAMA_URL defaults to http://localhost:$(OLLAMA_PORT) and nothing is bound, so
+# ollama-forward-bg puts the in-cluster Qwen there before uvicorn starts. Without
+# it the detector reports its heuristic fallback banner. The forward outlives the
+# dashboard on purpose (restarting webui is common) -- 'make ollama-forward-stop'.
+webui: ollama-forward-bg
+	cd $(AIOPS) && $(PY) -m uvicorn webui.backend.app:app --port $(WEBUI_PORT)
+
+# Reach the dashboard already running IN the cluster (svc/aiops, the Deployment
+# applied by aiops-up) instead of running a second copy locally. Serves the SPA
+# and the API on the same port, so http://localhost:$(WEBUI_PORT) is the whole
+# dashboard. Do NOT run this alongside `make webui` -- they collide on the port.
+# Blocks until interrupted; re-run it after an aiops pod restart.
+webui-forward:
+	@echo "[make] aiops dashboard -> http://localhost:$(WEBUI_PORT)  (Ctrl-C to stop)"
+	kubectl -n $(NS) port-forward svc/aiops $(WEBUI_PORT):8000
 
 webui-build:
 	cd $(AIOPS)/webui/frontend && npm install && npm run build
+
+# ---- TraceFlix web client (k8s) --------------------------------------------
+# The nine-service mesh's own web client, deployed beside the services it calls.
+# It serves the SPA and proxies /api/* to the mesh by Service DNS name, so ONE
+# forward reaches the whole app -- the browser never addresses a service itself.
+#
+# Order on a fresh cluster: frontend-image (build + load), frontend-up (apply),
+# frontend-forward (reach it). Re-run frontend-image then `kubectl -n $(NS)
+# rollout restart deploy/frontend` after changing anything under services/frontend.
+frontend-image:
+	docker build -t $(FRONTEND_IMG) $(SERVICES)/frontend
+	@echo "[make] loading $(FRONTEND_IMG) into the kind node stores (imagePullPolicy: Never)"
+	@for n in $$(docker ps --format '{{.Names}}|{{.Image}}' | grep kindest/node | cut -d'|' -f1); do \
+	  echo "  -> $$n"; \
+	  docker save $(FRONTEND_IMG) | docker exec -i $$n ctr -n k8s.io images import - >/dev/null || \
+	    echo "  !! load into $$n failed"; \
+	done
+
+frontend-up:
+	kubectl apply -f $(SERVICES)/frontend/k8s/frontend.yaml
+	kubectl -n $(NS) rollout status deploy/frontend --timeout=120s
+
+frontend-down:
+	kubectl delete -f $(SERVICES)/frontend/k8s/frontend.yaml --ignore-not-found
+
+# Blocks until interrupted; re-run it after a frontend pod restart.
+frontend-forward:
+	@echo "[make] traceflix web client -> http://localhost:$(FRONTEND_PORT)  (Ctrl-C to stop)"
+	kubectl -n $(NS) port-forward svc/frontend $(FRONTEND_PORT):5173
 
 # ---- AIOps (local k8s) -----------------------------------------------------
 # Re-apply / remove the in-cluster AIOps engine + dashboard in the $(NS) namespace.
@@ -383,6 +462,96 @@ ollama-logs:
 ollama-forward:
 	@echo "[make] ollama -> http://localhost:$(OLLAMA_PORT)  (Ctrl-C to stop)"
 	kubectl -n $(NS) port-forward svc/ollama $(OLLAMA_PORT):11434
+
+# The same forward, DETACHED, so a one-terminal `make webui` reaches the LLM.
+# `webui` depends on this, so the usual way to get it is to change nothing.
+#
+# Idempotent: if :$(OLLAMA_PORT) already answers -- your own ollama-forward, a
+# host Ollama, an earlier -bg -- it forwards nothing and returns.
+#
+# Never fails the build. An unreachable Ollama is a legitimate way to run the
+# dashboard: the detector says so in its banner and scores windows with the
+# rule-of-thumb test instead. It warns loudly in two cases the banner cannot
+# distinguish for you: no forward at all, and a daemon that answers but has not
+# pulled $(OLLAMA_MODEL) -- there every call errors and every window is reported
+# normal, which looks like a healthy system rather than a broken detector.
+ollama-forward-bg:
+	@if curl -sf -m 2 http://localhost:$(OLLAMA_PORT)/api/tags >/dev/null 2>&1; then \
+	  echo "[make] ollama already reachable on :$(OLLAMA_PORT)"; \
+	elif ! kubectl -n $(NS) get deploy/ollama >/dev/null 2>&1; then \
+	  echo "[make] deploy/ollama is not in $(NS) -- run 'make ollama-up' for the LLM detector;"; \
+	  echo "[make] continuing without it (heuristic fallback)"; \
+	  exit 0; \
+	else \
+	  echo "[make] port-forward svc/ollama -> localhost:$(OLLAMA_PORT) (background; 'make ollama-forward-stop')"; \
+	  kubectl -n $(NS) port-forward svc/ollama $(OLLAMA_PORT):11434 >/dev/null 2>&1 & \
+	  i=0; while [ $$i -lt 30 ]; do \
+	    curl -sf -m 2 http://localhost:$(OLLAMA_PORT)/api/tags >/dev/null 2>&1 && break; \
+	    sleep 1; i=$$((i+1)); \
+	  done; \
+	fi; \
+	tags=$$(curl -sf -m 5 http://localhost:$(OLLAMA_PORT)/api/tags 2>/dev/null); \
+	if [ -z "$$tags" ]; then \
+	  echo "[make] !! ollama unreachable on :$(OLLAMA_PORT) -- detector will use the heuristic fallback"; \
+	elif ! echo "$$tags" | grep -q '$(OLLAMA_MODEL)'; then \
+	  echo "[make] !! ollama answers but $(OLLAMA_MODEL) is NOT pulled -- every call errors and"; \
+	  echo "[make] !! every window reports normal. Watch the pull with 'make ollama-logs'"; \
+	else \
+	  echo "[make] ollama on :$(OLLAMA_PORT) serving $(OLLAMA_MODEL)"; \
+	fi
+
+# Stop the detached forward. Matches on the command line, so it also stops a
+# foreground `make ollama-forward` running in another terminal -- there is no
+# way to tell the two apart from here.
+ollama-forward-stop:
+	@pkill -f "port-forward svc/ollama" 2>/dev/null && echo "[make] background forward stopped" \
+	  || echo "[make] no background forward running"
+
+# ---- grafana ---------------------------------------------------------------
+# Expose the in-cluster Grafana (deployed by k8s-deploy as part of
+# observability/on-demand-observability.yaml) on the host, so the dashboards over
+# Prometheus/Tempo/Loki can be opened in a browser -- the Service is ClusterIP,
+# there is no Ingress. Log in with admin/admin (set in the Deployment's env).
+# Blocks until interrupted; run it in its own terminal, and re-run it after a
+# grafana pod restart (the forward dies with the pod).
+#
+# :3000 is a popular port. If something local already owns it, move the forward:
+#   make grafana-forward GRAFANA_PORT=3001
+grafana-forward:
+	@echo "[make] grafana -> http://localhost:$(GRAFANA_PORT)  (admin/admin, Ctrl-C to stop)"
+	kubectl -n $(NS) port-forward svc/grafana $(GRAFANA_PORT):3000
+
+# The same forward, DETACHED, for a one-terminal demo run.
+#
+# Idempotent: if :$(GRAFANA_PORT) already answers -- your own grafana-forward, an
+# earlier -bg, some other local server -- it forwards nothing and returns. It
+# never fails the build: Grafana is for looking at, nothing in the pipeline reads
+# it, so a missing deployment is a warning rather than an error.
+grafana-forward-bg:
+	@if curl -sf -m 2 http://localhost:$(GRAFANA_PORT)/api/health >/dev/null 2>&1; then \
+	  echo "[make] grafana already reachable on :$(GRAFANA_PORT)"; \
+	elif ! kubectl -n $(NS) get deploy/grafana >/dev/null 2>&1; then \
+	  echo "[make] !! deploy/grafana is not in $(NS) -- run 'make k8s-deploy' first"; \
+	  exit 0; \
+	else \
+	  echo "[make] port-forward svc/grafana -> localhost:$(GRAFANA_PORT) (background; 'make grafana-forward-stop')"; \
+	  kubectl -n $(NS) port-forward svc/grafana $(GRAFANA_PORT):3000 >/dev/null 2>&1 & \
+	  i=0; while [ $$i -lt 30 ]; do \
+	    curl -sf -m 2 http://localhost:$(GRAFANA_PORT)/api/health >/dev/null 2>&1 && break; \
+	    sleep 1; i=$$((i+1)); \
+	  done; \
+	  if curl -sf -m 2 http://localhost:$(GRAFANA_PORT)/api/health >/dev/null 2>&1; then \
+	    echo "[make] grafana on http://localhost:$(GRAFANA_PORT) (admin/admin)"; \
+	  else \
+	    echo "[make] !! grafana did not answer on :$(GRAFANA_PORT) within 30s"; \
+	  fi; \
+	fi
+
+# Stop the detached forward. Matches on the command line, so it also stops a
+# foreground `make grafana-forward` running in another terminal.
+grafana-forward-stop:
+	@pkill -f "port-forward svc/grafana" 2>/dev/null && echo "[make] background forward stopped" \
+	  || echo "[make] no background forward running"
 
 # ---- Java services ---------------------------------------------------------
 build-services:
@@ -453,23 +622,110 @@ chaos-install:
 status:
 	kubectl get pods -n $(NS) -o wide
 
+# ---- k8s clean -------------------------------------------------------------
+# `k8s-delete` above removes ONE namespace. These remove everything this project
+# puts in a cluster, in the order that actually works:
+#
+#   1. Chaos experiment CRs first. A StressChaos/NetworkChaos carries a
+#      finalizer that only the chaos-controller can clear, so deleting the
+#      namespace while the controller is still up-and-then-gone leaves it
+#      Terminating forever. Delete the CRs, then the release, then the ns.
+#   2. The chaos-mesh helm release (its webhooks and ClusterRoles go with it).
+#   3. The three namespaces: $(NS) (mesh + telemetry + aiops + ollama +
+#      frontend + load-gen), devops-agent (VictoriaMetrics), chaos-mesh.
+#   4. The chaos-mesh.org CRDs -- helm deliberately leaves CRDs behind.
+#   5. PersistentVolumes left Released by the deleted PVCs (ollama-models).
+#      Scoped by claimRef namespace, so no unrelated PV is touched.
+#
+# Nothing outside those namespaces is touched, and everything here is
+# re-creatable with `make k8s-deploy` / `make run-platform`. Every step is
+# prefixed `-` so a missing namespace or an absent helm is not an error.
+K8S_NS_ALL  := $(NS) devops-agent
+CHAOS_NS    := chaos-mesh
+CHAOS_KINDS := podchaos networkchaos stresschaos iochaos httpchaos timechaos dnschaos jvmchaos kernelchaos schedule workflow
+LOCAL_IMGS  := $(FRONTEND_IMG) traceflix/aiops-src:1.0.0 traceflix/aiops-dist:1.0.0 \
+               $(foreach s,$(ALL_SVCS),traceflix/$(s)-service:1.0.0)
+
+k8s-clean:
+	@echo "[make] 1/5 deleting Chaos Mesh experiment CRs in $(NS) (finalizers block ns deletion)"
+	-@for k in $(CHAOS_KINDS); do \
+	   if kubectl get "$$k" -n $(NS) >/dev/null 2>&1; then \
+	     kubectl delete "$$k" --all -n $(NS) --ignore-not-found --timeout=60s || true; \
+	   fi; \
+	 done
+	@echo "[make] 2/5 uninstalling the chaos-mesh helm release"
+	-@command -v helm >/dev/null 2>&1 && helm uninstall chaos-mesh -n $(CHAOS_NS) >/dev/null 2>&1 || true
+	@echo "[make] 3/5 deleting namespaces: $(K8S_NS_ALL) $(CHAOS_NS)"
+	-kubectl delete namespace $(K8S_NS_ALL) $(CHAOS_NS) --ignore-not-found --timeout=300s
+	@echo "[make] 4/5 deleting the chaos-mesh.org CRDs (helm leaves them behind)"
+	-@kubectl get crd -o name 2>/dev/null | grep 'chaos-mesh\.org' | \
+	   xargs -r kubectl delete --ignore-not-found
+	@echo "[make] 5/5 deleting PersistentVolumes released by the above"
+	-@kubectl get pv -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{" "}{.spec.claimRef.namespace}{"\n"}{end}' 2>/dev/null | \
+	   awk '$$2=="Released" && ($$3=="$(NS)" || $$3=="devops-agent")   {print $$1}' | \
+	   xargs -r kubectl delete pv
+	@echo ""
+	@echo "[make] cluster clean. Verify: kubectl get ns | grep -E 'observability|devops-agent|chaos-mesh'"
+
+# Drop the locally built images. They are NOT in a registry -- every one is
+# built here and side-loaded, so this is the only copy; re-create with
+# `make images`, `make frontend-image` and `mk.ps1 aiops-image`. Removed from
+# each kind node's containerd store (what the kubelet actually reads under
+# imagePullPolicy: Never) and from the host daemon.
+k8s-clean-images:
+	@echo "[make] removing the locally built images from the kind node stores"
+	-@for n in $$(docker ps --format '{{.Names}}|{{.Image}}' | grep kindest/node | cut -d'|' -f1); do \
+	   echo "  -> $$n"; \
+	   for i in $(LOCAL_IMGS); do \
+	     docker exec "$$n" ctr -n k8s.io images rm "docker.io/$$i" >/dev/null 2>&1 || true; \
+	   done; \
+	 done
+	@echo "[make] removing them from the host daemon"
+	-@docker rmi $(LOCAL_IMGS) 2>/dev/null || true
+	@echo "[make] images cleaned"
+
+# Everything: cluster resources AND the locally built images.
+k8s-purge: k8s-clean k8s-clean-images
+	@echo "[make] k8s purge complete"
+
 # ---- fault injection / live ------------------------------------------------
-# Run the analysis against live PromQL/LogQL/TraceQL (point the URLs at your stack).
+# DEPRECATED. This never ran the analysis against live telemetry. run_experiment
+# accepts --labels and TF_LIVE but the join of collected windows to a labels CSV
+# was never implemented (its own comment said "would go here"), so the target
+# always scored a GENERATED stream -- and, having no --out, wrote it over
+# data/results, the reported campaign. It is kept as a signpost rather than
+# removed, because the name is in fullDemo.md, mk.ps1 and muscle memory.
+#
+# Refuses rather than warns: the failure it used to produce was a plausible-
+# looking table, which is worse than no table.
 live:
-	cd $(AIOPS) && TF_LIVE=1 \
-	  PROM_URL=$${PROM_URL:-http://localhost:9090} \
-	  LOKI_URL=$${LOKI_URL:-http://localhost:3100} \
-	  TEMPO_URL=$${TEMPO_URL:-http://localhost:3200} \
-	  VM_URL=$${VM_URL:-http://localhost:8428} \
-	  $(PY) -m ml.experiments.run_experiment --labels data/labels.csv
+	@echo "[make] 'live' is deprecated and does nothing -- it never read live telemetry."
+	@echo "       run_experiment has no live join; it also defaulted to --out data/results,"
+	@echo "       so this target overwrote the reported campaign with a generated run."
+	@echo ""
+	@echo "       Score the DEPLOYED stack against a campaign you injected:"
+	@echo "         make live-replay LIVE_LABELS=<your labels.csv> LIVE_OUT=<its own dir>"
+	@echo "         (needs TF_LIVE + a reachable Prometheus still holding the window)"
+	@echo "       Run the GENERATED campaign the write-up reports:"
+	@echo "         make rq124            (-> $(OUT))"
+	@false
 
 # Drive Chaos Mesh fault episodes on the k8s deployment, recording ground truth.
 live-episodes:
 	cd $(AIOPS) && $(PY) faults/run_episodes.py --episodes $(LIVE_EPISODES) --labels data/labels.csv
 
-# Inject a single fault into a Compose-deployed service via Pumba.
+# Inject a single fault into ANY service of the k8s deployment via Chaos Mesh,
+# recording the same ground-truth row as live-episodes. Faults: cpu_saturation
+# memory_leak latency_spike pod_kill network_partition.
+#   make inject SVC=catalog-service FAULT=cpu_saturation DUR=120
 inject:
-	cd $(DC_VM2) && ./inject-fault.sh $(SVC) $(FAULT) $(DUR)
+	cd $(AIOPS) && $(PY) faults/inject.py $(SVC) $(FAULT) $(DUR) --labels data/labels.csv
+
+# The compose/Pumba counterpart, for the VM2 mesh rather than the cluster. The
+# recipe is invoked through $(BASH_BIN) because make hands recipes to cmd.exe on
+# Windows, which cannot run ./inject-fault.sh.
+inject-compose:
+	"$(BASH_BIN)" -c 'cd $(DC_VM2) && ./inject-fault.sh $(SVC) $(FAULT) $(DUR)'
 
 # ---- paper / dissertation --------------------------------------------------
 paper:

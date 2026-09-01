@@ -23,6 +23,16 @@ rules:
   - apiGroups: [""]
     resources: ["events", "pods"]
     verbs: ["get", "list", "watch"]
+  # Ground truth for the live-cluster detector (collectors/chaos.py): which
+  # service is under which fault is read from the Chaos Mesh resources actually
+  # injected, not from a labels CSV written after the episode. Read-only, and
+  # namespaced -- the engine never creates or deletes chaos, only observes it.
+  # Without this the API server returns 403, every window is labelled `normal`,
+  # and the page reports its ground truth as unreadable rather than scoring
+  # against a label it cannot see.
+  - apiGroups: ["chaos-mesh.org"]
+    resources: ["stresschaos", "networkchaos", "podchaos"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -51,16 +61,25 @@ spec:
     metadata: {labels: {app: aiops}}
     spec:
       serviceAccountName: aiops
-      # The published :gpu image was built without the React dashboard. This
-      # initContainer injects the prebuilt SPA (dist) into a shared volume so the
-      # FastAPI backend serves it at / -- no multi-GB CUDA rebuild needed.
+      # The published :gpu image bakes the aiops source as it stood when the image
+      # was built, so a pod running it serves whatever backend that snapshot had --
+      # notably WITHOUT /api/live/ml and /api/live/llm, while the SPA it serves does
+      # show those tabs. This initContainer copies the CURRENT source (dist/
+      # included) over /opt/traceflix/aiops, so the pod runs today's code with the
+      # image's already-installed dependencies -- no multi-GB CUDA rebuild.
+      #
+      # It replaces the earlier SPA-only initContainer: dist/ lives inside the
+      # source, so injecting the source injects the dashboard too.
+      #
+      # Rebuild + reload the sidecar after ANY change under aiops/:
+      #   .\mk.ps1 aiops-image ; kubectl -n on-demand-observability rollout restart deploy/aiops
       initContainers:
-        - name: spa
-          image: traceflix/aiops-dist:1.0.0
+        - name: src
+          image: traceflix/aiops-src:1.0.0
           imagePullPolicy: Never
-          command: ["sh", "-c", "cp -r /dist/. /spa/"]
+          command: ["sh", "-c", "cp -a /src/. /app/"]
           volumeMounts:
-            - {name: spa, mountPath: /spa}
+            - {name: src, mountPath: /app}
       containers:
         - name: aiops
           image: ghcr.io/ducanhptitb19cn028/traceflix-aiops:gpu
@@ -68,7 +87,8 @@ spec:
           ports:
             - {name: http, containerPort: 8000}
           volumeMounts:
-            - {name: spa, mountPath: /opt/traceflix/aiops/webui/frontend/dist}
+            # Whole source tree, not just dist/ - see the initContainer note above.
+            - {name: src, mountPath: /opt/traceflix/aiops}
           env:
             - {name: PROM_URL,     value: "http://prometheus:9090"}
             - {name: VM_URL,       value: "http://victoriametrics.devops-agent.svc.cluster.local:8428"}
@@ -92,7 +112,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 30
       volumes:
-        - {name: spa, emptyDir: {}}
+        - {name: src, emptyDir: {}}
 ---
 apiVersion: v1
 kind: Service

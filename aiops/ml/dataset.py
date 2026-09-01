@@ -19,9 +19,11 @@ Two generators live here, and the difference matters:
   so every service on the path emits error spans and the origin is identifiable
   only as the root of the error tree.
 
-In LIVE mode this module is bypassed: windows come from collectors with TF_LIVE=1
-joined to the labels CSV produced by faults/run_episodes.py. The synthetic path
-here mirrors that join so the pipeline is identical offline and online.
+This module is synthetic in every mode -- TF_LIVE does not bypass it (see the
+import note below). Windows collected from the deployed stack and joined to the
+labels CSV that faults/inject.py or faults/run_episodes.py recorded come from
+ml.experiments.live_replay instead; it emits the same Window schema, so the
+analysis downstream is identical either way.
 """
 from __future__ import annotations
 
@@ -30,7 +32,18 @@ import random
 import pandas as pd
 
 from .configs import DEPENDENCIES, ENTRYPOINT, FAULT_TYPES, SERVICES
-from collectors.telemetry import Window, collect_window
+# `_synth` rather than `collect_window`, deliberately -- the same reasoning
+# streaming.live_detect gives. This module INVENTS the fault: it decides that
+# `svc` is faulty at `ts` and labels the window accordingly. Nothing was injected
+# into the real mesh, so there is no live telemetry that corresponds to that
+# label. Under TF_LIVE=1 -- which is how the in-cluster deployment runs --
+# collect_window would go to Prometheus/Loki/Tempo instead, at the generator's
+# synthetic timestamps (ts=10.0 is 1970, so every metric comes back 0.0 while the
+# non-time-parameterised log and trace collectors return present-moment values,
+# identical for every window whatever its label). The run still completes and
+# still reports an F1. Replaying a REAL campaign is ml.experiments.live_replay's
+# job; it takes the live path on purpose and refuses to run without TF_LIVE=1.
+from collectors.telemetry import Window, _synth
 
 # reverse edges: which callers depend on a given callee (for upstream symptoms)
 _CALLERS = {svc: [c for c, deps in DEPENDENCIES.items() if svc in deps]
@@ -90,7 +103,7 @@ def generate_run(n_episodes: int = 120, windows_per_episode: int = 12,
                     svc_fault, is_origin = "latency_spike", False
                 else:
                     svc_fault, is_origin = "normal", False
-                w = collect_window(svc, svc_fault, ts, rng, is_origin)
+                w = _synth(svc, svc_fault, ts, rng, is_origin)
                 episode.append(w)
                 all_windows.append(w)
 
@@ -182,8 +195,8 @@ def generate_rca_run(n_episodes: int = 200, windows_per_episode: int = 12,
                     svc_fault, level = "normal", 0.0
                 # NB: err_span_level is set from hop distance; the origin flag is
                 # not passed and is not consulted by the propagating path.
-                episode.append(collect_window(svc, svc_fault, ts, rng,
-                                              err_span_level=level))
+                episode.append(_synth(svc, svc_fault, ts, rng,
+                                      err_span_level=level))
         rca_episodes.append((episode, root))
 
     return rca_episodes

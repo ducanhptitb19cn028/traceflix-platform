@@ -29,18 +29,19 @@ services/            observability/         aiops/                  streaming/ +
 9 Spring Boot   ──►  Tempo · Loki ·    ──►   fault injection   ──►   Kafka event backbone +
 microservices       Prometheus · Grafana    + ML (RQ1–RQ4)          Qwen2.5-3B LLM detector
 gateway→…→catalog                           + cost + webui          + LoRA harness
++ React web client
 ```
 
 | Part | Shows | ~Time | Cluster/GPU? |
 |------|-------|-------|--------------|
 | 0 | Setup | 3 min | No |
-| 1 | The nine-service mesh (real business logic) | 5 min | No |
+| 1 | The nine-service mesh (real business logic) + its web client | 7 min | No |
 | 2 | Observability + the live streaming dashboard | 4 min | No |
 | 3 | **The research: RQ1–RQ4 + cost** | 8 min | No |
 | 4 | The Kafka streaming backbone | 4 min | No |
 | 5 | The local-LLM detector (Qwen2.5-3B) | 4 min | No (GPU optional) |
 | 6 | Engineering: tests, CI, automation | 4 min | No |
-| 7 | Deployment (Compose / k8s / faults) | 6 min | Docker |
+| 7 | Deployment (Compose / k8s / faults / both dashboards) | 8 min | Docker |
 | 8 | The paper | 3 min | Docker |
 
 **Highlights path (≈10 min, runs anywhere):**
@@ -65,7 +66,7 @@ make webui                            # dashboard → http://localhost:8000/stre
 | GNU make | any | the automation entrypoint (recommended) |
 | Ollama + GPU | optional | the **real** Qwen2.5-3B (heuristic fallback otherwise) |
 | kubectl | optional | the Kubernetes live track |
-| Node + npm | 18+ optional | rebuilding the dashboard frontend |
+| Node + npm | 22+ optional | running `services/frontend` locally (Vite 8); rebuilding the dashboard frontend. The in-cluster image builds its own — Docker is enough. |
 
 `make help` lists every target; the demo leans on it throughout.
 
@@ -130,6 +131,38 @@ curl -s http://localhost:8093/api/users/1
 > attribution hard — and what Part 3's RQ2 measures."
 
 Stop the slice when done: `pkill -f target/ ` (or close the terminal).
+
+### The same mesh, as a product
+
+`services/frontend` is the mesh's own web client — React + Vite, served by a Node
+host that proxies `/api/*` to whichever service owns the prefix. The browser sees
+**one origin** and never addresses a service itself; the prefix→service table
+(`routes.js`) is shared by the dev proxy, the local host and the in-cluster
+deployment, so the three cannot drift apart.
+
+**▶ Run** — all nine services on localhost, then the client:
+
+```bash
+cd services && ./run-local.sh start        # nine jars, ports 8080–8088
+cd frontend && npm install && npm run build
+node server.js                             # → http://localhost:5173
+```
+
+**✔ Expect:** the catalogue renders, and each page is a live call into the mesh —
+the header `x-traceflix-upstream-ms` is stamped by the host, so every latency the
+UI shows is measured on one clock rather than the browser's.
+
+> 🗣 Say: "This is the same three-hop call I just made with `curl`, except a person
+> is making it. Clicking here emits exactly the OTel telemetry the experiments
+> consume — the same spans the load generator produces, on a human path through
+> the graph. And note the home page is composed by the **gateway** in one piece:
+> a fault deep in the mesh empties the whole page rather than one tile. That is
+> the propagation failure mode Part 3 measures, visible in the product."
+
+Stop when done: `./run-local.sh stop` (`status` shows per-port health).
+
+Part 7 deploys this same client *into the cluster*, where it addresses the nine
+services by Service DNS name instead of by port.
 
 ---
 
@@ -427,16 +460,26 @@ View distributed traces in **Grafana → Tempo**.
 ### Fault injection + the live experiment
 
 ```bash
-# Pumba targets ANY of the nine services by name; writes the same labels CSV as k8s
+# Chaos Mesh targets ANY of the nine services by name; writes the same labels CSV
+# as live-episodes. Use inject-compose for the Pumba/compose mesh instead.
 make inject SVC=catalog-service FAULT=cpu_saturation DUR=120
 make inject SVC=recommendation-service FAULT=pod_kill
 
-make live PROM_URL=http://localhost:9090 TEMPO_URL=http://localhost:3200   # TF_LIVE=1 analysis
+# Score that campaign against the telemetry Prometheus actually recorded at the
+# time. One out directory per campaign -- results_live/ holds the reported one.
+make live-replay LIVE_LABELS=data/labels.csv LIVE_OUT=data/results_live_demo \
+  PROM_URL=http://localhost:9090
 ```
 
-> 🗣 Say: "The collectors issue real PromQL/LogQL/TraceQL and emit the **same
-> `Window` schema** the synthetic generator mirrors — so the entire RQ1–RQ4
-> analysis runs unchanged on live telemetry."
+> 🗣 Say: "The replay re-issues each query **at the instant its window
+> represents**, so this scores telemetry Prometheus really recorded rather than
+> the generator. It emits the same `Window` schema, so the analysis code path is
+> identical — configuration C1 only, because the log and trace collectors take no
+> timestamp and would mix present-moment values into a past window."
+
+> ⚠️ `make live` is deprecated and refuses to run. It never read live telemetry:
+> `run_experiment`'s live join was never implemented, so it scored a generated
+> stream and wrote it over `data/results`. `live-replay` is the real-telemetry path.
 
 ### Kubernetes (original path)
 
@@ -445,6 +488,41 @@ make bootstrap        # build + deploy services + observability + Chaos Mesh
 make k8s-deploy       # or apply manifests directly
 make chaos-install
 make live-episodes    # drive Chaos Mesh episodes, record ground-truth labels
+```
+
+### The two dashboards, in-cluster
+
+Both the AIOps dashboard and the TraceFlix web client run *inside* the cluster and
+are reached by a port-forward. Each forward blocks until interrupted, so give each
+its own terminal, and re-run it after the pod restarts.
+
+```bash
+make frontend-image     # docker build + load into every kind node store
+make frontend-up        # apply services/frontend/k8s/frontend.yaml
+make frontend-forward   # the web client   → http://localhost:5173
+make webui-forward      # the AIOps dashboard → http://localhost:8000
+```
+
+**✔ Expect** — the client answers on its own origin and relays the mesh's real data:
+
+```bash
+curl -s "http://localhost:5173/api/browse?userId=1" | head -c 120
+# {"userId":1,"user":{"id":1,"name":"Alice Adams","email":"alice@traceflix.test",...
+```
+
+> 🗣 Say: "The client is deployed beside the services it calls, and in the cluster
+> it addresses them by **Service DNS name** — `catalog-service:8080` — rather than
+> the nine localhost ports it uses on a laptop. One environment variable switches
+> the two, off a single routing table, so the demo you saw in Part 1 and this one
+> are the same code. One forward reaches the whole app because the browser only
+> ever talks to that one origin — which is precisely the job an ingress would do."
+
+The images are local and never pulled (`imagePullPolicy: Never`), so
+`frontend-image` must run before `frontend-up` on a fresh cluster. After changing
+anything under `services/frontend`, rebuild and restart:
+
+```bash
+make frontend-image && kubectl -n on-demand-observability rollout restart deploy/frontend
 ```
 
 ---
@@ -476,17 +554,19 @@ realisation.
 | Setup | `setup` `setup-llm` |
 | Experiments | `experiments` `repro` `quick` `rq124` `rq3` `cost` `plots` `figures` |
 | Stream/LLM | `streaming` `llm` `lora` |
-| WebUI | `webui` `webui-build` |
+| WebUI | `webui` `webui-build` `webui-forward` |
+| Web client | `frontend-image` `frontend-up` `frontend-down` `frontend-forward` |
 | Java | `build-services` `compile-services` `images` `test-services` |
 | Tests | `test` `test-aiops` `test-services` |
 | Compose | `deploy-up/down` `mesh-up/down` `telemetry-up/down` `kafka-llm-up/down` `gateway-up/down` |
 | Kubernetes | `bootstrap` `k8s-deploy` `k8s-delete` `chaos-install` |
-| Faults/live | `live` `live-episodes` `inject` |
+| Faults/live | `live-replay` `live-episodes` `inject` (k8s/Chaos Mesh) `inject-compose` (Pumba) — `live` is deprecated |
 | Paper/docs | `paper` `paper-pages` `paper-clean` `dissertation` |
 | Clean | `clean` `clean-results` `clean-all` |
 
 Knobs: `EPISODES` (200), `DRIFT_EPISODES` (320), `SEED` (42), `CONFIGS`,
-`STREAM_EPISODES`, `SVC`/`FAULT`/`DUR` (inject), `PAPER_DIR`.
+`STREAM_EPISODES`, `SVC`/`FAULT`/`DUR` (inject), `PAPER_DIR`,
+`WEBUI_PORT` (8000), `FRONTEND_PORT` (5173).
 
 # Appendix B — Artifacts
 
@@ -513,13 +593,28 @@ Knobs: `EPISODES` (200), `DRIFT_EPISODES` (320), `SEED` (42), `CONFIGS`,
 - **`make paper` mount path (Windows)** — override `PAPER_DIR=<windows-path>/paper`.
 - **LSTM F1 ≈ 0.26** — expected; it is a deliberately weak baseline on the
   interleaved-per-service windowed representation (ensemble trees lead, RQ4).
+- **Frontend pod `ErrImageNeverPull`** — the image is local and never pulled. Run
+  `make frontend-image` first; it loads into *every* kind node store, and a node
+  that missed the load fails only when the pod happens to schedule there.
+- **Web client returns 502 `service unreachable`** — the host reached no upstream.
+  In-cluster that means `TF_UPSTREAM=cluster` is unset (it is addressing nine
+  loopback ports, which inside a pod are the container itself); locally it means
+  the mesh is not up — check `./run-local.sh status`. The JSON body names the
+  upstream it tried.
+- **A forward reports `address already in use`** — `make webui` and
+  `webui-forward` both want :8000, as do `node server.js` and `frontend-forward`
+  on :5173. Run one or the other, or override `WEBUI_PORT` / `FRONTEND_PORT`.
+- **`make: command not found` / blocked by Application Control** — the recipes are
+  one or two lines each; read the target and run it directly.
 
 # Appendix D — Teardown
 
 ```bash
 make deploy-down                    # Compose mesh + telemetry
 make kafka-llm-down                 # Kafka + Ollama (if started)
+make frontend-down                  # the in-cluster web client
 make k8s-delete                     # Kubernetes namespace (live track)
 make clean clean-results            # build artifacts + generated CSVs/figures
-pkill -f 'target/'                  # any locally-run service jars
+cd services && ./run-local.sh stop  # the nine local jars (Part 1)
+pkill -f 'target/'                  # any stragglers
 ```
